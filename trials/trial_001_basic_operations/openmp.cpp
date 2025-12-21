@@ -1,0 +1,240 @@
+// openmp.cpp
+#include <chrono>
+#include <cmath>
+#include <cstdint>
+#include <cstdlib>
+#include <iomanip>
+#include <iostream>
+#include <vector>
+#include <random>
+#include <omp.h>
+
+
+void serial_add(const std::vector<double>& numbers_a, const std::vector<double>& numbers_b, std::vector<double>& numbers_c)
+{
+    for(int i = 0; i <numbers_a.size(); i++)
+    {
+        numbers_c[i] = numbers_a[i] + numbers_b[i];
+    }
+}
+
+
+void serial_multiply(const std::vector<double>& numbers_a, const std::vector<double>& numbers_b, std::vector<double>& numbers_c)
+{
+    for(int i = 0; i <numbers_a.size(); i++)
+    {
+        numbers_c[i] = numbers_a[i] * numbers_b[i];
+    }
+}
+
+
+void serial_divide(const std::vector<double>& numbers_a, const std::vector<double>& numbers_b, std::vector<double>& numbers_c)
+{
+    for(int i = 0; i <numbers_a.size(); i++)
+    {
+        numbers_c[i] = numbers_a[i] / std::max(numbers_b[i], 1.0e-9);
+    }
+}
+
+
+void serial_power(const std::vector<double>& numbers_a, const std::vector<double>& numbers_b, std::vector<double>& numbers_c)
+{
+    for(int i = 0; i <numbers_a.size(); i++)
+    {
+        numbers_c[i] = std::pow(numbers_a[i], numbers_b[i]);
+    }
+}
+
+
+// Serial task - perform operation on numbers in the vector
+void serial_task(const std::string& operation, const std::vector<double>& numbers_a, const std::vector<double>& numbers_b, std::vector<double>& numbers_c)
+{
+    if(operation == "add") serial_add(numbers_a, numbers_b, numbers_c);
+    if(operation == "multiply") serial_multiply(numbers_a, numbers_b, numbers_c);
+    if(operation == "divide") serial_divide(numbers_a, numbers_b, numbers_c);
+    if(operation == "power") serial_power(numbers_a, numbers_b, numbers_c);
+}
+
+
+
+void parallel_add(const std::vector<double>& numbers_a, const std::vector<double>& numbers_b, std::vector<double>& numbers_c)
+{
+    #pragma omp parallel for schedule(static)
+    for(int i = 0; i <numbers_a.size(); i++)
+    {
+        numbers_c[i] = numbers_a[i] + numbers_b[i];
+    }
+}
+
+
+void parallel_multiply(const std::vector<double>& numbers_a, const std::vector<double>& numbers_b, std::vector<double>& numbers_c)
+{
+    #pragma omp parallel for schedule(static)
+    for(int i = 0; i <numbers_a.size(); i++)
+    {
+        numbers_c[i] = numbers_a[i] * numbers_b[i];
+    }
+}
+
+
+void parallel_divide(const std::vector<double>& numbers_a, const std::vector<double>& numbers_b, std::vector<double>& numbers_c)
+{
+    #pragma omp parallel for schedule(static)
+    for(int i = 0; i <numbers_a.size(); i++)
+    {
+        numbers_c[i] = numbers_a[i] / std::max(numbers_b[i], 1.0e-9);
+    }
+}
+
+
+void parallel_power(const std::vector<double>& numbers_a, const std::vector<double>& numbers_b, std::vector<double>& numbers_c)
+{
+    #pragma omp parallel for schedule(static)
+    for(int i = 0; i <numbers_a.size(); i++)
+    {
+        numbers_c[i] = std::pow(numbers_a[i], numbers_b[i]);
+    }
+}
+
+
+// parallel task - perform operation on numbers in the vector
+void parallel_task(const std::string& operation, const std::vector<double>& numbers_a, const std::vector<double>& numbers_b, std::vector<double>& numbers_c)
+{
+    if(operation == "add") parallel_add(numbers_a, numbers_b, numbers_c);
+    if(operation == "multiply") parallel_multiply(numbers_a, numbers_b, numbers_c);
+    if(operation == "divide") parallel_divide(numbers_a, numbers_b, numbers_c);
+    if(operation == "power") parallel_power(numbers_a, numbers_b, numbers_c);
+}
+
+
+// Check the sum of an array (serial)
+double check_sum(const std::vector<double>& numbers_c)
+{
+    double sum {};
+    for(const auto& number : numbers_c)
+    {
+        sum = sum + number;
+    }
+    return sum;
+}
+
+
+
+int main(int argc, char** argv) 
+{
+
+    // Must have 4 arguments
+    if (argc < 4) 
+    {
+        std::cerr << "Usage: " << argv[0] << " time_limit   vec_size   operation\n";
+        return 1;
+    }
+
+    // Read in test_time and size of vector
+    double test_time = std::atof(argv[1]);
+    const int N = std::atoi(argv[2]);
+    const std::string operation = argv[3];
+
+
+    if(!(operation == "add" || operation == "multiply" || operation == "divide" || operation == "power"))
+    {
+        std::cout << operation << std::endl;
+        return 1;
+    }
+
+    // Random number generator
+    std::mt19937_64 rng(123456789ULL);
+    std::uniform_real_distribution<double> dist(0.0, 1.0);    // [0.0, 1.0)
+
+    // Vector of numbers
+    std::vector<double> numbers_a;
+    std::vector<double> numbers_b;
+    numbers_a.reserve(N);
+    numbers_b.reserve(N);
+
+    // Populate vectors
+    int last {};
+    for (int i = 0; i < N; ++i) 
+    {
+        numbers_a.emplace_back(dist(rng));
+        numbers_b.emplace_back(dist(rng));
+    }
+
+    double expected_value {};
+
+    // Expected value
+    {
+        std::vector<double> numbers_c(N);
+        serial_task(operation, numbers_a, numbers_b, numbers_c);
+        expected_value = check_sum(numbers_c);
+        std::cout << "Serial computed expected value:  " << expected_value << std::endl;
+    }
+
+
+
+  
+    // ======= Calculation Starts ========
+
+    // Setup
+    auto t0 = std::chrono::steady_clock::now();
+
+
+    // Do calculation
+    auto t1 = std::chrono::steady_clock::now();
+    auto deadline = t1 + std::chrono::duration<double>(test_time);
+    std::uint64_t iters = 0;
+
+    int sum {};
+
+    // Do as many times as possible before time runs out
+    std::vector<double> numbers_c(N);    
+    do 
+    {
+        parallel_task(operation, numbers_a, numbers_b, numbers_c);
+        iters++;
+    } 
+    while (std::chrono::steady_clock::now() < deadline);
+
+    // Clean up
+    auto t2 = std::chrono::steady_clock::now();
+
+
+
+    // Actual end time
+    auto t3 = std::chrono::steady_clock::now();
+
+    // ======= Calculation Ends ========
+
+    
+    double calculated_value = check_sum(numbers_c);
+   
+    double time_setup = std::chrono::duration<double>(t1 - t0).count();
+    double time_calc = std::chrono::duration<double>(t2 - t1).count();
+    double time_cleanup = std::chrono::duration<double>(t3 - t2).count();
+    double time_total = std::chrono::duration<double>(t3 - t0).count();
+    double time_per_iteration = time_calc / iters;
+
+
+    std::string method {"OpenMP"};
+    std::string comments {"operation:" + operation};
+    bool passed_check = std::abs(calculated_value - expected_value) < 1.0e-9;
+
+    std::cout << method << "," 
+              << expected_value << "," 
+              << calculated_value << "," 
+              << iters << "," 
+              << time_per_iteration << "," 
+              << time_setup << "," 
+              << time_calc << "," 
+              << time_cleanup << "," 
+              << time_total << "," 
+              << passed_check << "," 
+              << comments << "" 
+              << std::endl;
+
+
+    
+    return 0;
+
+
+}
