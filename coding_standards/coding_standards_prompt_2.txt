@@ -1,0 +1,703 @@
+You are an expert C++23 scientific/HPC software engineer and code reviewer.
+
+GOAL
+Generate a project-specific C++ coding standard based ONLY on:
+1) The preferences and rules provided below
+2) The code examples pasted below (treat them as canonical style)
+
+Do NOT:
+- Impose external style guides unless explicitly required by the preferences
+- Rewrite the whole codebase; output is a standard, not a refactor plan
+- Recommend “modern C++” patterns that conflict with the stated rules
+- Suggest changes that harm performance in hot paths (assume HPC context)
+
+OUTPUT FORMAT
+Produce a Markdown document with these sections:
+1) Scope and goals
+2) File conventions and layout
+3) Formatting and braces
+4) Naming conventions
+5) Includes, headers, and modules
+6) Namespaces and symbol visibility
+7) Types, initialization, and auto usage
+8) Ownership, lifetime, and pointers
+9) Control flow guidelines (if/switch/enums)
+10) STL usage and algorithms/iterators
+11) Error handling and contracts (assertions/exceptions)
+12) Parallelism (OpenMP)
+13) Documentation (Doxygen)
+14) Forbidden patterns and preferred alternatives
+15) Reviewer checklist
+
+For every rule you define:
+- Label it MUST / SHOULD / MAY
+- Give a brief rationale
+- When helpful, include a short illustrative snippet (keep snippets short; no big rewrites)
+- If you infer a rule from examples, explicitly say “Inferred from examples”
+
+If preferences conflict with examples:
+- Prefer the explicit preferences
+- Otherwise prefer consistency with examples
+
+PROJECT SETTINGS (CANONICAL)
+- Language: C++23
+- Namespaces: use namespaces; full naming only (MUST NOT use `using namespace` or `using <ns>::<symbol>` at file scope)
+- File extensions: .cpp, .hpp, .ixx
+- Indentation: 4 spaces, no tabs
+- Braces: Allman / BSD style
+- Newlines: prefer '\n' over std::endl
+
+NAMING RULES (CANONICAL)
+- Variables: snake_case (e.g., my_integer)
+- Classes/Types: PascalCase (e.g., MyClass)
+- Macro-like “define parameters”: UPPERCASE (e.g., MYPARAMETER)
+- Constants: UPPERCASE_WITH_UNDERSCORES (e.g., MY_CONST_INTEGER)
+
+CODE DESIGN RULES (CANONICAL)
+- No raw owning pointers; use STL smart pointers only for ownership (unique_ptr/shared_ptr)
+  - Raw pointers MAY be used only as non-owning observers if absolutely necessary; otherwise prefer references/spans/iterators.
+- Use #ifdef #define #endif instead of pragmaonce
+- Aim for functions that fit on a screen (encourage decomposition)
+- Prefer std::variant over polymorphism unless polymorphism clearly makes more sense
+- Use STL where available instead of rewriting
+- Use “static classes” only to group related static utility functions (no instances)
+- Use structs where sensible over classes, especially considering porting to GPUs
+- Prefer concrete classes + encapsulation where it makes sense
+- Use namespaces to group a library’s classes and avoid global scope pollution
+- Prefer switch statements where appropriate over long if/else chains
+- Use enums where appropriate; prefer enum class over enum
+- Use std::format for formatting output
+- Prefer i++ over ++i (unless necessary)
+- Prefer iterators / standard algorithms where possible
+- Prefer std::size_t over size_t
+- Prefer brace initialization {} and use empty/zero brace initialization where appropriate
+- Prefer auto type deduction with brace initialization, e.g.:
+    auto my_integer {0};
+    auto my_double {0.0};
+    auto my_counter {std::size_t(0)};
+    auto my_string {std::string("")};
+
+PARALLELISM
+- Use OpenMP for parallel sections where appropriate
+- Provide rules for how OpenMP should appear in code (e.g., minimal scope, avoid hidden sharing bugs, etc.)
+
+DOCUMENTATION
+- Use Doxygen comments for public APIs; define expectations for @file, @brief, @param, @return, @throws, [[nodiscard]] usage, etc.
+
+CODE EXAMPLES (CANONICAL STYLE)
+[PASTE CODE EXAMPLES BELOW THIS LINE]
+
+
+
+[Example 1 Vec3]
+
+
+#ifndef VEC3_HPP
+#define VEC3_HPP
+
+/**************************************************************************************************/
+#include "../Helper/_helper.hpp"
+/**************************************************************************************************/
+
+/**
+ * @file Vec3.hpp
+ * @brief 3D vector class with common linear algebra operations.
+ *
+ * Provides a lightweight 3-component vector type intended for numerical
+ * and scientific computing. Supports arithmetic, norms, dot/cross products,
+ * periodic boundary conditions, and basis transformations.
+ */
+
+namespace Maths
+{
+
+/**
+ * @class Vec3
+ * @brief 3D Cartesian vector.
+ *
+ * Represents a three-dimensional vector with double precision components.
+ * Designed for performance and clarity in scientific and numerical codes.
+ */
+class Vec3
+{
+public:
+
+    //#######################################
+    // Attributes
+    //#######################################
+
+    /** @brief x-component */
+    double x {};
+
+    /** @brief y-component */
+    double y {};
+
+    /** @brief z-component */
+    double z {};
+
+    //#######################################
+    // Constructors
+    //#######################################
+
+    /**
+     * @brief Default constructor.
+     *
+     * Initializes the vector to (0,0,0).
+     */
+    constexpr Vec3() : x(0), y(0), z(0) {}
+
+    /**
+     * @brief Construct from components.
+     * @param x x-component
+     * @param y y-component
+     * @param z z-component
+     */
+    constexpr Vec3(double x, double y, double z) : x(x), y(y), z(z) {}
+
+    //#######################################
+    // Methods
+    //#######################################
+
+    /**
+     * @brief Unary minus.
+     * @return Vector with all components negated.
+     */
+    inline Vec3 operator-() const
+    {
+        return Vec3(-x, -y, -z);
+    }
+
+    /**
+     * @brief Component access by index.
+     * @param i Index (0=x, 1=y, 2=z)
+     * @return Reference to component.
+     * @warning No bounds checking is performed.
+     */
+    inline double& operator[](int i)
+    {
+        return *((&x) + i);
+    }
+
+    /**
+     * @brief Component access by index (const).
+     * @param i Index (0=x, 1=y, 2=z)
+     * @return Const reference to component.
+     * @warning No bounds checking is performed.
+     */
+    inline const double& operator[](int i) const
+    {
+        return *((&x) + i);
+    }
+
+    /**
+     * @brief Euclidean norm of the vector.
+     * @return Vector magnitude.
+     */
+    inline double length() const
+    {
+        return std::sqrt(x * x + y * y + z * z);
+    }
+
+    /**
+     * @brief Squared Euclidean norm.
+     *
+     * Useful for performance-critical code where the true length is not required.
+     *
+     * @return Squared magnitude.
+     */
+    inline double length_squared() const
+    {
+        return x * x + y * y + z * z;
+    }
+
+    /**
+     * @brief Return a normalized copy of the vector.
+     * @return Unit vector in the same direction, or the original vector if zero-length.
+     */
+    inline Vec3 normalize() const
+    {
+        double len = length();
+        return len > 0 ? (*this) / len : *this;
+    }
+
+    /**
+     * @brief Dot product with another vector.
+     * @param other Other vector.
+     * @return Scalar dot product.
+     */
+    inline double dot(const Vec3& other) const
+    {
+        return x * other.x + y * other.y + z * other.z;
+    }
+
+    /**
+     * @brief Cross product with another vector.
+     * @param other Other vector.
+     * @return Cross product vector.
+     */
+    inline Vec3 cross(const Vec3& other) const
+    {
+        return Vec3(
+            y * other.z - z * other.y,
+            z * other.x - x * other.z,
+            x * other.y - y * other.x
+        );
+    }
+
+    /**
+     * @brief Distance to another vector.
+     * @param other Other vector.
+     * @return Euclidean distance.
+     */
+    inline double distance(const Vec3& other) const
+    {
+        return (*this - other).length();
+    }
+
+    /**
+     * @brief Clamp components to a range.
+     * @param minVal Minimum value.
+     * @param maxVal Maximum value.
+     * @return Clamped vector.
+     */
+    inline Vec3 clamp(double minVal = 0.0, double maxVal = 1.0) const
+    {
+        return Vec3(
+            std::clamp(x, minVal, maxVal),
+            std::clamp(y, minVal, maxVal),
+            std::clamp(z, minVal, maxVal)
+        );
+    }
+
+    /**
+     * @brief Apply periodic boundary conditions in a unit cell.
+     *
+     * Wraps all components into the interval [0,1).
+     */
+    void unit_cell_pbc()
+    {
+        x = std::fmod(x, 1.0);
+        y = std::fmod(y, 1.0);
+        z = std::fmod(z, 1.0);
+        if (x < 0.0) x += 1.0;
+        if (y < 0.0) y += 1.0;
+        if (z < 0.0) z += 1.0;
+    }
+
+    /**
+     * @brief Add another vector (in-place).
+     * @param other Vector to add.
+     * @return Reference to this vector.
+     */
+    inline Vec3& operator+=(const Vec3& other)
+    {
+        x += other.x; y += other.y; z += other.z;
+        return *this;
+    }
+
+    /**
+     * @brief Subtract another vector (in-place).
+     * @param other Vector to subtract.
+     * @return Reference to this vector.
+     */
+    inline Vec3& operator-=(const Vec3& other)
+    {
+        x -= other.x; y -= other.y; z -= other.z;
+        return *this;
+    }
+
+    /**
+     * @brief Scale vector (in-place).
+     * @param scalar Scaling factor.
+     * @return Reference to this vector.
+     */
+    inline Vec3& operator*=(double scalar)
+    {
+        x *= scalar; y *= scalar; z *= scalar;
+        return *this;
+    }
+
+    /**
+     * @brief Divide vector by scalar (in-place).
+     * @param scalar Divisor.
+     * @return Reference to this vector.
+     * @throws std::invalid_argument if scalar is zero.
+     */
+    inline Vec3& operator/=(double scalar)
+    {
+        if (scalar == 0.0) THROW_INVALID_ARGUMENT("Divide by zero error.");
+        x /= scalar; y /= scalar; z /= scalar;
+        return *this;
+    }
+
+    /**
+     * @brief Set all components to zero.
+     */
+    void zero() noexcept
+    {
+        x = 0.0;
+        y = 0.0;
+        z = 0.0;
+    }
+
+    //#######################################
+    // Static utilities
+    //#######################################
+
+    /**
+     * @brief Component-wise minimum of two vectors.
+     */
+    inline static Vec3 min(const Vec3& a, const Vec3& b) noexcept
+    {
+        return Vec3(
+            std::min(a.x, b.x),
+            std::min(a.y, b.y),
+            std::min(a.z, b.z)
+        );
+    }
+
+    /**
+     * @brief Component-wise maximum of two vectors.
+     */
+    inline static Vec3 max(const Vec3& a, const Vec3& b) noexcept
+    {
+        return Vec3(
+            std::max(a.x, b.x),
+            std::max(a.y, b.y),
+            std::max(a.z, b.z)
+        );
+    }
+
+    /**
+     * @brief Separation vector in a general lattice basis.
+     *
+     * @param alat Lattice constant.
+     * @param basis 3x3 basis matrix stored row-major.
+     * @param a First position.
+     * @param b Second position.
+     * @return Separation vector in Cartesian coordinates.
+     */
+    [[nodiscard]]
+    inline static Vec3 separation(
+        double alat,
+        const std::array<double, 9>& basis,
+        const Vec3& a,
+        const Vec3& b) noexcept
+    {
+        const double dx = b.x - a.x;
+        const double dy = b.y - a.y;
+        const double dz = b.z - a.z;
+
+        const auto M = [&](int r, int c) noexcept { return basis[r * 3 + c]; };
+
+        const double s0 = M(0,0)*dx + M(0,1)*dy + M(0,2)*dz;
+        const double s1 = M(1,0)*dx + M(1,1)*dy + M(1,2)*dz;
+        const double s2 = M(2,0)*dx + M(2,1)*dy + M(2,2)*dz;
+
+        return Vec3(alat * s0, alat * s1, alat * s2);
+    }
+
+    //#######################################
+    // Friends
+    //#######################################
+
+    /**
+     * @brief Stream output operator.
+     */
+    friend inline std::ostream& operator<<(std::ostream& os, const Vec3& v)
+    {
+        return os << "[" << v.x << ", " << v.y << ", " << v.z << "]";
+    }
+
+    /** @brief Vector addition */
+    friend inline Vec3 operator+(const Vec3& a, const Vec3& b)
+    {
+        return Vec3(a.x + b.x, a.y + b.y, a.z + b.z);
+    }
+
+    /** @brief Vector subtraction */
+    friend inline Vec3 operator-(const Vec3& a, const Vec3& b)
+    {
+        return Vec3(a.x - b.x, a.y - b.y, a.z - b.z);
+    }
+
+    /** @brief Scalar multiplication */
+    friend inline Vec3 operator*(const Vec3& a, double s)
+    {
+        return Vec3(a.x * s, a.y * s, a.z * s);
+    }
+
+    /** @brief Scalar multiplication */
+    friend inline Vec3 operator*(double s, const Vec3& a)
+    {
+        return a * s;
+    }
+
+    /** @brief Matrix-vector multiplication (C-style 3x3 matrix) */
+    friend inline Vec3 operator*(const double (&m)[3][3], const Vec3& v)
+    {
+        return {
+            m[0][0]*v.x + m[0][1]*v.y + m[0][2]*v.z,
+            m[1][0]*v.x + m[1][1]*v.y + m[1][2]*v.z,
+            m[2][0]*v.x + m[2][1]*v.y + m[2][2]*v.z
+        };
+    }
+
+    /** @brief Matrix-vector multiplication (std::array basis) */
+    friend inline Vec3 operator*(const std::array<double, 9>& basis, const Vec3& v)
+    {
+        return {
+            basis[0]*v.x + basis[1]*v.y + basis[2]*v.z,
+            basis[3]*v.x + basis[4]*v.y + basis[5]*v.z,
+            basis[6]*v.x + basis[7]*v.y + basis[8]*v.z
+        };
+    }
+
+    /** @brief Scalar division */
+    friend inline Vec3 operator/(const Vec3& a, double s)
+    {
+        if (s == 0.0) THROW_INVALID_ARGUMENT("Divide by zero error.");
+        return Vec3(a.x / s, a.y / s, a.z / s);
+    }
+};
+
+} // namespace Maths
+
+#endif // VEC3_HPP
+
+
+
+
+[Example 2 function containint parallel code]
+
+
+void parallel_add(const std::vector<double>& numbers_a, const std::vector<double>& numbers_b, std::vector<double>& numbers_c)
+{
+    const auto n {std::size_t(numbers_a.size())};
+
+    #pragma omp parallel for simd schedule(static)
+    for (auto i = std::size_t(0); i < n; i++) 
+    {
+        numbers_c[i] = numbers_a[i] + numbers_b[i];
+    }
+}
+
+
+
+
+
+[Example 3 sample helper macros to be used]
+
+
+#ifndef MACROS_HPP
+#define MACROS_HPP
+
+
+/*********************************************************************************************************************************/
+#include "../Helper/_helper.hpp"
+/*********************************************************************************************************************************/
+
+
+
+#define CLASS_SET_GET(Class, attribute)                                      \
+    inline void set_##attribute(Class& attribute)                            \
+    {                                                                        \
+        _##attribute = std::move(attribute);                                 \
+    }                                                                        \
+                                                                             \
+    Class& get_##attribute()                                                 \
+    {                                                                        \
+        return _##attribute;                                                 \
+    }                                                                        \
+                                                                             \
+    const Class& get_##attribute() const                                     \
+    {                                                                        \
+        return _##attribute;                                                 \
+    }                                                                        \
+                                                                             \
+    Class get_##attribute##_copy() const                                     \
+    {                                                                        \
+        return _##attribute;                                                 \
+    }
+
+
+#define DOUBLE_SET_GET(attribute)                                            \
+    inline void set_##attribute(double attribute)                            \
+    {                                                                        \
+        _##attribute = attribute;                                            \
+    }                                                                        \
+                                                                             \
+    double get_##attribute() const                                    \
+    {                                                                        \
+        return _##attribute;                                                 \
+    }
+
+
+#define SIZE_T_SET_GET(attribute)                                            \
+    inline void set_##attribute(std::size_t attribute)                            \
+    {                                                                        \
+        _##attribute = attribute;                                            \
+    }                                                                        \
+                                                                             \
+    std::size_t get_##attribute() const                                    \
+    {                                                                        \
+        return _##attribute;                                                 \
+    }
+
+
+#define STRING_SET_GET(attribute)                                            \
+    inline void set_##attribute(std::string& attribute)                            \
+    {                                                                        \
+        _##attribute = std::move(attribute);                                 \
+    }                                                                        \
+                                                                             \
+    std::string& get_##attribute()                                                 \
+    {                                                                        \
+        return _##attribute;                                                 \
+    }                                                                        \
+                                                                             \
+    const std::string& get_##attribute() const                                     \
+    {                                                                        \
+        return _##attribute;                                                 \
+    }                                                                        \
+                                                                             \
+    std::string get_##attribute##_copy() const                                     \
+    {                                                                        \
+        return _##attribute;                                                 \
+    }
+
+    
+#define ARRAY9_SET_GET(attribute)                                            \
+    inline void set_##attribute(const std::array<double, 9>& attribute)      \
+    {                                                                        \
+        _##attribute = attribute;                                            \
+    }                                                                        \
+                                                                             \
+    inline const std::array<double, 9>& get_##attribute() const              \
+    {                                                                        \
+        return _##attribute;                                                 \
+    }                                                                        \
+                                                                             \
+    inline std::array<double, 9>& get_##attribute()                          \
+    {                                                                        \
+        return _##attribute;                                                 \
+    }
+
+
+
+#define SINGLETON(Class)  \
+    class Class##Once  \
+    {  \
+    public:  \
+        inline static Class& get() { static Class instance; return instance; }   \
+        inline static const Class& get_ro() { static Class instance; return instance; }   \
+    private: \
+        Class##Once() {}; \
+        ~Class##Once() = default; \
+        Class##Once(const Class##Once&) = delete; \
+        Class##Once& operator=(const Class##Once&) = delete; \
+        Class##Once(Class##Once&&) = delete; \
+        Class##Once& operator=(const Class##Once&&) = delete; \
+    };
+
+
+
+#define ITERATOR(Type, Attribute) \
+    std::vector<Type>::iterator begin() { return Attribute.begin(); } \
+    std::vector<Type>::iterator end()   { return Attribute.end(); } \
+    std::vector<Type>::const_iterator begin() const { return Attribute.begin(); } \
+    std::vector<Type>::const_iterator end()   const { return Attribute.end(); } \
+    std::vector<Type>::const_iterator cbegin() const { return Attribute.cbegin(); } \
+    std::vector<Type>::const_iterator cend()   const { return Attribute.cend(); }
+
+#endif
+
+
+
+[Example 4 error macros to be used] 
+
+
+#ifndef ERROR_HPP
+#define ERROR_HPP
+
+#include <iostream>
+#include <stdexcept>
+#include <string>
+
+// Helper for stringification
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+
+// Macro to throw std::invalid_argument with context
+#define THROW_INVALID_ARGUMENT(msg) \
+    throw std::invalid_argument( \
+        std::string("\n[INVALID_ARGUMENT] \nError message:  ") + msg + \
+        "\n  File: " + __FILE__ + \
+        "\n  Line: " + TOSTRING(__LINE__) + \
+        "\n  Function: " + __func__ \
+    )
+
+#define THROW_RUNTIME_ERROR(msg) \
+    throw std::runtime_error( \
+        std::string("\n[RUNTIME_ERROR] \nError message:  ") + msg + \
+        "\n  File: " + __FILE__ + \
+        "\n  Line: " + TOSTRING(__LINE__) + \
+        "\n  Function: " + __func__ \
+    )    
+
+#endif
+
+
+
+
+[Example 5 a struct example]
+
+
+#ifndef ATOM_HPP
+#define ATOM_HPP
+
+/*********************************************************************************************************************************/
+#include "../Helper/_helper.hpp"
+#include "../Maths/_maths.hpp"
+/*********************************************************************************************************************************/
+
+namespace SimpleMD
+{
+
+struct Atom
+{
+
+public:
+
+    std::size_t atom_type {};
+    std::size_t atom_id {};
+
+    Maths::Vec3 position {};
+    Maths::Vec3 force {};
+    Maths::Vec3 velocity {};
+    double mass {};
+    double inv_mass {};
+    Maths::Vec3 scratch {};
+
+    Atom() {}
+    Atom(const std::size_t id, const double x, const double y, const double z, const double mass) :
+        atom_id(id), position(x, y, z), mass(std::max(mass, 1.0e-20)), inv_mass(1.0 / std::max(mass, 1.0e-20))  
+        {}
+
+    void set_position(Maths::Vec3 position_in)
+    {
+        position = position_in;
+        position.unit_cell_pbc();
+    }
+
+};
+
+}
+
+#endif
+
+
+
+TASK
+Generate the coding standard in Markdown. Make it actionable, specific, and consistent with the examples.
+End with a compact reviewer checklist and a short “exceptions” section listing any cases where deviating is acceptable.
