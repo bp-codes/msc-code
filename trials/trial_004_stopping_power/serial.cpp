@@ -140,12 +140,9 @@ static inline double stopping_power(
     // ----------------------------
     // Mass stopping power [MeV·cm^2/g] and linear stopping power [MeV/cm]
     // ----------------------------
-    const double projectile_charge_squared =
-        static_cast<double>(projectile_atomic_number)
-      * static_cast<double>(projectile_atomic_number);
+    const double projectile_charge_squared = static_cast<double>(projectile_atomic_number) * static_cast<double>(projectile_atomic_number);
 
-    const double z_over_a =
-        static_cast<double>(target_atomic_number) / target_atomic_mass;
+    const double z_over_a = static_cast<double>(target_atomic_number) / target_atomic_mass;
 
     const double prefactor_mass = bethe_constant * projectile_charge_squared * z_over_a / beta2;
 
@@ -163,19 +160,31 @@ static inline double stopping_power(
 
 void serial_task(const std::vector<double>& velocity_array, std::vector<double>& results)
 {
+    // Set values
+    const auto projectile_atomic_number {1};
+    const auto projectile_atomic_mass {1.008};
+    const auto target_atomic_number {26};
+    const auto target_atomic_mass {55.845};
+    const auto target_density {7.874};
+    const auto mean_excitation_energy_mev {286.0};
+    const auto density_effect_delta {0.0};
+    const auto shell_correction_c_over_z {0.0};
+    const auto include_spin_half_correction {false};
+
+    // Loop over ion projectiles
     for(size_t i=0; i<velocity_array.size(); i++)
     {
         results[i] = stopping_power(
             velocity_array[i],
-            1,
-            1.008,
-            26,
-            55.845,
-            7.874,
-            286.0,
-            0.0,
-            0.0,
-            false
+            projectile_atomic_number,
+            projectile_atomic_mass,
+            target_atomic_number,
+            target_atomic_mass,
+            target_density,
+            mean_excitation_energy_mev,
+            density_effect_delta,
+            shell_correction_c_over_z,
+            include_spin_half_correction
         );
     }
 
