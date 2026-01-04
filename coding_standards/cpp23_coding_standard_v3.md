@@ -64,6 +64,8 @@ The following keywords indicate requirement levels in this document:
   *Rationale:* maintainability + reviewability.
 - **SHOULD** aim for functions that “fit on a screen” (roughly ≤ ~60–80 lines).  
   *Rationale:* encourages cohesion and testability.
+- **SHOULD** separate functions with 3 blank lines.
+- **SHOULD** have no more than one blank line within a function.
 
 ---
 
