@@ -289,11 +289,13 @@ The following keywords indicate requirement levels in this document:
   **Prefer:** include guards.
 - **MUST NOT** use `using namespace ...` at file scope.  
   **Prefer:** fully qualified names.
-- **MUST NOT** use `std::endl` for normal output.  
-  **Prefer:** `'
-'`.
 - **MUST NOT** use C-style casts.  
   **Prefer:** `static_cast` (and other C++ casts where appropriate).
+- **SHOULD NOT** use `std::endl` for normal output.  
+  **Prefer:** `'
+'`.
+- **SHOULD** use `std::format` for formatted output (if available).  
+  *Rationale* A clearer method for outputting formatted data.
 - **SHOULD NOT** write long `if/else` ladders on discrete modes.  
   **Prefer:** `enum class` + `switch`.
 - **SHOULD NOT** reimplement STL utilities.  
