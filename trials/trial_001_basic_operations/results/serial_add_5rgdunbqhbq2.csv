@@ -1,0 +1,2 @@
+method,expected_value,calculated_value,iterations,time_per_iteration,time_setup,time_calc,time_cleanup,time_total,max_rss_kb,passed_check,comments
+Serial,1000430.1995739531,1000430.1995739531,3511,1.424213110e-03,0.000000,5.000412,0.000000,5.000412,27232,1,operation:add

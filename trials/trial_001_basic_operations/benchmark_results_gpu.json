@@ -1,0 +1,147 @@
+{
+  "meta": {
+    "runs_per_app": 5
+  },
+  "results": [
+    {
+      "app": "sycl.x",
+      "run": 1,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.52,
+        "max_rss_kb": 172096
+      },
+      "program_metrics": {"method":"Parallel SYCL","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":29105,"time_per_iteration":1.780376374e-04,"time_setup":0.201301,"time_calc":5.181785,"time_cleanup":0.000611,"time_total":5.383698,"passed_check":1,"comments":"operation:add"}
+    },
+    {
+      "app": "sycl.x",
+      "run": 2,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.52,
+        "max_rss_kb": 171948
+      },
+      "program_metrics": {"method":"Parallel SYCL","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":29456,"time_per_iteration":1.759396882e-04,"time_setup":0.197061,"time_calc":5.182479,"time_cleanup":0.000654,"time_total":5.380194,"passed_check":1,"comments":"operation:add"}
+    },
+    {
+      "app": "sycl.x",
+      "run": 3,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.50,
+        "max_rss_kb": 172208
+      },
+      "program_metrics": {"method":"Parallel SYCL","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":31863,"time_per_iteration":1.621879813e-04,"time_setup":0.196213,"time_calc":5.167796,"time_cleanup":0.000662,"time_total":5.364671,"passed_check":1,"comments":"operation:add"}
+    },
+    {
+      "app": "sycl.x",
+      "run": 4,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.51,
+        "max_rss_kb": 172472
+      },
+      "program_metrics": {"method":"Parallel SYCL","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":30702,"time_per_iteration":1.682228129e-04,"time_setup":0.197237,"time_calc":5.164777,"time_cleanup":0.000650,"time_total":5.362664,"passed_check":1,"comments":"operation:add"}
+    },
+    {
+      "app": "sycl.x",
+      "run": 5,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.52,
+        "max_rss_kb": 172532
+      },
+      "program_metrics": {"method":"Parallel SYCL","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":30986,"time_per_iteration":1.668134775e-04,"time_setup":0.217501,"time_calc":5.168882,"time_cleanup":0.000631,"time_total":5.387015,"passed_check":1,"comments":"operation:add"}
+    },
+    {
+      "app": "cuda.x",
+      "run": 1,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.52,
+        "max_rss_kb": 122980
+      },
+      "program_metrics": {"method":"Parallel CUDA","expected_value":1000430.1995739449,"calculated_value":1000430.1995739449,"iterations":30253,"time_per_iteration":1.713323783e-04,"time_setup":0.185357,"time_calc":5.183318,"time_cleanup":0.000650,"time_total":5.369326,"passed_check":1,"comments":"operation:add"}
+    },
+    {
+      "app": "cuda.x",
+      "run": 2,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.53,
+        "max_rss_kb": 123124
+      },
+      "program_metrics": {"method":"Parallel CUDA","expected_value":1000430.1995739449,"calculated_value":1000430.1995739449,"iterations":31063,"time_per_iteration":1.664671195e-04,"time_setup":0.180177,"time_calc":5.170968,"time_cleanup":0.000659,"time_total":5.351804,"passed_check":1,"comments":"operation:add"}
+    },
+    {
+      "app": "cuda.x",
+      "run": 3,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.55,
+        "max_rss_kb": 123276
+      },
+      "program_metrics": {"method":"Parallel CUDA","expected_value":1000430.1995739449,"calculated_value":1000430.1995739449,"iterations":30319,"time_per_iteration":1.708279461e-04,"time_setup":0.183619,"time_calc":5.179332,"time_cleanup":0.000656,"time_total":5.363607,"passed_check":1,"comments":"operation:add"}
+    },
+    {
+      "app": "cuda.x",
+      "run": 4,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.50,
+        "max_rss_kb": 123048
+      },
+      "program_metrics": {"method":"Parallel CUDA","expected_value":1000430.1995739449,"calculated_value":1000430.1995739449,"iterations":30232,"time_per_iteration":1.710741714e-04,"time_setup":0.175256,"time_calc":5.171914,"time_cleanup":0.000646,"time_total":5.347816,"passed_check":1,"comments":"operation:add"}
+    },
+    {
+      "app": "cuda.x",
+      "run": 5,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.53,
+        "max_rss_kb": 123236
+      },
+      "program_metrics": {"method":"Parallel CUDA","expected_value":1000430.1995739449,"calculated_value":1000430.1995739449,"iterations":29355,"time_per_iteration":1.760778005e-04,"time_setup":0.174552,"time_calc":5.168764,"time_cleanup":0.000651,"time_total":5.343967,"passed_check":1,"comments":"operation:add"}
+    }
+  ]
+}
