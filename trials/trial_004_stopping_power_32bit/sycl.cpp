@@ -1,18 +1,28 @@
 // sycl_stopping_power_usm.cpp
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
-#include <iomanip>
 #include <iostream>
-#include <limits>
 #include <random>
 #include <string>
-
+#include <vector>
 #include <sycl/sycl.hpp>
+#if defined(__cpp_lib_format)
+    #include <format>
+#endif
 
-// Use std::log on host, sycl::log on device (so the same function works both places)
-static inline float my_log(float x) {
+
+/**
+ * @brief Log function usable on host and SYCL device.
+ *
+ * @param x Input value.
+ * @return Natural logarithm of x.
+ */
+[[nodiscard]]
+static inline float sycl_compatible_log(const float x)
+{
 #ifdef __SYCL_DEVICE_ONLY__
     return sycl::log(x);
 #else
@@ -20,7 +30,17 @@ static inline float my_log(float x) {
 #endif
 }
 
-static inline float my_sqrt(float x) {
+
+
+/**
+ * @brief Square-root function usable on host and SYCL device.
+ *
+ * @param x Input value.
+ * @return Square root of x.
+ */
+[[nodiscard]]
+static inline float sycl_compatible_sqrt(const float x)
+{
 #ifdef __SYCL_DEVICE_ONLY__
     return sycl::sqrt(x);
 #else
@@ -29,182 +49,361 @@ static inline float my_sqrt(float x) {
 }
 
 
-static inline float stopping_power_fe(const float v_m_per_s) 
+
+/**
+ * @brief Linear stopping power (dE/dx) for a charged ion in a material using the PDG Bethe equation.
+ *
+ * Implements the PDG "Bethe equation" for heavy charged particles, including:
+ *  - W_max from PDG Eq. (34.4)
+ *  - stopping-power bracket from PDG Eq. (34.5), including the density-effect term -delta/2
+ *  - optional spin-1/2 correction term +(W_max/E)^2/4 (PDG footnote)
+ *  - optional shell correction term -C/Z (PDG low-energy discussion)
+ *
+ * Returns *linear stopping power* in MeV/cm:
+ *   (dE/dx)_linear = rho * (dE/dx)_mass
+ *
+ * Assumes that input values have already been checked as valid.
+ *
+ * @param projectile_velocity_ms
+ *      Projectile velocity in metres per second.
+ * @param projectile_atomic_number
+ *      Projectile charge number z (number of protons in the ion).
+ * @param projectile_atomic_mass_mev
+ *      Projectile rest mass energy Mc^2 in MeV.
+ * @param target_atomic_number
+ *      Atomic number Z of the target material.
+ * @param target_atomic_mass_g_mol
+ *      Atomic mass A of the target material in g/mol.
+ * @param target_density_g_cm3
+ *      Target density rho in g/cm^3.
+ * @param mean_excitation_energy_mev
+ *      Mean excitation energy I in MeV.
+ * @param density_effect_delta
+ *      Density-effect correction delta(beta*gamma) (dimensionless). Use 0 if not applying.
+ * @param shell_correction_c_over_z
+ *      Shell correction term C/Z (dimensionless). Use 0 if not applying.
+ *      (Included in square brackets as -C/Z.)
+ * @param include_spin_half_correction
+ *      If true, includes the PDG spin-1/2 correction term +(W_max/E)^2/4 in the square brackets.
+ *
+ * @return
+ *      Linear stopping power dE/dx in MeV/cm.
+ *
+ * @warning
+ *      This routine does not validate inputs. In particular, beta must be in (0, 1).
+ *      This implementation clamps beta to avoid divide-by-zero and gamma overflow; that changes physics.
+ */
+[[nodiscard]]
+static inline float stopping_power(
+    const float projectile_velocity_ms,
+    const int projectile_atomic_number,
+    const float projectile_atomic_mass_mev,
+    const int target_atomic_number,
+    const float target_atomic_mass_g_mol,
+    const float target_density_g_cm3,
+    const float mean_excitation_energy_mev,
+    const float density_effect_delta,
+    const float shell_correction_c_over_z,
+    const bool include_spin_half_correction)
 {
-    static constexpr float c     = 299792458.0f;
-    static constexpr float me    = 0.51099895000f;
-    static constexpr float K     = 0.307075f;
+    // Fundamental constants (PDG)
+    static constexpr float SPEED_OF_LIGHT_MS {299792458.0f};    ///< [m/s]
+    static constexpr float ELECTRON_MASS_MEV {0.51099895f};     ///< [MeV]
+    static constexpr float BETHE_CONSTANT_K  {0.307075f};       ///< [MeV·cm^2/mol]
 
-    static constexpr float Z     = 26.0f;
-    static constexpr float A     = 55.845f;
-    static constexpr float rho   = 7.874f;
-    static constexpr float I     = 286.0e-6f;
+    // Relativistic kinematics
+    const auto beta_raw {projectile_velocity_ms / SPEED_OF_LIGHT_MS};
+    const auto beta {std::clamp(beta_raw, 1.0e-9f, 0.99999f)};
+    const auto beta2 {beta * beta};
 
-    static constexpr float M     = 938.2720813f;
+    const auto inv_one_minus_beta2 {1.0f / (1.0f - beta2)};
+    const auto gamma2 {inv_one_minus_beta2};
+    const auto gamma {sycl_compatible_sqrt(gamma2)};
 
-    const float beta  = v_m_per_s / c;
-    const float beta2 = beta * beta;
-    const float inv_1_minus_beta2 = 1.0f / (1.0f - beta2);
-    const float gamma2 = inv_1_minus_beta2;              // gamma^2
-    const float gamma  = my_sqrt(gamma2);             // or std::sqrt on host via my_* wrappers
+    // Total energy E = gamma * M c^2 [MeV]
+    const auto total_energy_mev {gamma * projectile_atomic_mass_mev};
 
-    const float me_over_M = me / M;
+    // Maximum energy transfer W_max (PDG Eq. 34.4)
+    const auto electron_to_projectile_mass {ELECTRON_MASS_MEV / projectile_atomic_mass_mev};
 
-    const float numerator = 2.0f * me * beta2 * gamma2;
-    const float denom = 1.0f + 2.0f * gamma * me_over_M + (me_over_M * me_over_M);
-    const float Tmax = numerator / denom;
+    const auto w_max_numerator {2.0f * ELECTRON_MASS_MEV * beta2 * gamma2};
+    const auto w_max_denominator = std::max(
+        1.0f
+      + 2.0f * gamma * electron_to_projectile_mass
+      + (electron_to_projectile_mass * electron_to_projectile_mass),
+        1.0e-12f);
 
-    const float logArg = (2.0f * me * beta2 * gamma2 * Tmax) / (I * I);
+    const auto w_max_mev {w_max_numerator / w_max_denominator};
 
-    const float prefactor = K * (Z / A) / beta2;
-    const float bracket   = 0.5f * my_log(logArg) - beta2;
+    // Logarithmic argument (PDG Eq. 34.5)
+    const auto mean_excitation_energy2_mev2
+        {mean_excitation_energy_mev * mean_excitation_energy_mev};
 
-    return (prefactor * bracket) * rho;
+    const auto log_argument = std::max(
+        (2.0f * ELECTRON_MASS_MEV * beta2 * gamma2 * w_max_mev)
+        / mean_excitation_energy2_mev2,
+        1.0f);
+
+    // Square-bracketed term (PDG Eq. 34.5 + optional corrections)
+    auto bracket =
+        0.5f * sycl_compatible_log(log_argument)
+      - beta2
+      - 0.5f * density_effect_delta
+      - shell_correction_c_over_z;
+
+    if (include_spin_half_correction)
+    {
+        const auto w_over_e
+            {w_max_mev / std::max(total_energy_mev, 1.0e-12f)};
+        bracket += 0.25f * (w_over_e * w_over_e); // +(W_max/E)^2 / 4
+    }
+
+    // Mass stopping power [MeV·cm^2/g] and linear stopping power [MeV/cm]
+    const auto projectile_charge {static_cast<float>(projectile_atomic_number)};
+    const auto projectile_charge2 {projectile_charge * projectile_charge};
+
+    const auto z_over_a
+        {static_cast<float>(target_atomic_number) / target_atomic_mass_g_mol};
+
+    const auto prefactor_mass
+        {BETHE_CONSTANT_K * projectile_charge2 * z_over_a / beta2};
+
+    const auto mass_stopping_power_mev_cm2_per_g
+        {prefactor_mass * bracket};
+
+    const auto linear_stopping_power_mev_per_cm
+        {target_density_g_cm3 * mass_stopping_power_mev_cm2_per_g};
+
+    return linear_stopping_power_mev_per_cm;
 }
 
 
 
-// Serial: compute sum directly (matches host sum of per-element values)
-float serial_expected_sum(const float* velocity_array, std::size_t n) 
+/**
+ * @brief Compute stopping power for an array of projectile velocities (serial).
+ *
+ * @param velocity_array Projectile velocities in m/s.
+ * @param results Output array (must be pre-sized to match velocity_array).
+ *
+ * @warning
+ *      This routine does not validate sizes; callers must ensure `results.size() == velocity_array.size()`.
+ */
+static inline void serial_task(
+    const std::vector<float>& velocity_array,
+    std::vector<float>& results)
 {
-    float sum = 0.0f;
-    for (std::size_t i = 0; i < n; ++i) {
-        sum += stopping_power_fe(velocity_array[i]);
+    static constexpr int   PROJECTILE_ATOMIC_NUMBER {1};
+    static constexpr float PROJECTILE_ATOMIC_MASS_MEV {938.2720813f};
+
+    static constexpr int   TARGET_ATOMIC_NUMBER {26};
+    static constexpr float TARGET_ATOMIC_MASS_G_MOL {55.845f};
+    static constexpr float TARGET_DENSITY_G_CM3 {7.874f};
+
+    static constexpr float MEAN_EXCITATION_ENERGY_MEV {286.0e-6f};
+    static constexpr float DENSITY_EFFECT_DELTA {0.0f};
+    static constexpr float SHELL_CORRECTION_C_OVER_Z {0.0f};
+    static constexpr bool  INCLUDE_SPIN_HALF_CORRECTION {false};
+
+    const auto n {std::size_t(velocity_array.size())};
+
+    for (auto i = std::size_t(0); i < n; i++)
+    {
+        results[i] = stopping_power(
+            velocity_array[i],
+            PROJECTILE_ATOMIC_NUMBER,
+            PROJECTILE_ATOMIC_MASS_MEV,
+            TARGET_ATOMIC_NUMBER,
+            TARGET_ATOMIC_MASS_G_MOL,
+            TARGET_DENSITY_G_CM3,
+            MEAN_EXCITATION_ENERGY_MEV,
+            DENSITY_EFFECT_DELTA,
+            SHELL_CORRECTION_C_OVER_Z,
+            INCLUDE_SPIN_HALF_CORRECTION);
+    }
+}
+
+
+
+/**
+ * @brief Fill per-particle stopping power array on device (USM device allocations).
+ */
+[[nodiscard]]
+static inline sycl::event sycl_task(
+    sycl::queue& queue,
+    const std::size_t n,
+    const float* const velocity_device,
+    float* const stopping_power_device)
+{
+    return queue.parallel_for(
+        sycl::range<1>(n),
+        [=](sycl::item<1> item)
+        {
+            static constexpr int   PROJECTILE_ATOMIC_NUMBER {1};
+            static constexpr float PROJECTILE_ATOMIC_MASS_MEV {938.2720813f};
+
+            static constexpr int   TARGET_ATOMIC_NUMBER {26};
+            static constexpr float TARGET_ATOMIC_MASS_G_MOL {55.845f};
+            static constexpr float TARGET_DENSITY_G_CM3 {7.874f};
+
+            static constexpr float MEAN_EXCITATION_ENERGY_MEV {286.0e-6f};
+            static constexpr float DENSITY_EFFECT_DELTA {0.0f};
+            static constexpr float SHELL_CORRECTION_C_OVER_Z {0.0f};
+            static constexpr bool  INCLUDE_SPIN_HALF_CORRECTION {false};
+
+            const auto i {item.get_linear_id()};
+
+            stopping_power_device[i] = stopping_power(
+                velocity_device[i],
+                PROJECTILE_ATOMIC_NUMBER,
+                PROJECTILE_ATOMIC_MASS_MEV,
+                TARGET_ATOMIC_NUMBER,
+                TARGET_ATOMIC_MASS_G_MOL,
+                TARGET_DENSITY_G_CM3,
+                MEAN_EXCITATION_ENERGY_MEV,
+                DENSITY_EFFECT_DELTA,
+                SHELL_CORRECTION_C_OVER_Z,
+                INCLUDE_SPIN_HALF_CORRECTION);
+        });
+}
+
+
+
+/**
+ * @brief Compute the sum of an array (serial).
+ */
+[[nodiscard]]
+static inline float check_sum(const std::vector<float>& values) noexcept
+{
+    auto sum {0.0f};
+    for (const auto value : values)
+    {
+        sum += value;
     }
     return sum;
 }
 
-// Serial: fill per-particle stopping power array (optional helper)
-void serial_task(std::size_t n, const float* velocity_array, float* stopping_power) {
-    for (std::size_t i = 0; i < n; ++i) 
-    {
-        stopping_power[i] = stopping_power_fe(velocity_array[i]);
-    }
-}
 
-// SYCL: fill per-particle stopping power array on device
-sycl::event sycl_task(
-    sycl::queue& q,
-    std::size_t n,
-    const float* velocity_array,
-    float* stopping_power
-) {
-  return q.parallel_for(sycl::range<1>(n), [=](sycl::item<1> it) {
-      const std::size_t i = it.get_linear_id();
-      stopping_power[i] = stopping_power_fe(velocity_array[i]);
-  });
-}
 
-int main(int argc, char** argv) {
-    if (argc < 3) 
+int main(int argc, char** argv)
+{
+    if (argc < 3)
     {
-        std::cerr << "Usage: " << argv[0] << " time_limit   vec_size\n";
+        std::cerr << "Usage: " << argv[0] << " time_limit vec_size\n";
         return 1;
     }
 
-    const double test_time = std::atof(argv[1]);
-    const std::size_t N = static_cast<std::size_t>(std::atoll(argv[2]));
+    const auto test_time_s {std::atof(argv[1])};
+    const auto n_raw {std::atoll(argv[2])};
 
-    // Setup timing start
-    auto t0 = std::chrono::steady_clock::now();
-
-    sycl::queue q{sycl::default_selector_v};
-    std::cerr << "Using device: "
-              << q.get_device().get_info<sycl::info::device::name>() << "\n";
-
-    // Allocate 
-    float* velocity_host = sycl::malloc_shared<float>(N, q);
-    float* stopping_power_host = sycl::malloc_shared<float>(N, q);
-
-    float* velocity_device = sycl::malloc_device<float>(N, q);
-    float* stopping_power_device = sycl::malloc_device<float>(N, q);
-
-    if (!velocity_device || !stopping_power_device || !velocity_host || !stopping_power_host) 
+    if (n_raw <= 0)
     {
-        std::cerr << "Memory allocation failed\n";
-        return 2;
+        std::cerr << "vec_size must be a positive integer\n";
+        return 1;
     }
 
-    // Fill input once (host writes shared memory)
+    const auto n {static_cast<std::size_t>(n_raw)};
+
+    const auto t0 {std::chrono::steady_clock::now()};
+
+    sycl::queue queue {sycl::default_selector_v};
+    std::cerr << "Using device: "
+              << queue.get_device().get_info<sycl::info::device::name>()
+              << '\n';
+
+    auto* velocity_host {sycl::malloc_shared<float>(n, queue)};
+    auto* stopping_power_host {sycl::malloc_shared<float>(n, queue)};
+    auto* velocity_device {sycl::malloc_device<float>(n, queue)};
+    auto* stopping_power_device {sycl::malloc_device<float>(n, queue)};
+
     std::mt19937_64 rng(123456789ULL);
     std::uniform_real_distribution<float> dist(0.0f, 1.0f);
-    for (std::size_t i = 0; i < N; ++i) 
+
+    for (auto i = std::size_t(0); i < n; i++)
     {
         velocity_host[i] = 1.0e6f * dist(rng);
     }
 
-    // Expected serial value (host)
-    const float expected_value = serial_expected_sum(velocity_host, N);
-    std::cout << "Serial computed expected value:  " << expected_value << "\n";
-
-    q.memcpy(velocity_device, velocity_host, sizeof(float) * N).wait();
-
-    // Calc timing start
-    auto t1 = std::chrono::steady_clock::now();
-    auto deadline = t1 + std::chrono::duration<double>(test_time);
-    std::uint64_t iters = 0;
-
-
-    // Run as many iterations as possible
-    sycl::event last;
-    do 
+    float expected_value {0.0f};
     {
-        last = sycl_task(q, N, velocity_device, stopping_power_device);
+        auto v {std::vector<float>(velocity_host, velocity_host + n)};
+        auto s {std::vector<float>(n)};
+        serial_task(v, s);
+        expected_value = check_sum(s);
+    }
+
+    queue.memcpy(velocity_device, velocity_host, sizeof(float) * n).wait();
+
+    const auto t1 {std::chrono::steady_clock::now()};
+    const auto deadline {t1 + std::chrono::duration<double>(test_time_s)};
+    auto iters {std::uint64_t(0)};
+
+    sycl::event last_event;
+    do
+    {
+        last_event = sycl_task(queue, n, velocity_device, stopping_power_device);
         ++iters;
-    } while (std::chrono::steady_clock::now() < deadline);
+    }
+    while (std::chrono::steady_clock::now() < deadline);
 
-    // Ensure last submitted kernel finished before reading result
-    last.wait();
+    last_event.wait();
+    const auto t2 {std::chrono::steady_clock::now()};
 
-    auto t2 = std::chrono::steady_clock::now();
+    queue.memcpy(stopping_power_host, stopping_power_device, sizeof(float) * n).wait();
 
-
-    q.memcpy(stopping_power_host,
-         stopping_power_device,
-         sizeof(float) * N).wait();
-
-    // Sum stopping_power on host for comparison
-    float calculated_value = 0.0f;
-    for (std::size_t i = 0; i < N; ++i) 
+    float calculated_value {0.0f};
+    for (auto i = std::size_t(0); i < n; i++)
     {
         calculated_value += stopping_power_host[i];
     }
 
-    // Free USM
-    sycl::free(stopping_power_device, q);
-    sycl::free(stopping_power_host, q);
-    sycl::free(velocity_device, q);
-    sycl::free(velocity_host, q);
+    sycl::free(stopping_power_device, queue);
+    sycl::free(stopping_power_host, queue);
+    sycl::free(velocity_device, queue);
+    sycl::free(velocity_host, queue);
 
+    const auto t3 {std::chrono::steady_clock::now()};
 
+    const auto time_setup_s   {std::chrono::duration<double>(t1 - t0).count()};
+    const auto time_calc_s    {std::chrono::duration<double>(t2 - t1).count()};
+    const auto time_cleanup_s {std::chrono::duration<double>(t3 - t2).count()};
+    const auto time_total_s   {std::chrono::duration<double>(t3 - t0).count()};
+    const auto time_per_iteration_s
+        {(iters > 0) ? (time_calc_s / static_cast<double>(iters)) : 0.0};
 
-    auto t3 = std::chrono::steady_clock::now();
+    const auto passed_check {(std::abs(calculated_value - expected_value) < 1.0e-5f)};
 
-    const double time_setup   = std::chrono::duration<double>(t1 - t0).count();
-    const double time_calc    = std::chrono::duration<double>(t2 - t1).count();
-    const double time_cleanup = std::chrono::duration<double>(t3 - t2).count();
-    const double time_total   = std::chrono::duration<double>(t3 - t0).count();
-    const double time_per_iteration =
-        (iters > 0) ? (time_calc / static_cast<double>(iters)) : 0.0;
+    const auto method {std::string("SYCL_USM_array")};
+    const auto comments {std::string("stopping_power")};
 
-    const bool passed_check =
-        std::abs(calculated_value - expected_value) < 1.0e-6f;
-
-    std::string method{"SYCL_USM_array"};
-    std::string comments{"stopping_power"};
-
-    std::cout << method << ","
-              << expected_value << ","
-              << calculated_value << ","
-              << iters << ","
-              << time_per_iteration << ","
-              << time_setup << ","
-              << time_calc << ","
-              << time_cleanup << ","
-              << time_total << ","
-              << passed_check << ","
-              << comments
-              << "\n";
+#if defined(__cpp_lib_format)
+    std::cout << std::format(
+        "{},{:.9g},{:.9g},{},{:.9e},{:.6f},{:.6f},{:.6f},{:.6f},{},{}\n",
+        method,
+        expected_value,
+        calculated_value,
+        iters,
+        time_per_iteration_s,
+        time_setup_s,
+        time_calc_s,
+        time_cleanup_s,
+        time_total_s,
+        passed_check,
+        comments);
+#else
+    std::cout
+        << method << ","
+        << expected_value << ","
+        << calculated_value << ","
+        << iters << ","
+        << time_per_iteration_s << ","
+        << time_setup_s << ","
+        << time_calc_s << ","
+        << time_cleanup_s << ","
+        << time_total_s << ","
+        << passed_check << ","
+        << comments
+        << '\n';
+#endif
 
     return 0;
 }

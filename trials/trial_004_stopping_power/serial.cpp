@@ -8,6 +8,7 @@
 #include <random>
 #include <string>
 #include <vector>
+#include <format>
 #include <algorithm>
 
 
@@ -283,19 +284,19 @@ int main(int argc, char** argv)
     const auto comments {std::string("stopping_power")};
     const auto passed_check {(std::abs(calculated_value - expected_value) < 1.0e-9)};
 
-    std::cout
-        << method << ","
-        << expected_value << ","
-        << calculated_value << ","
-        << iters << ","
-        << time_per_iteration_s << ","
-        << time_setup_s << ","
-        << time_calc_s << ","
-        << time_cleanup_s << ","
-        << time_total_s << ","
-        << passed_check << ","
-        << comments
-        << '\n';
+    std::cout << std::format(
+        "{},{:.17g},{:.17g},{},{:.9e},{:.6f},{:.6f},{:.6f},{:.6f},{},{}\n",
+        method,
+        expected_value,
+        calculated_value,
+        iters,
+        time_per_iteration_s,
+        time_setup_s,
+        time_calc_s,
+        time_cleanup_s,
+        time_total_s,
+        passed_check,
+        comments);
 
     return 0;
 }

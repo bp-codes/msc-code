@@ -3,7 +3,7 @@ source /opt/intel/oneapi/setvars.sh
 export SYCL_DEVICE_FILTER=cuda
 
 
-acpp -std=c++17 \
+acpp -std=c++23 \
      -O3 \
      -v \
      -fopenmp \

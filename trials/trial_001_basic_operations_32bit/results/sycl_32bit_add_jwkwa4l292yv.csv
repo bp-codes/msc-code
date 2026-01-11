@@ -1,0 +1,2 @@
+method,expected_value,calculated_value,iterations,time_per_iteration,time_setup,time_calc,time_cleanup,time_total,max_rss_kb,passed_check,comments
+Parallel SYCL 32bit,1000430.1995739531,1000430.1995940438,56675,8.992592965e-05,0.246989,5.096552,0.000472,5.344013,183712,0,operation:add

@@ -7,113 +7,93 @@
 #include <iostream>
 #include <vector>
 #include <random>
-#include <immintrin.h>
-#include <algorithm>
-
+#include <sycl/sycl.hpp>
 
 
 
 //======================================
-// Serial SIMD
+// Sycl
 //======================================
 
-void serial_simd_add(const std::vector<double>& a,
-              const std::vector<double>& b,
-              std::vector<double>& c)
+
+
+sycl::event sycl_add(std::size_t n, 
+                sycl::queue& q,
+                const double* sycldev_numbers_a, 
+                const double* sycldev_numbers_b, 
+                double* sycldev_numbers_c)
 {
-    size_t n = a.size();
-    size_t i = 0;
-
-    // Loop over chunks of 4 doubles per AVX register
-    for (; i + 4 <= n; i += 4)
-    {
-        __m256d va = _mm256_loadu_pd(&a[i]);
-        __m256d vb = _mm256_loadu_pd(&b[i]);
-        __m256d vc = _mm256_add_pd(va, vb);
-        _mm256_storeu_pd(&c[i], vc);
-    }
-
-    // remainder loop
-    for (; i < n; i++)
-    {
-        c[i] = a[i] + b[i];
-    }
+    return q.parallel_for(
+        sycl::range<1>(n), [=](sycl::id<1> i) 
+        {
+            std::size_t idx = i[0];
+            sycldev_numbers_c[idx] = sycldev_numbers_a[idx] + sycldev_numbers_b[idx];
+        }
+    );
 }
 
 
-// SIMD: c[i] = a[i] * b[i]
-void serial_simd_multiply(const std::vector<double>& a,
-                   const std::vector<double>& b,
-                   std::vector<double>& c)
+sycl::event sycl_multiply(std::size_t N,
+                sycl::queue& q,
+                const double* sycldev_numbers_a,
+                const double* sycldev_numbers_b,
+                double* sycldev_numbers_c)
 {
-    size_t n = a.size();
-    size_t i = 0;
-
-    // Loop over chunks of 4 doubles per AVX register
-    for (; i + 4 <= n; i += 4)
-    {
-        __m256d va = _mm256_loadu_pd(&a[i]);
-        __m256d vb = _mm256_loadu_pd(&b[i]);
-        __m256d vc = _mm256_mul_pd(va, vb);
-        _mm256_storeu_pd(&c[i], vc);
-    }
-
-    // remainder loop
-    for (; i < n; i++)
-    {
-        c[i] = a[i] * b[i];
-    }
+    return q.parallel_for(
+        sycl::range<1>(N), [=](sycl::id<1> i) 
+        {
+            std::size_t idx = i[0];
+            sycldev_numbers_c[idx] = sycldev_numbers_a[idx] * sycldev_numbers_b[idx];
+        }
+    );
 }
 
 
-
-// SIMD: c[i] = a[i] / b[i], with safe divide
-void serial_simd_divide(const std::vector<double>& a,
-                 const std::vector<double>& b,
-                 std::vector<double>& c)
+sycl::event sycl_divide(std::size_t N,
+                sycl::queue& q,
+                const double* sycldev_numbers_a,
+                const double* sycldev_numbers_b,
+                double* sycldev_numbers_c)
 {
-    size_t n = a.size();
-    size_t i = 0;
-
-    __m256d epsilon = _mm256_set1_pd(1e-9);
-
-    // Loop over chunks of 4 doubles per AVX register
-    for (; i + 4 <= n; i += 4)
-    {
-        __m256d va = _mm256_loadu_pd(&a[i]);
-        __m256d vb = _mm256_loadu_pd(&b[i]);
-        vb = _mm256_max_pd(vb, epsilon);      // avoid divide by zero
-        __m256d vc = _mm256_div_pd(va, vb);
-        _mm256_storeu_pd(&c[i], vc);
-    }
-
-    // remainder loop
-    for (; i < n; i++)
-    {
-        c[i] = a[i] / std::max(b[i], 1e-9);
-    }
+    return q.parallel_for(
+        sycl::range<1>(N), [=](sycl::id<1> i) 
+        {
+            std::size_t idx = i[0];
+            sycldev_numbers_c[idx] = sycldev_numbers_a[idx] / sycldev_numbers_b[idx];
+        }
+    );
 }
 
 
-void serial_simd_power(const std::vector<double>& numbers_a, const std::vector<double>& numbers_b, std::vector<double>& numbers_c)
+sycl::event sycl_power(std::size_t N, 
+                sycl::queue& q,
+                const double* sycldev_numbers_a, 
+                const double* sycldev_numbers_b, 
+                double* sycldev_numbers_c)
 {
-    for(std::size_t i = 0; i <numbers_a.size(); i++)
-    {
-        numbers_c[i] = std::pow(numbers_a[i], numbers_b[i]);
-    }
+    return q.parallel_for(
+        sycl::range<1>(N), [=](sycl::id<1> i) 
+        {
+            std::size_t idx = i[0];
+            sycldev_numbers_c[idx] = sycl::pow(sycldev_numbers_a[idx], sycldev_numbers_b[idx]);
+        }
+    );
 }
-
 
 
 // Serial task - perform operation on numbers in the vector
-void serial_simd_task(const std::string& operation, const std::vector<double>& numbers_a, const std::vector<double>& numbers_b, std::vector<double>& numbers_c)
+sycl::event sycl_task( const std::string& operation, 
+                std::size_t N, 
+                sycl::queue& q,
+                double* sycldev_numbers_a, 
+                double* sycldev_numbers_b, 
+                double* sycldev_numbers_c)
 {
-    if(operation == "add") serial_simd_add(numbers_a, numbers_b, numbers_c);
-    if(operation == "multiply") serial_simd_multiply(numbers_a, numbers_b, numbers_c);
-    if(operation == "divide") serial_simd_divide(numbers_a, numbers_b, numbers_c);
-    if(operation == "power") serial_simd_power(numbers_a, numbers_b, numbers_c);
+    if(operation == "add") return sycl_add(N, q, sycldev_numbers_a, sycldev_numbers_b, sycldev_numbers_c);
+    if(operation == "multiply") sycl_multiply(N, q, sycldev_numbers_a, sycldev_numbers_b, sycldev_numbers_c);
+    if(operation == "divide") sycl_divide(N, q, sycldev_numbers_a, sycldev_numbers_b, sycldev_numbers_c);
+    if(operation == "power") sycl_power(N, q, sycldev_numbers_a, sycldev_numbers_b, sycldev_numbers_c);
 }
-
 
 
 
@@ -122,9 +102,10 @@ void serial_simd_task(const std::string& operation, const std::vector<double>& n
 // Serial
 //======================================
 
+
 void serial_add(const std::vector<double>& numbers_a, const std::vector<double>& numbers_b, std::vector<double>& numbers_c)
 {
-    for(std::size_t i = 0; i <numbers_a.size(); i++)
+    for(int i = 0; i <numbers_a.size(); i++)
     {
         numbers_c[i] = numbers_a[i] + numbers_b[i];
     }
@@ -133,7 +114,7 @@ void serial_add(const std::vector<double>& numbers_a, const std::vector<double>&
 
 void serial_multiply(const std::vector<double>& numbers_a, const std::vector<double>& numbers_b, std::vector<double>& numbers_c)
 {
-    for(std::size_t i = 0; i <numbers_a.size(); i++)
+    for(int i = 0; i <numbers_a.size(); i++)
     {
         numbers_c[i] = numbers_a[i] * numbers_b[i];
     }
@@ -142,7 +123,7 @@ void serial_multiply(const std::vector<double>& numbers_a, const std::vector<dou
 
 void serial_divide(const std::vector<double>& numbers_a, const std::vector<double>& numbers_b, std::vector<double>& numbers_c)
 {
-    for(std::size_t i = 0; i <numbers_a.size(); i++)
+    for(int i = 0; i <numbers_a.size(); i++)
     {
         numbers_c[i] = numbers_a[i] / std::max(numbers_b[i], 1.0e-9);
     }
@@ -151,7 +132,7 @@ void serial_divide(const std::vector<double>& numbers_a, const std::vector<doubl
 
 void serial_power(const std::vector<double>& numbers_a, const std::vector<double>& numbers_b, std::vector<double>& numbers_c)
 {
-    for(std::size_t i = 0; i <numbers_a.size(); i++)
+    for(int i = 0; i <numbers_a.size(); i++)
     {
         numbers_c[i] = std::pow(numbers_a[i], numbers_b[i]);
     }
@@ -167,6 +148,8 @@ void serial_task(const std::string& operation, const std::vector<double>& number
     if(operation == "divide") serial_divide(numbers_a, numbers_b, numbers_c);
     if(operation == "power") serial_power(numbers_a, numbers_b, numbers_c);
 }
+
+
 
 
 
@@ -219,7 +202,7 @@ int main(int argc, char** argv)
     numbers_b.reserve(N);
 
     // Populate vectors
-    for (std::size_t i = 0; i < N; ++i) 
+    for (int i = 0; i < N; ++i) 
     {
         numbers_a.emplace_back(dist(rng));
         numbers_b.emplace_back(dist(rng));
@@ -242,6 +225,23 @@ int main(int argc, char** argv)
     // Setup
     auto t0 = std::chrono::steady_clock::now();
 
+    
+    sycl::queue q{ sycl::default_selector_v };
+    std::cerr << "Using device: " << q.get_device().get_info<sycl::info::device::name>() << "\n";
+
+    // Results
+    std::vector<double> numbers_c(N);    
+
+    // Allocate device memory once
+    double* sycldev_numbers_a = sycl::malloc_device<double>(N, q);
+    double* sycldev_numbers_b = sycl::malloc_device<double>(N, q);
+    double* sycldev_numbers_c = sycl::malloc_device<double>(N, q);
+
+    // Copy once
+    q.memcpy(sycldev_numbers_a, numbers_a.data(), N * sizeof(double)).wait();
+    q.memcpy(sycldev_numbers_b, numbers_b.data(), N * sizeof(double)).wait();
+
+
 
     // Do calculation
     auto t1 = std::chrono::steady_clock::now();
@@ -249,27 +249,41 @@ int main(int argc, char** argv)
     std::uint64_t iters = 0;
 
     int sum {};
+    sycl::event last;
 
     // Do as many times as possible before time runs out
-    std::vector<double> numbers_c(N);    
     do 
     {
-        serial_simd_task(operation, numbers_a, numbers_b, numbers_c);
+        last = sycl_task( operation,   
+                   N,    
+                   q,   
+                   sycldev_numbers_a, 
+                   sycldev_numbers_b, 
+                   sycldev_numbers_c );
         iters++;
     } 
     while (std::chrono::steady_clock::now() < deadline);
 
+    last.wait();
+
     // Clean up
     auto t2 = std::chrono::steady_clock::now();
 
+    // Copy results
+    q.memcpy(numbers_c.data(), sycldev_numbers_c, N * sizeof(double)).wait();
+
+    // Free device allocations
+    sycl::free(sycldev_numbers_a, q);
+    sycl::free(sycldev_numbers_b, q);
+    sycl::free(sycldev_numbers_c, q);
 
     // Actual end time
     auto t3 = std::chrono::steady_clock::now();
 
     // ======= Calculation Ends ========
 
-    // Check
     double calculated_value = check_sum(numbers_c);
+
    
     double time_setup = std::chrono::duration<double>(t1 - t0).count();
     double time_calc = std::chrono::duration<double>(t2 - t1).count();
@@ -278,7 +292,7 @@ int main(int argc, char** argv)
     double time_per_iteration = time_calc / iters;
 
 
-    std::string method {"Serial"};
+    std::string method {"SYCL"};
     std::string comments {"operation:" + operation};
     bool passed_check = std::abs(calculated_value - expected_value) < 1.0e-9;
 
