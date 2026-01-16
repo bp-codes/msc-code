@@ -1,14 +1,39 @@
 #ifndef SOURCE_HPP
 #define SOURCE_HPP
 
-#include <iostream>
+#include <cstddef>
 #include <vector>
 #include <string>
+#include <stdexcept>
+#include <algorithm>
+#include <cmath>
+
 #include "json.hpp"
 #include "Grid.hpp"
 
+/**
+ * @file Source.hpp
+ * @brief Heat source definitions and JSON parsing helpers.
+ *
+ * Defines spatial/temporal source descriptors and functions to:
+ * - parse a list of sources from a JSON configuration
+ * - evaluate the source contribution S(x,y,t) at a given point in space and time
+ */
 
-struct Source 
+/**
+ * @brief Describes a heat source with spatial and temporal behaviour.
+ *
+ * Spatial kinds:
+ * - Gaussian: centered at (x0,y0) with width sigma
+ * - Block: rectangular region [x_min,x_max] x [y_min,y_max]
+ * - Point: single cell at (x0,y0) interpreted on a grid cell of size (dx,dy)
+ *
+ * Temporal kinds:
+ * - Constant: value represents the temperature itself (override behaviour in solver)
+ * - Rate: value represents a source term added to the PDE
+ * - Impulse: declared but may be unsupported depending on parsing/solver logic
+ */
+struct Source
 {
     enum class SpatialKind { Gaussian, Block, Point };
     enum class TemporalKind { Constant, Rate, Impulse };
@@ -28,66 +53,86 @@ struct Source
 
     // block params
     double x_min {0.0};
-    double x_max {0.0}; 
+    double x_max {0.0};
     double y_min {0.0};
     double y_max {0.0};
 };
 
-
-// Reading sources from json file
+/**
+ * @brief Parse heat sources from the JSON configuration.
+ *
+ * Expects an optional "source" array. Each item must contain:
+ * - "spatial_kind": "gaussian" | "block" | "point"
+ * - "temporal_kind": "constant" | "rate"
+ *
+ * Optional fields per source:
+ * - t0, duration, amplitude
+ * - gaussian: x0, y0, sigma OR sigma_fraction
+ * - point: x0, y0
+ * - block: x_min, x_max, y_min, y_max
+ *
+ * @param config_file JSON configuration object.
+ * @param model_grid Grid metadata used for defaults and clamping.
+ * @return Vector of parsed sources (empty if "source" is absent).
+ *
+ * @throws std::runtime_error If the schema is invalid or values are inconsistent.
+ * @throws nlohmann::json::exception If JSON field access fails (missing keys/type mismatch).
+ */
+[[nodiscard]]
 static std::vector<Source> parse_sources(const nlohmann::json& config_file, const Grid& model_grid)
 {
-    std::vector<Source> sources;
-    if (!config_file.contains("source")) return sources;     // optional
-    const auto& arr = config_file.at("source");
+    auto sources {std::vector<Source>{}};
+    if (!config_file.contains("source")) return sources; // optional
 
-    if (!arr.is_array()) 
+    const auto& arr = config_file.at("source");
+    if (!arr.is_array())
     {
         throw std::runtime_error("\"source\" must be an array");
     }
 
-    for (std::size_t k = 0; k < arr.size(); ++k) 
+    for (auto k {std::size_t(0)}; k < arr.size(); k++)
     {
         const nlohmann::json& js = arr[k];
 
         if (!js.contains("spatial_kind")) throw std::runtime_error("source item missing \"spatial_kind\"");
-        std::string spatial_kind = js.at("spatial_kind").get<std::string>();
+        const auto spatial_kind {js.at("spatial_kind").get<std::string>()};
 
         if (!js.contains("temporal_kind")) throw std::runtime_error("source item missing \"temporal_kind\"");
-        std::string temporal_kind = js.at("temporal_kind").get<std::string>();
+        const auto temporal_kind {js.at("temporal_kind").get<std::string>()};
 
-        Source s;
+        auto s {Source{}};
         s.t0 = js.value("t0", 0.0);
         s.duration = js.value("duration", 0.0);
         s.amplitude = js.value("amplitude", 0.0);
 
         // Spatial kind
-
-        if (spatial_kind == "gaussian") 
+        if (spatial_kind == "gaussian")
         {
             s.spatial_kind = Source::SpatialKind::Gaussian;
             s.x0 = js.value("x0", 0.5 * model_grid.length_x);
             s.y0 = js.value("y0", 0.5 * model_grid.length_y);
-            if (js.contains("sigma")) 
+
+            if (js.contains("sigma"))
             {
                 s.sigma = js.at("sigma").get<double>();
-            } 
-            else 
+            }
+            else
             {
-                auto frac = js.value("sigma_fraction", 0.1);
+                const auto frac {js.value("sigma_fraction", 0.1)};
                 s.sigma = frac * std::min(model_grid.length_x, model_grid.length_y);
             }
+
             if (!(s.sigma > 0.0)) throw std::runtime_error("gaussian source needs positive sigma");
         }
-        else if (spatial_kind == "point") 
+        else if (spatial_kind == "point")
         {
             s.spatial_kind = Source::SpatialKind::Point;
-            s.x0   = js.value("x0", 0.5*model_grid.length_x);
-            s.y0   = js.value("y0", 0.5*model_grid.length_y);
+            s.x0 = js.value("x0", 0.5 * model_grid.length_x);
+            s.y0 = js.value("y0", 0.5 * model_grid.length_y);
         }
-        else if (spatial_kind == "block") 
+        else if (spatial_kind == "block")
         {
-            s.spatial_kind  = Source::SpatialKind::Block;
+            s.spatial_kind = Source::SpatialKind::Block;
             if (!(js.contains("x_min") && js.contains("x_max") && js.contains("y_min") && js.contains("y_max")))
             {
                 throw std::runtime_error("block source needs x_min/x_max/y_min/y_max");
@@ -97,75 +142,99 @@ static std::vector<Source> parse_sources(const nlohmann::json& config_file, cons
             s.x_max = js.at("x_max").get<double>();
             s.y_min = js.at("y_min").get<double>();
             s.y_max = js.at("y_max").get<double>();
+
             if (s.x_max < s.x_min || s.y_max < s.y_min)
+            {
                 throw std::runtime_error("block has max < min");
+            }
+
             // Clamp to domain
             s.x_min = std::max(0.0, std::min(s.x_min, model_grid.length_x));
             s.x_max = std::max(0.0, std::min(s.x_max, model_grid.length_x));
             s.y_min = std::max(0.0, std::min(s.y_min, model_grid.length_y));
             s.y_max = std::max(0.0, std::min(s.y_max, model_grid.length_y));
         }
-        else 
+        else
         {
             throw std::runtime_error("unknown source spatial kind: " + spatial_kind);
         }
 
-
         // Temporal kind
-
-        if (temporal_kind == "constant") 
+        if (temporal_kind == "constant")
         {
             s.temporal_kind = Source::TemporalKind::Constant;
         }
-        else if (temporal_kind == "rate") 
+        else if (temporal_kind == "rate")
         {
             s.temporal_kind = Source::TemporalKind::Rate;
         }
-        else 
+        else
         {
             throw std::runtime_error("unknown source temporal kind: " + temporal_kind);
         }
 
         sources.push_back(s);
     }
+
     return sources;
 }
 
-
-
-static inline double source_value_at(   const Source& s, 
-                                        const double t, 
-                                        const double x, 
-                                        const double y, 
-                                        const double dt, 
-                                        const double dx, 
-                                        const double dy)
+/**
+ * @brief Evaluate the source contribution at a given time and point.
+ *
+ * Returns 0 outside the active time window [t0, t0+duration).
+ *
+ * Spatial behaviour:
+ * - Gaussian: amplitude * exp(-r^2/(2*sigma^2))
+ * - Point: returns amplitude if (x,y) falls inside the single-cell region [x0,x0+dx) x [y0,y0+dy)
+ * - Block: returns amplitude if (x,y) falls inside [x_min,x_max] x [y_min,y_max]
+ *
+ * @param s Source descriptor.
+ * @param t Time at which to evaluate.
+ * @param x x-position.
+ * @param y y-position.
+ * @param dt Time step (currently unused; kept for API compatibility).
+ * @param dx Grid cell size in x (used for Point sources).
+ * @param dy Grid cell size in y (used for Point sources).
+ * @return Source value at (x,y,t).
+ */
+[[nodiscard]]
+static inline double source_value_at(const Source& s,
+                                     const double t,
+                                     const double x,
+                                     const double y,
+                                     const double dt,
+                                     const double dx,
+                                     const double dy)
 {
-    if(!(t >= s.t0 && t < (s.t0 + s.duration)))
+    (void)dt;
+
+    if (!(t >= s.t0 && t < (s.t0 + s.duration)))
     {
         return 0.0;
     }
 
-    if (s.spatial_kind == Source::SpatialKind::Gaussian) 
+    if (s.spatial_kind == Source::SpatialKind::Gaussian)
     {
-        const auto r2 = (x - s.x0)*(x - s.x0) + (y - s.y0)*(y - s.y0);
-        return s.amplitude * std::exp(-r2 / (2.0*s.sigma*s.sigma));
+        const auto r2 {(x - s.x0) * (x - s.x0) + (y - s.y0) * (y - s.y0)};
+        return s.amplitude * std::exp(-r2 / (2.0 * s.sigma * s.sigma));
     }
-    else if (s.spatial_kind == Source::SpatialKind::Point)     
+    else if (s.spatial_kind == Source::SpatialKind::Point)
     {
-        if(x >= s.x0 && x < (s.x0 + dx) && y >= s.y0 && y < (s.y0 + dy) && t >= s.t0 && t < (s.t0 + s.duration))
+        if (x >= s.x0 && x < (s.x0 + dx) && y >= s.y0 && y < (s.y0 + dy) && t >= s.t0 && t < (s.t0 + s.duration))
         {
             return s.amplitude;
         }
-    } 
-    else 
-    { 
+    }
+    else
+    {
         // block
-        if (x >= s.x_min && x <= s.x_max && y >= s.y_min && y <= s.y_max && t >= s.t0 && t < (s.t0 + s.duration)) 
+        if (x >= s.x_min && x <= s.x_max && y >= s.y_min && y <= s.y_max && t >= s.t0 && t < (s.t0 + s.duration))
         {
             return s.amplitude;
         }
     }
+
     return 0.0;
 }
 
