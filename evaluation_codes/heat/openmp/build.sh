@@ -1,2 +1,2 @@
 #!/bin/bash
-g++ -std=c++17 -O2 -fopenmp main.cpp -o main.x
+g++ -O3 -ffast-math -march=native -std=c++23 -fopenmp main.cpp -o main.x

@@ -1,5 +1,6 @@
  {
   "queue_output": true,
+  "threads": 4,
   "nx": 301,
   "ny": 301,
   "length_x": 1.0,
@@ -27,7 +28,7 @@
   "dt": 0.01,
   "t_final":2.0,
   "snapshot_every": 1000,
-  "output_dir": "out",
+  "output_dir": "output",
   "output_prefix": "heat",
   "source": [
 	  {
