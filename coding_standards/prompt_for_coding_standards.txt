@@ -1,0 +1,24 @@
+
+I want to apply coding standard to code across multiple projects.
+
+Aim:
+
+- Apply a consistent style to multiple codes.
+- At some point the number of lines and complexity of the code will be measured.
+- When applying these standards, the functionality must not be changed.
+
+Should do:
+
+- Complete doxygen comments
+- Use auto and initialise with {} e.g. auto counter {std::size_t(0)};
+- Check proper use of const, passing references, inline, nodiscard, noexcept
+
+For now:
+
+- Don't do anything else.
+- Don't change variable names.
+- Don't change any functionality.
+
+
+I will upload the coding standards.
+
