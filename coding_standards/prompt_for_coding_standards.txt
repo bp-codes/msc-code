@@ -12,6 +12,7 @@ Should do:
 - Complete doxygen comments
 - Use auto and initialise with {} e.g. auto counter {std::size_t(0)};
 - Check proper use of const, passing references, inline, nodiscard, noexcept
+- Add in missing includes if detected
 
 For now:
 

@@ -1,49 +1,96 @@
-// CudaEngine.cu
+/**
+ * @file CudaEngine.cu
+ * @brief CUDA backend implementation for explicit FTCS heat stepping and boundary enforcement.
+ *
+ * Implements CUDA kernels and CudaEngine methods used by the heat solver:
+ * - one explicit interior time step (FTCS with 5-point Laplacian)
+ * - Dirichlet boundary enforcement on device
+ * - host<->device upload/download of Grid state and Source list
+ */
+
 #include "CudaEngine.hpp"
 
 #include <cstddef>
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <utility>
+#include <cmath>
+
 #include <cuda_runtime.h>
 
 // -------------------- Kernels --------------------
 
+/**
+ * @brief Set the top and bottom Dirichlet boundaries (u=0) on the device.
+ *
+ * @param un Output buffer (next step).
+ * @param NX Grid size in x.
+ * @param NY Grid size in y.
+ */
 __global__ void set_top_bottom(double* __restrict__ un,
                                std::size_t NX, std::size_t NY)
 {
     const std::size_t i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i < NX) {
+    if (i < NX)
+    {
         // top row j=0
         un[i] = 0.0;
+
         // bottom row j=NY-1
         if (NY > 0) un[(NY - 1) * NX + i] = 0.0;
     }
 }
 
+/**
+ * @brief Set the left and right Dirichlet boundaries (u=0) on the device.
+ *
+ * @param un Output buffer (next step).
+ * @param NX Grid size in x.
+ * @param NY Grid size in y.
+ */
 __global__ void set_left_right(double* __restrict__ un,
                                std::size_t NX, std::size_t NY)
 {
     const std::size_t j = blockIdx.x * blockDim.x + threadIdx.x;
-    if (j < NY) {
+    if (j < NY)
+    {
         // left i=0
         un[j * NX] = 0.0;
+
         // right i=NX-1
         if (NX > 0) un[j * NX + (NX - 1)] = 0.0;
     }
 }
 
-
-
+/**
+ * @brief Device-side evaluation of source contribution S(x,y,t).
+ *
+ * Behaviour matches the host-side interpretation:
+ * - active window: [t0, t0+duration)
+ * - spatial shapes: Gaussian, Point (single cell), Block
+ *
+ * @param s Source descriptor.
+ * @param t Time at which to evaluate.
+ * @param x x-position.
+ * @param y y-position.
+ * @param dt Time step (currently unused; kept for API compatibility).
+ * @param dx Cell size in x (used for Point sources).
+ * @param dy Cell size in y (used for Point sources).
+ * @return Source value at (x,y,t).
+ */
 __device__ inline double device_source_value_at(
-    const Source& s, 
-    double t, 
-    double x, 
+    const Source& s,
+    double t,
+    double x,
     double y,
-    double dt, 
-    double dx, 
+    double dt,
+    double dx,
     double dy)
 {
+    (void)dt;
+
     // Check active time window
     if (!(t >= s.t0 && t < (s.t0 + s.duration)))
     {
@@ -80,8 +127,14 @@ __device__ inline double device_source_value_at(
     return val;
 }
 
-
-// --- compute one explicit heat step on the interior -------------------
+/**
+ * @brief Compute one explicit FTCS heat step on interior cells.
+ *
+ * Updates un(i,j) for 1<=i<nx-1, 1<=j<ny-1:
+ *   un = u + alpha*dt*(laplacian(u) + source)
+ * If a Constant temporal source is present, the per-cell update may be overridden
+ * by the maximum constant source value at that cell.
+ */
 __global__ void heat_step_kernel(
     const double* __restrict__ u,      // in
     double* __restrict__ un,           // out
@@ -97,9 +150,9 @@ __global__ void heat_step_kernel(
     const int i = blockIdx.x * blockDim.x + threadIdx.x;
     const int j = blockIdx.y * blockDim.y + threadIdx.y;
 
-    if (i <= 0 || j <= 0 || i >= (int)nx - 1 || j >= (int)ny - 1) return;
+    if (i <= 0 || j <= 0 || i >= static_cast<int>(nx) - 1 || j >= static_cast<int>(ny) - 1) return;
 
-    const std::size_t idx = (std::size_t)j * nx + (std::size_t)i;
+    const std::size_t idx = static_cast<std::size_t>(j) * nx + static_cast<std::size_t>(i);
 
     const double uij = u[idx];
 
@@ -115,15 +168,16 @@ __global__ void heat_step_kernel(
     const double x = i * dx;
     const double y = j * dy;
 
-    for (std::size_t k = 0; k < num_sources; ++k) 
+    for (std::size_t k = 0; k < num_sources; ++k)
     {
         const auto& s = sources[k];
         const double val = device_source_value_at(s, t_mid, x, y, dt, dx, dy);
-        if (s.temporal_kind == Source::TemporalKind::Rate) 
+
+        if (s.temporal_kind == Source::TemporalKind::Rate)
         {
             source_acc += val;
-        } 
-        else if (s.temporal_kind == Source::TemporalKind::Constant) 
+        }
+        else if (s.temporal_kind == Source::TemporalKind::Constant)
         {
             constant = fmax(constant, val);
         }
@@ -131,42 +185,39 @@ __global__ void heat_step_kernel(
 
     const double aij = alpha[idx];
 
-    if (constant > 0.0) 
+    if (constant > 0.0)
     {
         un[idx] = constant;
-    } 
-    else 
+    }
+    else
     {
         un[idx] = uij + aij * dt * (lap + source_acc);
     }
 }
 
-
-
-
-
-
-
-
-
 // -------------------- Private helpers --------------------
 
 void CudaEngine::_check_data_dims(const Grid& model_grid) const
 {
-    const auto n = nx * ny;
-    if (model_grid.nx != nx || model_grid.ny != ny) {
+    const auto n {nx * ny};
+
+    if (model_grid.nx != nx || model_grid.ny != ny)
+    {
         throw std::runtime_error("DeviceGrid: Grid dims mismatch");
     }
+
     if (model_grid.u.size() != n ||
         model_grid.un.size() != n ||
-        model_grid.alpha.size() != n) {
+        model_grid.alpha.size() != n)
+    {
         throw std::runtime_error("DeviceGrid: Grid vector sizes mismatch");
     }
 }
 
 void CudaEngine::_check_sources_dims(const std::vector<Source>& sources) const
 {
-    if (sources.size() != num_sources) {
+    if (sources.size() != num_sources)
+    {
         throw std::runtime_error("DeviceGrid: Sources size mismatch");
     }
 }
@@ -214,11 +265,10 @@ void CudaEngine::_cleanup()
     if (d_invdx2)    { cudaFree(d_invdx2); d_invdx2 = nullptr; }
     if (d_invdy2)    { cudaFree(d_invdy2); d_invdy2 = nullptr; }
 
-    if (d_nx)         { cudaFree(d_nx); d_nx = nullptr; }
-    if (d_ny)         { cudaFree(d_ny); d_ny = nullptr; }
-    if (d_num_sources){ cudaFree(d_num_sources); d_num_sources = nullptr; }
+    if (d_nx)          { cudaFree(d_nx); d_nx = nullptr; }
+    if (d_ny)          { cudaFree(d_ny); d_ny = nullptr; }
+    if (d_num_sources) { cudaFree(d_num_sources); d_num_sources = nullptr; }
 }
-
 
 // Copy model grid from host -> device
 void CudaEngine::upload_grid(const Grid& model_grid,
@@ -228,9 +278,9 @@ void CudaEngine::upload_grid(const Grid& model_grid,
     _check_data_dims(model_grid);
     _check_sources_dims(sources);
 
-    const auto n = model_grid.nx * model_grid.ny;
-    const auto bytes = n * sizeof(double);
-    const auto num_sources_host = sources.size();
+    const auto n {model_grid.nx * model_grid.ny};
+    const auto bytes {n * sizeof(double)};
+    const auto num_sources_host {sources.size()};
 
     // Copy scalar attributes
     CUDA_CHECK(cudaMemcpy(d_nx, &model_grid.nx, sizeof(std::size_t), cudaMemcpyHostToDevice));
@@ -249,7 +299,8 @@ void CudaEngine::upload_grid(const Grid& model_grid,
     CUDA_CHECK(cudaMemcpy(d_alpha, model_grid.alpha.data(), bytes, cudaMemcpyHostToDevice));
 
     // Copy sources (ensure Source is trivially copyable / POD)
-    if (num_sources_host) {
+    if (num_sources_host)
+    {
         CUDA_CHECK(cudaMemcpy(d_sources, sources.data(),
                               num_sources_host * sizeof(Source),
                               cudaMemcpyHostToDevice));
@@ -261,10 +312,10 @@ void CudaEngine::download_grid(Grid& model_grid)
 {
     _check_data_dims(model_grid);
 
-    const auto n = model_grid.nx * model_grid.ny;
-    const auto bytes = n * sizeof(double);
+    const auto n {model_grid.nx * model_grid.ny};
+    const auto bytes {n * sizeof(double)};
 
-    CUDA_CHECK(cudaMemcpy(model_grid.u.data(), d_u, bytes, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(model_grid.u.data(),  d_u,  bytes, cudaMemcpyDeviceToHost));
     CUDA_CHECK(cudaMemcpy(model_grid.un.data(), d_un, bytes, cudaMemcpyDeviceToHost));
 }
 
@@ -272,8 +323,8 @@ void CudaEngine::download_grid(Grid& model_grid)
 
 void CudaEngine::dirichlet_boundaries(cudaStream_t stream)
 {
-    const auto NX = nx;
-    const auto NY = ny;
+    const auto NX {nx};
+    const auto NY {ny};
 
     if (NX == 0 || NY == 0) return;
 
@@ -291,26 +342,26 @@ void CudaEngine::swap_buffers() noexcept
 {
     if (d_u == nullptr || d_un == nullptr)
     {
-        return; 
+        return;
     }
+
     std::swap(d_u, d_un);
 }
-
 
 void CudaEngine::heat_step(double dt, double t_mid)
 {
     if (nx < 2 || ny < 2) return;
 
     // pull scalar grid params from device (or cache these on host later)
-    double h_invdx2, h_invdy2, h_dx, h_dy;
+    double h_invdx2{}, h_invdy2{}, h_dx{}, h_dy{};
     CUDA_CHECK(cudaMemcpy(&h_invdx2, d_invdx2, sizeof(double), cudaMemcpyDeviceToHost));
     CUDA_CHECK(cudaMemcpy(&h_invdy2, d_invdy2, sizeof(double), cudaMemcpyDeviceToHost));
     CUDA_CHECK(cudaMemcpy(&h_dx,     d_dx,     sizeof(double), cudaMemcpyDeviceToHost));
     CUDA_CHECK(cudaMemcpy(&h_dy,     d_dy,     sizeof(double), cudaMemcpyDeviceToHost));
 
     dim3 block(16, 16);
-    dim3 grid( (static_cast<unsigned>(nx) + block.x - 1) / block.x,
-               (static_cast<unsigned>(ny) + block.y - 1) / block.y );
+    dim3 grid((static_cast<unsigned>(nx) + block.x - 1) / block.x,
+              (static_cast<unsigned>(ny) + block.y - 1) / block.y);
 
     heat_step_kernel<<<grid, block>>>(
         d_u, d_un, d_alpha,
@@ -320,9 +371,7 @@ void CudaEngine::heat_step(double dt, double t_mid)
         d_sources, num_sources,
         t_mid
     );
+
     CUDA_CHECK(cudaGetLastError());
     CUDA_CHECK(cudaDeviceSynchronize()); // keep for bring-up; remove later if you pipeline
 }
-
-
-
