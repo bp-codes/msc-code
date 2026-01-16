@@ -1,9 +1,7 @@
 #!/bin/bash
-source /opt/intel/oneapi/setvars.sh
 export SYCL_DEVICE_FILTER=cuda
 
-nvcc -std=c++17 \
-    -O2 \
+nvcc -O3 -std=c++20 \
     -Xcompiler "-fno-fast-math -fno-unsafe-math-optimizations -ffp-contract=off" \
     CudaEngine.cu \
     main.cpp \
