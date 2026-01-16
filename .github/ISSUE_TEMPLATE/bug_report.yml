@@ -1,0 +1,69 @@
+name: Bug report
+description: Report a defect or incorrect behaviour
+title: "[Bug]: "
+labels: ["bug"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please fill in all required fields.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Clear and concise description of the bug.
+      placeholder: Describe the observed behaviour
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+      placeholder: Describe expected behaviour
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps or code to reproduce the issue.
+      placeholder: |
+        1. Build with ...
+        2. Run ...
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - Crash / Data corruption
+        - Incorrect results
+        - Performance regression
+        - Minor issue
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Project version / commit
+      placeholder: e.g. v1.2.0 or commit hash
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: |
+        OS:
+        Compiler:
+        CMake version:
+        CPU / GPU:
+        Build type:
+ 

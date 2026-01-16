@@ -2,7 +2,12 @@
 build
 build/*
 **/build
+output
+output/*
+**/output
 *.log 
 *.exe
 *.x
+*.mp4
+*.png
 

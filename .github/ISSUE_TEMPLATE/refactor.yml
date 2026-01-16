@@ -1,0 +1,36 @@
+ 
+name: Refactor / Technical debt
+description: Internal change with no functional behaviour change
+title: "[Refactor]: "
+labels: ["refactor", "tech-debt"]
+body:
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why is this refactor needed?
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope of change
+      description: What code will be affected?
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks
+      description: Possible regressions or hazards
+
+  - type: checkboxes
+    id: guarantees
+    attributes:
+      label: Guarantees
+      options:
+        - label: No change to public API
+        - label: No numerical behaviour change
+        - label: Performance-neutral or better
