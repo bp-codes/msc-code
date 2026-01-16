@@ -20,14 +20,18 @@ add_executable(SimpleMD.x main.cpp)
 
 target_compile_options(SimpleMD.x PRIVATE
     -O3
+    -v
+    -ffast-math
 )
 
 target_link_options(SimpleMD.x PRIVATE
     -O3
+    -v 
+    -ffast-math
 )
 
 target_link_libraries(SimpleMD.x PRIVATE SimpleMD::simplemd)
-target_compile_features(SimpleMD.x PRIVATE cxx_std_20)
+target_compile_features(SimpleMD.x PRIVATE cxx_std_23)
 
 
 
