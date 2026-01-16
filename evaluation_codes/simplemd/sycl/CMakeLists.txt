@@ -5,13 +5,11 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-#include(CTest)
-
 # Don't require OpenMP discovery with acpp; create a fallback target.
 find_package(OpenMP QUIET)
 if(NOT OpenMP_CXX_FOUND)
     add_library(OpenMP::OpenMP_CXX INTERFACE IMPORTED)
-    target_compile_options(OpenMP::OpenMP_CXX INTERFACE -fopenmp -O3 -ffast-math)
+    target_compile_options(OpenMP::OpenMP_CXX INTERFACE -fopenmp)
     target_link_options(OpenMP::OpenMP_CXX INTERFACE -fopenmp -O3 -ffast-math)
 endif()
 

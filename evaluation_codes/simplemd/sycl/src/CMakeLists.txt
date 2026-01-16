@@ -12,7 +12,7 @@ add_library(SimpleMD::simplemd ALIAS simplemd)
 add_executable(SimpleMD.x main.cpp)
 
 # C++ standard
-target_compile_features(SimpleMD.x PRIVATE cxx_std_17)
+target_compile_features(SimpleMD.x PRIVATE cxx_std_23)
 
 # AdaptiveCpp flags (compile + link)
 set(ACPP_TARGETS "cuda:sm_86" CACHE STRING "AdaptiveCpp targets")
@@ -20,13 +20,14 @@ set(ACPP_TARGETS "cuda:sm_86" CACHE STRING "AdaptiveCpp targets")
 target_compile_options(SimpleMD.x PRIVATE
     -O3
     -v
-    -fopenmp
+    -ffast-math
     --acpp-targets=${ACPP_TARGETS}
 )
 
 target_link_options(SimpleMD.x PRIVATE
-    -v
-    -fopenmp
+    -O3
+    -v 
+    -ffast-math
     --acpp-targets=${ACPP_TARGETS}
 )
 
