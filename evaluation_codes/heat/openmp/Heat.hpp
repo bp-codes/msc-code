@@ -41,6 +41,14 @@ public:
         // Read input
         Heat::read_input(input_file, model_grid, sources, dt, t_final, snapshot_every, outdir, prefix, queue_output);
 
+        #pragma omp parallel
+        {        
+            #pragma omp single
+            {
+                std::cout << "Threads: " << omp_get_num_threads() << std::endl;
+            }
+        }
+
         // Make output dir
         try 
         {
@@ -113,6 +121,8 @@ private:
         outdir = config_file.value("output_dir", std::filesystem::path("out"));
         prefix = config_file.value("output_prefix", std::string("heat"));
         queue_output = config_file.value("queue_output", true);
+        auto threads = config_file.value("threads", 1);
+        omp_set_num_threads(threads);
 
         // Zero out the boundaries of the grid
         Grid::dirichlet_boundaries(model_grid);
@@ -178,8 +188,8 @@ private:
             // sample sources at midpoint time
             const double t_sample = t + 0.5 * dt;
 
-            // Loop over cells in grid
-            #pragma omp parallel for collapse(2) schedule(static)
+            // Loop over cells in grid (faster without collapse)
+            #pragma omp parallel for schedule(static)
             for (std::size_t j = 1; j < model_grid.ny - 1; j++) 
             {
                 for (std::size_t i = 1; i < model_grid.nx - 1; i++) 
