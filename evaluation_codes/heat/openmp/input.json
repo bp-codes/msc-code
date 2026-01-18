@@ -1,8 +1,8 @@
  {
   "queue_output": true,
   "threads": 4,
-  "nx": 301,
-  "ny": 301,
+  "nx": 501,
+  "ny": 501,
   "length_x": 1.0,
   "length_y": 1.0,
   "alpha": 
@@ -27,7 +27,7 @@
   },
   "dt": 0.01,
   "t_final":2.0,
-  "snapshot_every": 1000,
+  "snapshot_every": 5000,
   "output_dir": "output",
   "output_prefix": "heat",
   "source": [
