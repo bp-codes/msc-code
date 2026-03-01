@@ -1,0 +1,800 @@
+{
+  "multiply": {
+    "Serial SIMD 32": {
+      "min_iters": 17556,
+      "max_iters": 17556,
+      "mean_iters": 17556.0,
+      "median_iters": 17556,
+      "mean_percentage_error": -0.00015594263631953488,
+      "max_abs_percentage_error": 0.00015594263631953488
+    },
+    "Parallel CUDA 32": {
+      "min_iters": 57172,
+      "max_iters": 57172,
+      "mean_iters": 57172.0,
+      "median_iters": 57172,
+      "mean_percentage_error": -0.014680209254677095,
+      "max_abs_percentage_error": 0.014680209254677095
+    },
+    "Serial SIMD": {
+      "min_iters": 3538,
+      "max_iters": 4324,
+      "mean_iters": 3775.3333333333335,
+      "median_iters": 3694.0,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Parallel SYCL 32": {
+      "min_iters": 54397,
+      "max_iters": 55390,
+      "mean_iters": 55082.2,
+      "median_iters": 55181,
+      "mean_percentage_error": -0.00015594263631953488,
+      "max_abs_percentage_error": 0.00015594263631953488
+    },
+    "Serial STL": {
+      "min_iters": 3707,
+      "max_iters": 4333,
+      "mean_iters": 3828.6666666666665,
+      "median_iters": 3730.0,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Serial32": {
+      "min_iters": 20295,
+      "max_iters": 28609,
+      "mean_iters": 24092.5,
+      "median_iters": 23798.0,
+      "mean_percentage_error": -0.00015594263631953488,
+      "max_abs_percentage_error": 0.00015594263631953488
+    },
+    "Serial": {
+      "min_iters": 3703,
+      "max_iters": 4341,
+      "mean_iters": 3862.8333333333335,
+      "median_iters": 3761.0,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Parallel OpenMP 32": {
+      "min_iters": 132910,
+      "max_iters": 132910,
+      "mean_iters": 132910.0,
+      "median_iters": 132910,
+      "mean_percentage_error": -0.00015594263631953488,
+      "max_abs_percentage_error": 0.00015594263631953488
+    },
+    "Parallel OpenMP SIMD": {
+      "min_iters": 14358,
+      "max_iters": 49167,
+      "mean_iters": 29561.166666666668,
+      "median_iters": 29059.0,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Parallel OpenMP": {
+      "min_iters": 22563,
+      "max_iters": 46692,
+      "mean_iters": 31994.333333333332,
+      "median_iters": 32087.5,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Parallel SYCL": {
+      "min_iters": 27589,
+      "max_iters": 27891,
+      "mean_iters": 27753.8,
+      "median_iters": 27770,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Serial STL 32": {
+      "min_iters": 27438,
+      "max_iters": 27438,
+      "mean_iters": 27438.0,
+      "median_iters": 27438,
+      "mean_percentage_error": -0.00015594263631953488,
+      "max_abs_percentage_error": 0.00015594263631953488
+    },
+    "Parallel OpenMP SIMD 32": {
+      "min_iters": 136101,
+      "max_iters": 136101,
+      "mean_iters": 136101.0,
+      "median_iters": 136101,
+      "mean_percentage_error": -0.00015594263631953488,
+      "max_abs_percentage_error": 0.00015594263631953488
+    },
+    "Parallel CUDA": {
+      "min_iters": 31562,
+      "max_iters": 31562,
+      "mean_iters": 31562.0,
+      "median_iters": 31562,
+      "mean_percentage_error": 5.336304957513862e-12,
+      "max_abs_percentage_error": 5.336304957513862e-12
+    }
+  },
+  "divide": {
+    "Serial STL": {
+      "min_iters": 3632,
+      "max_iters": 4362,
+      "mean_iters": 3833.0,
+      "median_iters": 3732.5,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Parallel OpenMP": {
+      "min_iters": 22176,
+      "max_iters": 50340,
+      "mean_iters": 34398.166666666664,
+      "median_iters": 35443.5,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Parallel SYCL 32": {
+      "min_iters": 55107,
+      "max_iters": 55561,
+      "mean_iters": 55358.8,
+      "median_iters": 55396,
+      "mean_percentage_error": -0.0006501418726065576,
+      "max_abs_percentage_error": 0.0006501418726065576
+    },
+    "Parallel CUDA 32": {
+      "min_iters": 55095,
+      "max_iters": 55095,
+      "mean_iters": 55095.0,
+      "median_iters": 55095,
+      "mean_percentage_error": -0.03423731002890577,
+      "max_abs_percentage_error": 0.03423731002890577
+    },
+    "Serial32": {
+      "min_iters": 21815,
+      "max_iters": 28950,
+      "mean_iters": 24146.666666666668,
+      "median_iters": 23466.5,
+      "mean_percentage_error": -0.0006574513760138045,
+      "max_abs_percentage_error": 0.0006574513760138044
+    },
+    "Serial SIMD": {
+      "min_iters": 3555,
+      "max_iters": 4361,
+      "mean_iters": 3746.0,
+      "median_iters": 3636.5,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Parallel OpenMP SIMD": {
+      "min_iters": 26943,
+      "max_iters": 42356,
+      "mean_iters": 36221.5,
+      "median_iters": 39580.0,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Parallel OpenMP 32": {
+      "min_iters": 123525,
+      "max_iters": 123525,
+      "mean_iters": 123525.0,
+      "median_iters": 123525,
+      "mean_percentage_error": -0.0006574513760138044,
+      "max_abs_percentage_error": 0.0006574513760138044
+    },
+    "Parallel SYCL": {
+      "min_iters": 27372,
+      "max_iters": 27781,
+      "mean_iters": 27574.0,
+      "median_iters": 27546,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Serial SIMD 32": {
+      "min_iters": 18887,
+      "max_iters": 18887,
+      "mean_iters": 18887.0,
+      "median_iters": 18887,
+      "mean_percentage_error": -0.0006574513760138044,
+      "max_abs_percentage_error": 0.0006574513760138044
+    },
+    "Parallel CUDA": {
+      "min_iters": 31598,
+      "max_iters": 31598,
+      "mean_iters": 31598.0,
+      "median_iters": 31598,
+      "mean_percentage_error": -6.39905520045387e-13,
+      "max_abs_percentage_error": 6.39905520045387e-13
+    },
+    "Serial": {
+      "min_iters": 3614,
+      "max_iters": 4332,
+      "mean_iters": 3850.8333333333335,
+      "median_iters": 3798.0,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Serial STL 32": {
+      "min_iters": 27023,
+      "max_iters": 27023,
+      "mean_iters": 27023.0,
+      "median_iters": 27023,
+      "mean_percentage_error": -0.0006574513760138044,
+      "max_abs_percentage_error": 0.0006574513760138044
+    },
+    "Parallel OpenMP SIMD 32": {
+      "min_iters": 122343,
+      "max_iters": 122343,
+      "mean_iters": 122343.0,
+      "median_iters": 122343,
+      "mean_percentage_error": -0.0006574513760138044,
+      "max_abs_percentage_error": 0.0006574513760138044
+    }
+  },
+  "add": {
+    "Serial": {
+      "min_iters": 3502,
+      "max_iters": 4413,
+      "mean_iters": 3874.9166666666665,
+      "median_iters": 3854.5,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Serial STL": {
+      "min_iters": 3481,
+      "max_iters": 4413,
+      "mean_iters": 3890.181818181818,
+      "median_iters": 3986,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Serial STL 32": {
+      "min_iters": 26429,
+      "max_iters": 27743,
+      "mean_iters": 27176.0,
+      "median_iters": 27356,
+      "mean_percentage_error": 8.00081852074196e-05,
+      "max_abs_percentage_error": 8.00081852074196e-05
+    },
+    "Parallel SYCL": {
+      "min_iters": 27489,
+      "max_iters": 30207,
+      "mean_iters": 29053.0,
+      "median_iters": 29702,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Serial32": {
+      "min_iters": 22191,
+      "max_iters": 28818,
+      "mean_iters": 25108.0,
+      "median_iters": 25498,
+      "mean_percentage_error": 8.00081852074196e-05,
+      "max_abs_percentage_error": 8.00081852074196e-05
+    },
+    "Parallel SYCL 32": {
+      "min_iters": 54661,
+      "max_iters": 59060,
+      "mean_iters": 55702.166666666664,
+      "median_iters": 55136.0,
+      "mean_percentage_error": 8.00081852074196e-05,
+      "max_abs_percentage_error": 8.00081852074196e-05
+    },
+    "Serial SIMD": {
+      "min_iters": 3362,
+      "max_iters": 4157,
+      "mean_iters": 3685.6666666666665,
+      "median_iters": 3656.0,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Parallel OpenMP SIMD": {
+      "min_iters": 19300,
+      "max_iters": 47912,
+      "mean_iters": 31717.833333333332,
+      "median_iters": 30223.5,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Parallel OpenMP 32": {
+      "min_iters": 134152,
+      "max_iters": 134152,
+      "mean_iters": 134152.0,
+      "median_iters": 134152,
+      "mean_percentage_error": 8.00081852074196e-05,
+      "max_abs_percentage_error": 8.00081852074196e-05
+    },
+    "Parallel OpenMP": {
+      "min_iters": 17007,
+      "max_iters": 45584,
+      "mean_iters": 31126.333333333332,
+      "median_iters": 32311.5,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Parallel CUDA 32": {
+      "min_iters": 61548,
+      "max_iters": 61548,
+      "mean_iters": 61548.0,
+      "median_iters": 61548,
+      "mean_percentage_error": -0.0006946585534916364,
+      "max_abs_percentage_error": 0.0006946585534916364
+    },
+    "Serial SIMD 32": {
+      "min_iters": 16654,
+      "max_iters": 17326,
+      "mean_iters": 17034.0,
+      "median_iters": 17122,
+      "mean_percentage_error": 8.00081852074196e-05,
+      "max_abs_percentage_error": 8.00081852074196e-05
+    },
+    "Parallel CUDA": {
+      "min_iters": 29028,
+      "max_iters": 29218,
+      "mean_iters": 29123.0,
+      "median_iters": 29123.0,
+      "mean_percentage_error": -8.145568307869787e-13,
+      "max_abs_percentage_error": 8.145568307869787e-13
+    },
+    "Parallel OpenMP SIMD 32": {
+      "min_iters": 134221,
+      "max_iters": 134221,
+      "mean_iters": 134221.0,
+      "median_iters": 134221,
+      "mean_percentage_error": 8.00081852074196e-05,
+      "max_abs_percentage_error": 8.00081852074196e-05
+    }
+  },
+  "power": {
+    "Serial": {
+      "min_iters": 645,
+      "max_iters": 684,
+      "mean_iters": 655.5,
+      "median_iters": 650.5,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Serial STL": {
+      "min_iters": 649,
+      "max_iters": 686,
+      "mean_iters": 659.6666666666666,
+      "median_iters": 655.5,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Parallel OpenMP SIMD 32": {
+      "min_iters": 5480,
+      "max_iters": 5480,
+      "mean_iters": 5480.0,
+      "median_iters": 5480,
+      "mean_percentage_error": 0.0009966756152171448,
+      "max_abs_percentage_error": 0.0009966756152171448
+    },
+    "Serial32": {
+      "min_iters": 1407,
+      "max_iters": 1500,
+      "mean_iters": 1441.0,
+      "median_iters": 1438.0,
+      "mean_percentage_error": 0.0009966756152171448,
+      "max_abs_percentage_error": 0.0009966756152171448
+    },
+    "Parallel OpenMP SIMD": {
+      "min_iters": 1955,
+      "max_iters": 2523,
+      "mean_iters": 2264.1666666666665,
+      "median_iters": 2266.0,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Parallel OpenMP": {
+      "min_iters": 2249,
+      "max_iters": 2523,
+      "mean_iters": 2354.1666666666665,
+      "median_iters": 2340.5,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Parallel SYCL": {
+      "min_iters": 4595,
+      "max_iters": 4645,
+      "mean_iters": 4618.2,
+      "median_iters": 4622,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Serial SIMD": {
+      "min_iters": 640,
+      "max_iters": 685,
+      "mean_iters": 651.8333333333334,
+      "median_iters": 647.0,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Parallel SYCL 32": {
+      "min_iters": 54476,
+      "max_iters": 55488,
+      "mean_iters": 54917.0,
+      "median_iters": 54658,
+      "mean_percentage_error": 0.0009876565914287492,
+      "max_abs_percentage_error": 0.0009876565914287492
+    },
+    "Serial SIMD 32": {
+      "min_iters": 1511,
+      "max_iters": 1511,
+      "mean_iters": 1511.0,
+      "median_iters": 1511,
+      "mean_percentage_error": 0.0009966756152171448,
+      "max_abs_percentage_error": 0.0009966756152171448
+    },
+    "Parallel CUDA": {
+      "min_iters": 4526,
+      "max_iters": 4526,
+      "mean_iters": 4526.0,
+      "median_iters": 4526,
+      "mean_percentage_error": 2.805473232012344e-12,
+      "max_abs_percentage_error": 2.805473232012344e-12
+    },
+    "Parallel OpenMP 32": {
+      "min_iters": 5415,
+      "max_iters": 5415,
+      "mean_iters": 5415.0,
+      "median_iters": 5415,
+      "mean_percentage_error": 0.0009966756152171448,
+      "max_abs_percentage_error": 0.0009966756152171448
+    },
+    "Serial STL 32": {
+      "min_iters": 1524,
+      "max_iters": 1524,
+      "mean_iters": 1524.0,
+      "median_iters": 1524,
+      "mean_percentage_error": 0.0009966756152171448,
+      "max_abs_percentage_error": 0.0009966756152171448
+    },
+    "Parallel CUDA 32": {
+      "min_iters": 56452,
+      "max_iters": 56452,
+      "mean_iters": 56452.0,
+      "median_iters": 56452,
+      "mean_percentage_error": 0.040653323212792324,
+      "max_abs_percentage_error": 0.040653323212792324
+    }
+  },
+  "log": {
+    "Serial SIMD": {
+      "min_iters": 1298,
+      "max_iters": 1448,
+      "mean_iters": 1352.6666666666667,
+      "median_iters": 1345.0,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Parallel OpenMP SIMD": {
+      "min_iters": 4010,
+      "max_iters": 5087,
+      "mean_iters": 4341.5,
+      "median_iters": 4263.0,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Parallel SYCL": {
+      "min_iters": 5636,
+      "max_iters": 5672,
+      "mean_iters": 5649.8,
+      "median_iters": 5647,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Parallel CUDA": {
+      "min_iters": 6035,
+      "max_iters": 6035,
+      "mean_iters": 6035.0,
+      "median_iters": 6035,
+      "mean_percentage_error": 4.856137606102592e-12,
+      "max_abs_percentage_error": 4.856137606102592e-12
+    },
+    "Parallel OpenMP 32": {
+      "min_iters": 16395,
+      "max_iters": 16395,
+      "mean_iters": 16395.0,
+      "median_iters": 16395,
+      "mean_percentage_error": 0.00012657743609428447,
+      "max_abs_percentage_error": 0.00012657743609428447
+    },
+    "Serial STL": {
+      "min_iters": 1323,
+      "max_iters": 1449,
+      "mean_iters": 1359.5,
+      "median_iters": 1343.0,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Serial": {
+      "min_iters": 1281,
+      "max_iters": 1459,
+      "mean_iters": 1368.3333333333333,
+      "median_iters": 1365.5,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Parallel OpenMP SIMD 32": {
+      "min_iters": 17441,
+      "max_iters": 17441,
+      "mean_iters": 17441.0,
+      "median_iters": 17441,
+      "mean_percentage_error": 0.00012657743609428447,
+      "max_abs_percentage_error": 0.00012657743609428447
+    },
+    "Serial32": {
+      "min_iters": 4543,
+      "max_iters": 5319,
+      "mean_iters": 4913.166666666667,
+      "median_iters": 4919.0,
+      "mean_percentage_error": 0.00012657743609428447,
+      "max_abs_percentage_error": 0.00012657743609428447
+    },
+    "Parallel OpenMP": {
+      "min_iters": 4037,
+      "max_iters": 4842,
+      "mean_iters": 4319.666666666667,
+      "median_iters": 4293.5,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Serial SIMD 32": {
+      "min_iters": 5400,
+      "max_iters": 5400,
+      "mean_iters": 5400.0,
+      "median_iters": 5400,
+      "mean_percentage_error": 0.00012657743609428447,
+      "max_abs_percentage_error": 0.00012657743609428447
+    },
+    "Parallel SYCL 32": {
+      "min_iters": 54918,
+      "max_iters": 56991,
+      "mean_iters": 55647.6,
+      "median_iters": 55596,
+      "mean_percentage_error": 0.00012032535210055354,
+      "max_abs_percentage_error": 0.00012032535210055354
+    },
+    "Parallel CUDA 32": {
+      "min_iters": 56499,
+      "max_iters": 56499,
+      "mean_iters": 56499.0,
+      "median_iters": 56499,
+      "mean_percentage_error": -0.0012676372945077117,
+      "max_abs_percentage_error": 0.0012676372945077117
+    },
+    "Serial STL 32": {
+      "min_iters": 5221,
+      "max_iters": 5221,
+      "mean_iters": 5221.0,
+      "median_iters": 5221,
+      "mean_percentage_error": 0.00012657743609428447,
+      "max_abs_percentage_error": 0.00012657743609428447
+    }
+  },
+  "exp": {
+    "Serial STL": {
+      "min_iters": 1580,
+      "max_iters": 1783,
+      "mean_iters": 1630.6666666666667,
+      "median_iters": 1602.5,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Parallel OpenMP SIMD 32": {
+      "min_iters": 19424,
+      "max_iters": 19424,
+      "mean_iters": 19424.0,
+      "median_iters": 19424,
+      "mean_percentage_error": 0.00010648488368895852,
+      "max_abs_percentage_error": 0.00010648488368895852
+    },
+    "Parallel SYCL 32": {
+      "min_iters": 55335,
+      "max_iters": 55689,
+      "mean_iters": 55451.8,
+      "median_iters": 55425,
+      "mean_percentage_error": 0.00010648488368895852,
+      "max_abs_percentage_error": 0.00010648488368895852
+    },
+    "Parallel SYCL": {
+      "min_iters": 9181,
+      "max_iters": 9270,
+      "mean_iters": 9215.0,
+      "median_iters": 9209,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Serial32": {
+      "min_iters": 5154,
+      "max_iters": 5860,
+      "mean_iters": 5399.166666666667,
+      "median_iters": 5348.0,
+      "mean_percentage_error": 0.00010648488368895853,
+      "max_abs_percentage_error": 0.00010648488368895852
+    },
+    "Parallel OpenMP": {
+      "min_iters": 5028,
+      "max_iters": 5773,
+      "mean_iters": 5207.0,
+      "median_iters": 5072.0,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Serial SIMD": {
+      "min_iters": 1597,
+      "max_iters": 1786,
+      "mean_iters": 1641.8333333333333,
+      "median_iters": 1616.0,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Serial": {
+      "min_iters": 1515,
+      "max_iters": 1767,
+      "mean_iters": 1640.8333333333333,
+      "median_iters": 1635.5,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Parallel OpenMP SIMD": {
+      "min_iters": 4185,
+      "max_iters": 6029,
+      "mean_iters": 4833.166666666667,
+      "median_iters": 4662.5,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Serial STL 32": {
+      "min_iters": 5708,
+      "max_iters": 5708,
+      "mean_iters": 5708.0,
+      "median_iters": 5708,
+      "mean_percentage_error": 0.00010648488368895852,
+      "max_abs_percentage_error": 0.00010648488368895852
+    },
+    "Parallel OpenMP 32": {
+      "min_iters": 17371,
+      "max_iters": 17371,
+      "mean_iters": 17371.0,
+      "median_iters": 17371,
+      "mean_percentage_error": 0.00010648488368895852,
+      "max_abs_percentage_error": 0.00010648488368895852
+    },
+    "Parallel CUDA 32": {
+      "min_iters": 56772,
+      "max_iters": 56772,
+      "mean_iters": 56772.0,
+      "median_iters": 56772,
+      "mean_percentage_error": 0.0015901936135684547,
+      "max_abs_percentage_error": 0.0015901936135684547
+    },
+    "Serial SIMD 32": {
+      "min_iters": 5795,
+      "max_iters": 5795,
+      "mean_iters": 5795.0,
+      "median_iters": 5795,
+      "mean_percentage_error": 0.00010648488368895852,
+      "max_abs_percentage_error": 0.00010648488368895852
+    },
+    "Parallel CUDA": {
+      "min_iters": 10539,
+      "max_iters": 10539,
+      "mean_iters": 10539.0,
+      "median_iters": 10539,
+      "mean_percentage_error": 4.0641512773259823e-13,
+      "max_abs_percentage_error": 4.0641512773259823e-13
+    }
+  },
+  "sqrt": {
+    "Parallel OpenMP": {
+      "min_iters": 9561,
+      "max_iters": 16506,
+      "mean_iters": 12636.333333333334,
+      "median_iters": 12617.5,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Serial32": {
+      "min_iters": 14797,
+      "max_iters": 18046,
+      "mean_iters": 15618.666666666666,
+      "median_iters": 15136.5,
+      "mean_percentage_error": 0.0001708714931461762,
+      "max_abs_percentage_error": 0.0001708714931461762
+    },
+    "Serial": {
+      "min_iters": 3536,
+      "max_iters": 4088,
+      "mean_iters": 3677.0,
+      "median_iters": 3607.5,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Parallel OpenMP SIMD": {
+      "min_iters": 11090,
+      "max_iters": 17188,
+      "mean_iters": 13323.166666666666,
+      "median_iters": 12659.0,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Parallel CUDA": {
+      "min_iters": 19200,
+      "max_iters": 19200,
+      "mean_iters": 19200.0,
+      "median_iters": 19200,
+      "mean_percentage_error": -2.3045426366778864e-12,
+      "max_abs_percentage_error": 2.3045426366778864e-12
+    },
+    "Parallel SYCL 32": {
+      "min_iters": 54656,
+      "max_iters": 56881,
+      "mean_iters": 55564.8,
+      "median_iters": 55519,
+      "mean_percentage_error": 0.0001708714931461762,
+      "max_abs_percentage_error": 0.0001708714931461762
+    },
+    "Parallel SYCL": {
+      "min_iters": 16693,
+      "max_iters": 16826,
+      "mean_iters": 16768.8,
+      "median_iters": 16773,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Parallel CUDA 32": {
+      "min_iters": 55906,
+      "max_iters": 55906,
+      "mean_iters": 55906.0,
+      "median_iters": 55906,
+      "mean_percentage_error": -0.0033908855121305946,
+      "max_abs_percentage_error": 0.0033908855121305946
+    },
+    "Serial SIMD 32": {
+      "min_iters": 13793,
+      "max_iters": 13793,
+      "mean_iters": 13793.0,
+      "median_iters": 13793,
+      "mean_percentage_error": 0.0001708714931461762,
+      "max_abs_percentage_error": 0.0001708714931461762
+    },
+    "Serial STL": {
+      "min_iters": 3543,
+      "max_iters": 4049,
+      "mean_iters": 3651.1666666666665,
+      "median_iters": 3579.5,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Serial SIMD": {
+      "min_iters": 3476,
+      "max_iters": 3970,
+      "mean_iters": 3590.1666666666665,
+      "median_iters": 3509.0,
+      "mean_percentage_error": 0.0,
+      "max_abs_percentage_error": 0.0
+    },
+    "Parallel OpenMP SIMD 32": {
+      "min_iters": 69340,
+      "max_iters": 69340,
+      "mean_iters": 69340.0,
+      "median_iters": 69340,
+      "mean_percentage_error": 0.0001708714931461762,
+      "max_abs_percentage_error": 0.0001708714931461762
+    },
+    "Parallel OpenMP 32": {
+      "min_iters": 72013,
+      "max_iters": 72013,
+      "mean_iters": 72013.0,
+      "median_iters": 72013,
+      "mean_percentage_error": 0.0001708714931461762,
+      "max_abs_percentage_error": 0.0001708714931461762
+    },
+    "Serial STL 32": {
+      "min_iters": 17693,
+      "max_iters": 17693,
+      "mean_iters": 17693.0,
+      "median_iters": 17693,
+      "mean_percentage_error": 0.0001708714931461762,
+      "max_abs_percentage_error": 0.0001708714931461762
+    }
+  }
+}

@@ -56,8 +56,6 @@ static inline double sycl_compatible_sqrt(const double x)
  * Implements the PDG "Bethe equation" for heavy charged particles, including:
  *  - W_max from PDG Eq. (34.4)
  *  - stopping-power bracket from PDG Eq. (34.5), including the density-effect term -delta/2
- *  - optional spin-1/2 correction term +(W_max/E)^2/4 (PDG footnote)
- *  - optional shell correction term -C/Z (PDG low-energy discussion)
  *
  * Returns *linear stopping power* in MeV/cm:
  *   (dE/dx)_linear = rho * (dE/dx)_mass
@@ -80,11 +78,6 @@ static inline double sycl_compatible_sqrt(const double x)
  *      Mean excitation energy I in MeV.
  * @param density_effect_delta
  *      Density-effect correction delta(beta*gamma) (dimensionless). Use 0 if not applying.
- * @param shell_correction_c_over_z
- *      Shell correction term C/Z (dimensionless). Use 0 if not applying.
- *      (Included in square brackets as -C/Z.)
- * @param include_spin_half_correction
- *      If true, includes the PDG spin-1/2 correction term +(W_max/E)^2/4 in the square brackets.
  *
  * @return
  *      Linear stopping power dE/dx in MeV/cm.
@@ -102,9 +95,7 @@ static inline double stopping_power(
     const double target_atomic_mass_g_mol,
     const double target_density_g_cm3,
     const double mean_excitation_energy_mev,
-    const double density_effect_delta,
-    const double shell_correction_c_over_z,
-    const bool include_spin_half_correction)
+    const double density_effect_delta)
 {
     // Fundamental constants (PDG)
     static constexpr auto SPEED_OF_LIGHT_MS {299792458.0};    ///< [m/s]
@@ -113,18 +104,18 @@ static inline double stopping_power(
 
     // Relativistic kinematics
     const auto beta_raw {projectile_velocity_ms / SPEED_OF_LIGHT_MS};
-    const auto beta {std::clamp(beta_raw, 1.0e-9, 0.99999)};
+    const auto beta {std::clamp(beta_raw, 1.0e-9, 0.99999)};            // Clamped to sensible values to avoid errors 
     const auto beta2 {beta * beta};
 
     const auto inv_one_minus_beta2 {1.0 / (1.0 - beta2)};
-    const auto gamma2 {inv_one_minus_beta2};
+    const auto gamma2 {std::max(0.0, inv_one_minus_beta2)};
     const auto gamma {sycl_compatible_sqrt(gamma2)};
 
     // Total energy E = gamma * M c^2 [MeV]
-    const auto total_energy_mev {gamma * projectile_atomic_mass_mev};
+    const auto total_energy_mev {std::max(0.0, gamma * projectile_atomic_mass_mev)};
 
     // Maximum energy transfer W_max (PDG Eq. 34.4)
-    const auto electron_to_projectile_mass {ELECTRON_MASS_MEV / projectile_atomic_mass_mev};
+    const auto electron_to_projectile_mass {ELECTRON_MASS_MEV / std::max(1.0e-9, projectile_atomic_mass_mev)};
 
     const auto w_max_numerator {2.0 * ELECTRON_MASS_MEV * beta2 * gamma2};
     const auto w_max_denominator = std::max(
@@ -139,27 +130,20 @@ static inline double stopping_power(
     const auto mean_excitation_energy2_mev2 {mean_excitation_energy_mev * mean_excitation_energy_mev};
 
     const auto log_argument = std::max(
-        (2.0 * ELECTRON_MASS_MEV * beta2 * gamma2 * w_max_mev) / mean_excitation_energy2_mev2,
+        (2.0 * ELECTRON_MASS_MEV * beta2 * gamma2 * w_max_mev) / std::max(1.0e-9, mean_excitation_energy2_mev2),
         1.0);
 
     // Square-bracketed term (PDG Eq. 34.5 + optional corrections)
     auto bracket =
         0.5 * sycl_compatible_log(log_argument)
       - beta2
-      - 0.5 * density_effect_delta
-      - shell_correction_c_over_z;
-
-    if (include_spin_half_correction)
-    {
-        const auto w_over_e {w_max_mev / std::max(total_energy_mev, 1.0e-12)};
-        bracket += 0.25 * (w_over_e * w_over_e); // +(W_max/E)^2 / 4
-    }
+      - 0.5 * density_effect_delta;
 
     // Mass stopping power [MeV·cm^2/g] and linear stopping power [MeV/cm]
     const auto projectile_charge {static_cast<double>(projectile_atomic_number)};
     const auto projectile_charge2 {projectile_charge * projectile_charge};
 
-    const auto z_over_a {static_cast<double>(target_atomic_number) / target_atomic_mass_g_mol};
+    const auto z_over_a {static_cast<double>(target_atomic_number) / std::max(1.0e-9, target_atomic_mass_g_mol)};
     const auto prefactor_mass {BETHE_CONSTANT_K * projectile_charge2 * z_over_a / beta2};
 
     const auto mass_stopping_power_mev_cm2_per_g {prefactor_mass * bracket};
@@ -192,8 +176,6 @@ static inline void serial_task(
 
     static constexpr auto MEAN_EXCITATION_ENERGY_MEV {286.0e-6};
     static constexpr auto DENSITY_EFFECT_DELTA {0.0};
-    static constexpr auto SHELL_CORRECTION_C_OVER_Z {0.0};
-    static constexpr auto INCLUDE_SPIN_HALF_CORRECTION {false};
 
     const auto n {std::size_t(velocity_array.size())};
 
@@ -207,9 +189,7 @@ static inline void serial_task(
             TARGET_ATOMIC_MASS_G_MOL,
             TARGET_DENSITY_G_CM3,
             MEAN_EXCITATION_ENERGY_MEV,
-            DENSITY_EFFECT_DELTA,
-            SHELL_CORRECTION_C_OVER_Z,
-            INCLUDE_SPIN_HALF_CORRECTION);
+            DENSITY_EFFECT_DELTA);
     }
 }
 
@@ -245,8 +225,6 @@ static inline sycl::event sycl_task(
 
             static constexpr auto MEAN_EXCITATION_ENERGY_MEV {286.0e-6};
             static constexpr auto DENSITY_EFFECT_DELTA {0.0};
-            static constexpr auto SHELL_CORRECTION_C_OVER_Z {0.0};
-            static constexpr auto INCLUDE_SPIN_HALF_CORRECTION {false};
 
             const auto i {item.get_linear_id()};
 
@@ -258,9 +236,7 @@ static inline sycl::event sycl_task(
                 TARGET_ATOMIC_MASS_G_MOL,
                 TARGET_DENSITY_G_CM3,
                 MEAN_EXCITATION_ENERGY_MEV,
-                DENSITY_EFFECT_DELTA,
-                SHELL_CORRECTION_C_OVER_Z,
-                INCLUDE_SPIN_HALF_CORRECTION);
+                DENSITY_EFFECT_DELTA);
         });
 }
 
@@ -275,14 +251,7 @@ static inline sycl::event sycl_task(
 [[nodiscard]]
 static inline double check_sum(const std::vector<double>& values) noexcept
 {
-    auto sum {0.0};
-
-    for (const auto value : values)
-    {
-        sum += value;
-    }
-
-    return sum;
+    return std::accumulate(values.begin(), values.end(), 0.0);;
 }
 
 
