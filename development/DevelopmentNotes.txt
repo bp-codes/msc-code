@@ -1,0 +1,11 @@
+
+Files checked with cppcheck
+
+cppcheck --enable=all --std=c++23 --language=c++ serial.cpp 
+
+
+
+
+Lizard used for complexity measures
+
+

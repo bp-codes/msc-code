@@ -14,6 +14,7 @@
 #include <sycl/sycl.hpp>
 #include <system_error>
 #include "Error.hpp"
+#include "json.hpp"
 
 namespace
 {
@@ -23,7 +24,7 @@ inline constexpr std::uint64_t RNG_SEED {123456789ULL};
 
 
 
-std::uint64_t max_rss_kb()
+/*std::uint64_t max_rss_kb()
 {
     rusage usage{};
     getrusage(RUSAGE_SELF, &usage);
@@ -35,7 +36,7 @@ std::uint64_t max_rss_kb()
     // Linux reports kilobytes
     return usage.ru_maxrss;
 #endif
-}
+}*/
 
 
 
@@ -608,12 +609,20 @@ sycl::event parallel_task(
 [[nodiscard]]
 double check_sum(const std::vector<double>& numbers)
 {
-    auto sum {0.0};
-    for (const auto number : numbers)
-    {
-        sum += number;
-    }
-    return sum;
+    return std::accumulate(numbers.begin(), numbers.end(), 0.0);
+}
+
+
+
+/**
+ * @brief Compute the sum of all elements in a vector (serial).
+ * @param numbers Vector to sum.
+ * @return Sum of elements.
+ */
+[[nodiscard]]
+float check_sum(const std::vector<float>& numbers)
+{
+    return std::accumulate(numbers.begin(), numbers.end(), 0.0f);
 }
 
 } // namespace
@@ -742,24 +751,48 @@ int main(int argc, char** argv)
         const auto method {std::string("Parallel SYCL")};
         const auto comments {std::string("operation:") + std::string(operation_string)};
 
-        std::cout
-            << "method,expected_value,calculated_value,iterations,"
-            "time_per_iteration,time_setup,time_calc,time_cleanup,"
-            "time_total,passed_check,comments\n";
+        // Output
+        {
 
-        std::cout
-            << method << ','
-            << std::setprecision(17) << expected_value << ','
-            << std::setprecision(17) << calculated_value << ','
-            << iters << ','
-            << std::scientific << std::setprecision(9) << time_per_iteration << ','
-            << std::fixed      << std::setprecision(6) << time_setup << ','
-            << std::fixed      << std::setprecision(6) << time_calc << ','
-            << std::fixed      << std::setprecision(6) << time_cleanup << ','
-            << std::fixed      << std::setprecision(6) << time_total << ','
-            << passed_check << ','
-            << comments
-            << '\n';
+            const std::string base_file_name = "results/parallel_sycl_" + std::string(operation_string);
+            const std::string json_file = base_file_name + "_" + random_suffix(12) + ".json";
+
+            nlohmann::json j;
+
+            // Metadata / identity
+            j["file"] = json_file;
+            j["method"] = method;
+            j["operation"] = operation_string;
+            j["comments"] = comments;
+
+            // Iteration/timing            
+            j["test_time_seconds"] = test_time_seconds;
+            j["iterations"] = iters;
+            j["time_per_iteration"] = time_per_iteration;
+            j["time_setup"] = time_setup;
+            j["time_calc"] = time_calc;
+            j["time_cleanup"] = time_cleanup;
+            j["time_total"] = time_total;
+
+            // Values
+            j["expected_value"] = expected_value;
+            j["calculated_value"] = calculated_value;
+            j["difference"] = (expected_value - calculated_value);
+            j["passed_check"] = passed_check;
+            j["values"] = numbers_c;
+
+            // Memory
+            //j["max_rss_kb"] = max_rss_kb();
+
+            std::ofstream out(json_file);
+            if (!out)
+            {
+                throw std::runtime_error("Failed to open output JSON file.");
+            }
+
+            // Pretty-print. Use `out << j;` if you want compact.
+            out << std::setw(2) << j << '\n';
+        }
 
         return 0;
     }

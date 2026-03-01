@@ -5,6 +5,46 @@
 		}
 	],
 	"settings": {
+
+		// -----------------------------
+		// TAB BEHAVIOUR
+		// -----------------------------
+
+		// Prevent tabs shrinking to tiny size
+		"workbench.editor.tabSizing": "fixed",
+
+		// Optional: wrap tabs instead of scrolling (VSCode 1.74+)
+		"workbench.editor.wrapTabs": true,
+
+		// Optional: limit tab width
+		"workbench.editor.tabSizingFixedMinWidth": 120,
+
+
+		// -----------------------------
+		// AUTOSUGGEST / INTELLISENSE
+		// -----------------------------
+
+		// Disable automatic popup suggestions
+		"editor.quickSuggestions": {
+			"comments": "off",
+			"strings": "off",
+			"other": "off"
+		},
+
+		// Disable suggestions while typing trigger characters
+		"editor.suggestOnTriggerCharacters": false,
+
+		// Disable inline ghost suggestions
+		"editor.inlineSuggest.enabled": false,
+
+		// Optional: disable parameter hints popup
+		"editor.parameterHints.enabled": false,
+
+
+		// -----------------------------
+		// File Associations
+		// -----------------------------
+
 		"files.associations": {
 			"cctype": "cpp",
 			"clocale": "cpp",

@@ -11,3 +11,5 @@ output/*
 *.mp4
 *.png
 *.xyz
+**/results/*
+**/target_values/*

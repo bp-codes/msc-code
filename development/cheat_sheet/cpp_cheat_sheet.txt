@@ -1,6 +1,7 @@
  
 
-# if
+if
+################################################
 
 if(a && b)
 if(a || b)
@@ -9,6 +10,12 @@ if(!a)
 Left to right evaluation.
 
 if(x < 0 || expensive_check())
+
+
+Ternary
+################################################
+
+condition ? value_if_true : value_if_false;
 
 
 # Casting

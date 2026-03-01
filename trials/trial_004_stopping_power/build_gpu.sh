@@ -11,6 +11,12 @@ acpp -std=c++23 \
      sycl.cpp \
      -o sycl.x
 
+nvcc -std=c++17 \
+    -O3 \
+    -Xcompiler "-fno-fast-math -fno-unsafe-math-optimizations -ffp-contract=off" \
+    cuda.cu \
+    -o cuda.x
+
 exit 0
 
 acpp -std=c++23 \
