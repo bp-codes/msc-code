@@ -2,7 +2,7 @@
 
 docker run --gpus all -it --rm \
   -v "$PWD":/workspace \
-  acpp-cuda-omp \
+  acpp-cuda-omp-2 \
   /bin/bash
 
 
