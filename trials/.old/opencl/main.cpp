@@ -1,4 +1,5 @@
 // g++ -std=c++20 main.cpp -lOpenCL -O2
+// apt update && apt install ocl-icd-opencl-dev
 
 #include <CL/cl.h>
 #include <iostream>
