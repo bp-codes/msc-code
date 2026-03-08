@@ -5,13 +5,15 @@
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
+#include <iomanip>
+#include <stdexcept>
 #include <limits>
 #include <random>
 #include <string>
 #include <vector>
-#include <format>
 #include <algorithm>
 #include <numeric>
+
 #include "json.hpp"
 #include "helper.hpp"
 #include "Error.hpp"
@@ -71,10 +73,11 @@ static inline double stopping_power(
     static constexpr auto SPEED_OF_LIGHT_MS {299792458.0};    ///< [m/s]
     static constexpr auto ELECTRON_MASS_MEV {0.51099895000};  ///< [MeV]
     static constexpr auto BETHE_CONSTANT_K  {0.307075};       ///< [MeV·cm^2/mol]
+    static constexpr auto SMALL_VALUE  {1.0e-9};
 
     // Relativistic kinematics
     const auto beta_raw {projectile_velocity_ms / SPEED_OF_LIGHT_MS};
-    const auto beta {std::clamp(beta_raw, 1.0e-9, 0.99999)};            // Clamped to sensible values to avoid errors 
+    const auto beta {std::clamp(beta_raw, SMALL_VALUE, 0.99999)};            // Clamped to sensible values to avoid errors 
     const auto beta2 {beta * beta};
 
     const auto inv_one_minus_beta2 {1.0 / (1.0 - beta2)};
@@ -85,14 +88,14 @@ static inline double stopping_power(
     const auto total_energy_mev {std::max(0.0, gamma * projectile_atomic_mass_mev)};
 
     // Maximum energy transfer W_max (PDG Eq. 34.4)
-    const auto electron_to_projectile_mass {ELECTRON_MASS_MEV / std::max(1.0e-9, projectile_atomic_mass_mev)};
+    const auto electron_to_projectile_mass {ELECTRON_MASS_MEV / std::max(SMALL_VALUE, projectile_atomic_mass_mev)};
 
     const auto w_max_numerator {2.0 * ELECTRON_MASS_MEV * beta2 * gamma2};
     const auto w_max_denominator = std::max(
         1.0
       + 2.0 * gamma * electron_to_projectile_mass
       + (electron_to_projectile_mass * electron_to_projectile_mass),
-        1.0e-12);
+        SMALL_VALUE);
 
     const auto w_max_mev {w_max_numerator / w_max_denominator};
 
@@ -100,8 +103,8 @@ static inline double stopping_power(
     const auto mean_excitation_energy2_mev2 {mean_excitation_energy_mev * mean_excitation_energy_mev};
 
     const auto log_argument = std::max(
-        (2.0 * ELECTRON_MASS_MEV * beta2 * gamma2 * w_max_mev) / std::max(1.0e-9, mean_excitation_energy2_mev2),
-        1.0);
+        (2.0 * ELECTRON_MASS_MEV * beta2 * gamma2 * w_max_mev) / std::max(SMALL_VALUE, mean_excitation_energy2_mev2),
+        SMALL_VALUE);
 
     // Square-bracketed term (PDG Eq. 34.5 + optional corrections)
     auto bracket =
@@ -113,7 +116,7 @@ static inline double stopping_power(
     const auto projectile_charge {static_cast<double>(projectile_atomic_number)};
     const auto projectile_charge2 {projectile_charge * projectile_charge};
 
-    const auto z_over_a {static_cast<double>(target_atomic_number) / std::max(1.0e-9, target_atomic_mass_g_mol)};
+    const auto z_over_a {static_cast<double>(target_atomic_number) / std::max(SMALL_VALUE, target_atomic_mass_g_mol)};
     const auto prefactor_mass {BETHE_CONSTANT_K * projectile_charge2 * z_over_a / beta2};
 
     const auto mass_stopping_power_mev_cm2_per_g {prefactor_mass * bracket};
@@ -293,14 +296,14 @@ int main(int argc, char** argv)
     const auto time_total_s {std::chrono::duration<double>(t3 - t0).count()};
     const auto time_per_iteration_s {time_calc_s / static_cast<double>(iters)};
 
-    const auto method {std::string("Openmp")};
+    const auto method {std::string("Parallel OpenMP")};
     const auto comments {std::string("stopping_power")};
     const auto passed_check {(std::abs(calculated_value - expected_value) < 1.0e-9)};
 
     // Output
     {
 
-        const std::string base_file_name = "results/openmp";
+        const std::string base_file_name = "results/parallel_openmp";
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
 
         nlohmann::json j;
