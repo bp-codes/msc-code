@@ -1,5 +1,10 @@
 #!/bin/bash
 
+#  ./bin/sycl.x 5.0 1000000 add
+#  ./bin/sycl_32.x 5.0 1000000 add
+#  ./bin/cuda.x 5.0 1000000 add
+#  ./bin/opencl.x 5.0 1000000 add
+
 apt update && apt install time
 set -euo pipefail
 
@@ -13,6 +18,8 @@ apps=(
     "./bin/cuda_32.x"
     "./bin/sycl.x"
     "./bin/sycl_32.x"
+    "./bin/opencl.x"
+    "./bin/opencl_32.x"
 )
 
 operations=(
@@ -36,7 +43,16 @@ do
         for ((i=1; i<=RUNS; i++))
         do
             echo "  Run $i"
-            "$app" 5.0 1000000 "$op"
+
+            if [[ "$app" == *opencl* ]]; then
+                echo "    CPU"
+                "$app" 5.0 1000000 "$op" CPU
+
+                echo "    GPU"
+                "$app" 5.0 1000000 "$op" GPU
+            else
+                "$app" 5.0 1000000 "$op"
+            fi
         done
 
     done

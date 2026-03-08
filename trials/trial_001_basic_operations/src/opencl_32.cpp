@@ -32,7 +32,7 @@ using OperationKind = helper::OperationKind;
 namespace
 {
 
-inline constexpr double MIN_DENOMINATOR {1.0e-9};
+inline constexpr float MIN_DENOMINATOR {1.0e-9};
 inline constexpr std::uint64_t RNG_SEED {123456789ULL};
 
 
@@ -45,9 +45,9 @@ inline constexpr std::uint64_t RNG_SEED {123456789ULL};
  * @brief Element-wise addition: c[i] = a[i] + b[i]
  */
 void serial_add(
-    const std::vector<double>& numbers_a,
-    const std::vector<double>& numbers_b,
-    std::vector<double>& numbers_c)
+    const std::vector<float>& numbers_a,
+    const std::vector<float>& numbers_b,
+    std::vector<float>& numbers_c)
 {
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
@@ -62,9 +62,9 @@ void serial_add(
  * @brief Element-wise multiplication: c[i] = a[i] * b[i]
  */
 void serial_multiply(
-    const std::vector<double>& numbers_a,
-    const std::vector<double>& numbers_b,
-    std::vector<double>& numbers_c)
+    const std::vector<float>& numbers_a,
+    const std::vector<float>& numbers_b,
+    std::vector<float>& numbers_c)
 {
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
@@ -79,9 +79,9 @@ void serial_multiply(
  * @brief Element-wise division: c[i] = a[i] / max(b[i], MIN_DENOMINATOR)
  */
 void serial_divide(
-    const std::vector<double>& numbers_a,
-    const std::vector<double>& numbers_b,
-    std::vector<double>& numbers_c)
+    const std::vector<float>& numbers_a,
+    const std::vector<float>& numbers_b,
+    std::vector<float>& numbers_c)
 {
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
@@ -96,9 +96,9 @@ void serial_divide(
  * @brief Element-wise power: c[i] = pow(a[i], b[i])
  */
 void serial_power(
-    const std::vector<double>& numbers_a,
-    const std::vector<double>& numbers_b,
-    std::vector<double>& numbers_c)
+    const std::vector<float>& numbers_a,
+    const std::vector<float>& numbers_b,
+    std::vector<float>& numbers_c)
 {
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
@@ -113,9 +113,9 @@ void serial_power(
  * @brief Element-wise exp sum: c[i] = exp(a[i]) + exp(b[i])
  */
 void serial_exp(
-    const std::vector<double>& numbers_a,
-    const std::vector<double>& numbers_b,
-    std::vector<double>& numbers_c)
+    const std::vector<float>& numbers_a,
+    const std::vector<float>& numbers_b,
+    std::vector<float>& numbers_c)
 {
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
@@ -131,9 +131,9 @@ void serial_exp(
  * @warning Inputs must be > 0. No bounds/validity checking is performed in this hot loop.
  */
 void serial_log(
-    const std::vector<double>& numbers_a,
-    const std::vector<double>& numbers_b,
-    std::vector<double>& numbers_c)
+    const std::vector<float>& numbers_a,
+    const std::vector<float>& numbers_b,
+    std::vector<float>& numbers_c)
 {
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
@@ -149,9 +149,9 @@ void serial_log(
  * @warning Inputs must be >= 0. No bounds/validity checking is performed in this hot loop.
  */
 void serial_sqrt(
-    const std::vector<double>& numbers_a,
-    const std::vector<double>& numbers_b,
-    std::vector<double>& numbers_c)
+    const std::vector<float>& numbers_a,
+    const std::vector<float>& numbers_b,
+    std::vector<float>& numbers_c)
 {
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
@@ -171,9 +171,9 @@ void serial_sqrt(
  */
 void serial_task(
     OperationKind operation,
-    const std::vector<double>& numbers_a,
-    const std::vector<double>& numbers_b,
-    std::vector<double>& numbers_c)
+    const std::vector<float>& numbers_a,
+    const std::vector<float>& numbers_b,
+    std::vector<float>& numbers_c)
 {
     switch (operation)
     {
@@ -243,9 +243,9 @@ const char* kernel_source()
 
 __kernel void kernel_add(
     const ulong n,
-    __global const double* a,
-    __global const double* b,
-    __global double* c)
+    __global const float* a,
+    __global const float* b,
+    __global float* c)
 {
     const ulong idx = (ulong)get_global_id(0);
     if (idx < n)
@@ -256,9 +256,9 @@ __kernel void kernel_add(
 
 __kernel void kernel_multiply(
     const ulong n,
-    __global const double* a,
-    __global const double* b,
-    __global double* c)
+    __global const float* a,
+    __global const float* b,
+    __global float* c)
 {
     const ulong idx = (ulong)get_global_id(0);
     if (idx < n)
@@ -269,23 +269,23 @@ __kernel void kernel_multiply(
 
 __kernel void kernel_divide(
     const ulong n,
-    __global const double* a,
-    __global const double* b,
-    __global double* c)
+    __global const float* a,
+    __global const float* b,
+    __global float* c)
 {
     const ulong idx = (ulong)get_global_id(0);
     if (idx < n)
     {
-        const double denom = b[idx] > 1.0e-9 ? b[idx] : 1.0e-9;
+        const float denom = b[idx] > 1.0e-9 ? b[idx] : 1.0e-9;
         c[idx] = a[idx] / denom;
     }
 }
 
 __kernel void kernel_power(
     const ulong n,
-    __global const double* a,
-    __global const double* b,
-    __global double* c)
+    __global const float* a,
+    __global const float* b,
+    __global float* c)
 {
     const ulong idx = (ulong)get_global_id(0);
     if (idx < n)
@@ -296,9 +296,9 @@ __kernel void kernel_power(
 
 __kernel void kernel_exp(
     const ulong n,
-    __global const double* a,
-    __global const double* b,
-    __global double* c)
+    __global const float* a,
+    __global const float* b,
+    __global float* c)
 {
     const ulong idx = (ulong)get_global_id(0);
     if (idx < n)
@@ -309,9 +309,9 @@ __kernel void kernel_exp(
 
 __kernel void kernel_log(
     const ulong n,
-    __global const double* a,
-    __global const double* b,
-    __global double* c)
+    __global const float* a,
+    __global const float* b,
+    __global float* c)
 {
     const ulong idx = (ulong)get_global_id(0);
     if (idx < n)
@@ -322,9 +322,9 @@ __kernel void kernel_log(
 
 __kernel void kernel_sqrt(
     const ulong n,
-    __global const double* a,
-    __global const double* b,
-    __global double* c)
+    __global const float* a,
+    __global const float* b,
+    __global float* c)
 {
     const ulong idx = (ulong)get_global_id(0);
     if (idx < n)
@@ -530,8 +530,8 @@ int main(int argc, char** argv)
         std::mt19937_64 rng(RNG_SEED);
         std::uniform_real_distribution<double> dist(1.0, 2.0);
 
-        auto numbers_a {std::vector<double>{}};
-        auto numbers_b {std::vector<double>{}};
+        auto numbers_a {std::vector<float>{}};
+        auto numbers_b {std::vector<float>{}};
         numbers_a.reserve(n);
         numbers_b.reserve(n);
 
@@ -543,7 +543,7 @@ int main(int argc, char** argv)
 
         auto expected_value {0.0};
         {
-            auto numbers_c {std::vector<double>(n)};
+            auto numbers_c {std::vector<float>(n)};
             helper::validate_sizes(numbers_a, numbers_b, numbers_c);
 
             serial_task(operation, numbers_a, numbers_b, numbers_c);
@@ -607,19 +607,19 @@ int main(int argc, char** argv)
         kernel = clCreateKernel(program, kernel_name(operation), &status);
         opencl_check(status, "clCreateKernel failed.");
 
-        auto numbers_c {std::vector<double>(n)};
+        auto numbers_c {std::vector<float>(n)};
 
-        dev_a = clCreateBuffer(context, CL_MEM_READ_ONLY, n * sizeof(double), nullptr, &status);
+        dev_a = clCreateBuffer(context, CL_MEM_READ_ONLY, n * sizeof(float), nullptr, &status);
         opencl_check(status, "clCreateBuffer(dev_a) failed.");
 
-        dev_b = clCreateBuffer(context, CL_MEM_READ_ONLY, n * sizeof(double), nullptr, &status);
+        dev_b = clCreateBuffer(context, CL_MEM_READ_ONLY, n * sizeof(float), nullptr, &status);
         opencl_check(status, "clCreateBuffer(dev_b) failed.");
 
-        dev_c = clCreateBuffer(context, CL_MEM_WRITE_ONLY, n * sizeof(double), nullptr, &status);
+        dev_c = clCreateBuffer(context, CL_MEM_WRITE_ONLY, n * sizeof(float), nullptr, &status);
         opencl_check(status, "clCreateBuffer(dev_c) failed.");
 
-        opencl_check(clEnqueueWriteBuffer(queue, dev_a, CL_TRUE, 0, n * sizeof(double), numbers_a.data(), 0, nullptr, nullptr), "clEnqueueWriteBuffer(dev_a) failed.");
-        opencl_check(clEnqueueWriteBuffer(queue, dev_b, CL_TRUE, 0, n * sizeof(double), numbers_b.data(), 0, nullptr, nullptr), "clEnqueueWriteBuffer(dev_b) failed.");
+        opencl_check(clEnqueueWriteBuffer(queue, dev_a, CL_TRUE, 0, n * sizeof(float), numbers_a.data(), 0, nullptr, nullptr), "clEnqueueWriteBuffer(dev_a) failed.");
+        opencl_check(clEnqueueWriteBuffer(queue, dev_b, CL_TRUE, 0, n * sizeof(float), numbers_b.data(), 0, nullptr, nullptr), "clEnqueueWriteBuffer(dev_b) failed.");
 
         const auto n_opencl {static_cast<cl_ulong>(n)};
         opencl_check(clSetKernelArg(kernel, 0, sizeof(cl_ulong), &n_opencl), "clSetKernelArg(0) failed.");
@@ -657,7 +657,7 @@ int main(int argc, char** argv)
         }
         while (std::chrono::steady_clock::now() < deadline);
 
-        opencl_check(clEnqueueReadBuffer(queue, dev_c, CL_TRUE, 0, n * sizeof(double), numbers_c.data(), 0, nullptr, nullptr), "clEnqueueReadBuffer(dev_c) failed.");
+        opencl_check(clEnqueueReadBuffer(queue, dev_c, CL_TRUE, 0, n * sizeof(float), numbers_c.data(), 0, nullptr, nullptr), "clEnqueueReadBuffer(dev_c) failed.");
         
         // ======= Clean up =======
         const auto t2 {std::chrono::steady_clock::now()};
@@ -698,13 +698,13 @@ int main(int argc, char** argv)
 
         const auto passed_check {std::abs(calculated_value - expected_value) < 1.0e-9};
 
-        const auto method {std::string("Parallel OpenCL ") + std::string(device_string)};
+        const auto method {std::string("Parallel OpenCL 32 ") + std::string(device_string)};
         const auto comments {std::string("operation:") + std::string(operation_string)};
 
         // Output
         {
 
-            const std::string base_file_name = "results/parallel_opencl_" + std::string(operation_string);
+            const std::string base_file_name = "results/parallel_opencl_32_" + std::string(operation_string);
             const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
 
             nlohmann::json j;

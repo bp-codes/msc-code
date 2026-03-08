@@ -1,5 +1,4 @@
 // serial.cpp
-#include <execution>
 #include <algorithm>
 #include <charconv>
 #include <chrono>
@@ -13,10 +12,10 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <thread>
 #include "Error.hpp"
 #include "helper.hpp"
 #include "json.hpp"
-#include <tbb/global_control.h>
 
 using OperationKind = helper::OperationKind;
 
@@ -222,15 +221,38 @@ void parallel_add(
     const std::vector<double>& numbers_b,
     std::vector<double>& numbers_c)
 {
-    std::transform(
-        std::execution::par,
-        numbers_a.begin(), numbers_a.end(),
-        numbers_b.begin(),
-        numbers_c.begin(),
-        [](double x, double y) {
-            return x + y;
+    const auto n {std::size_t(numbers_a.size())};
+    const std::size_t num_threads = std::min(helper::get_num_threads(), n);
+    const std::size_t chunk = (n + num_threads - 1) / num_threads;
+
+    std::vector<std::thread> threads;
+    threads.reserve(num_threads);
+
+    for (std::size_t t = 0; t < num_threads; ++t)
+    {
+        const std::size_t begin = t * chunk;
+        const std::size_t end = std::min(begin + chunk, n);
+
+        if (begin >= n)
+        {
+            break;
         }
-    );
+
+        threads.emplace_back(
+            [&, begin, end]()
+            {
+                for (std::size_t i = begin; i < end; ++i)
+                {
+                    numbers_c[i] = numbers_a[i] + numbers_b[i];
+                }
+            }
+        );
+    }
+
+    for (auto& thread : threads)
+    {
+        thread.join();
+    }
 }
 
 
@@ -243,15 +265,38 @@ void parallel_multiply(
     const std::vector<double>& numbers_b,
     std::vector<double>& numbers_c)
 {
-    std::transform(
-        std::execution::par,
-        numbers_a.begin(), numbers_a.end(),
-        numbers_b.begin(),
-        numbers_c.begin(),
-        [](double x, double y) {
-            return x * y;
+    const auto n {std::size_t(numbers_a.size())};
+    const std::size_t num_threads = std::min(helper::get_num_threads(), n);
+    const std::size_t chunk = (n + num_threads - 1) / num_threads;
+
+    std::vector<std::thread> threads;
+    threads.reserve(num_threads);
+
+    for (std::size_t t = 0; t < num_threads; ++t)
+    {
+        const std::size_t begin = t * chunk;
+        const std::size_t end = std::min(begin + chunk, n);
+
+        if (begin >= n)
+        {
+            break;
         }
-    );
+
+        threads.emplace_back(
+            [&, begin, end]()
+            {
+                for (std::size_t i = begin; i < end; ++i)
+                {
+                    numbers_c[i] = numbers_a[i] * numbers_b[i];
+                }
+            }
+        );
+    }
+
+    for (auto& thread : threads)
+    {
+        thread.join();
+    }
 }
 
 
@@ -264,16 +309,38 @@ void parallel_divide(
     const std::vector<double>& numbers_b,
     std::vector<double>& numbers_c)
 {
-    std::transform(
-        std::execution::par,
-        numbers_a.begin(), numbers_a.end(),
-        numbers_b.begin(),
-        numbers_c.begin(),
-        [](double x, double y)
+    const auto n {std::size_t(numbers_a.size())};
+    const std::size_t num_threads = std::min(helper::get_num_threads(), n);
+    const std::size_t chunk = (n + num_threads - 1) / num_threads;
+
+    std::vector<std::thread> threads;
+    threads.reserve(num_threads);
+
+    for (std::size_t t = 0; t < num_threads; ++t)
+    {
+        const std::size_t begin = t * chunk;
+        const std::size_t end = std::min(begin + chunk, n);
+
+        if (begin >= n)
         {
-            return x / std::max(y, MIN_DENOMINATOR);
+            break;
         }
-    );
+
+        threads.emplace_back(
+            [&, begin, end]()
+            {
+                for (std::size_t i = begin; i < end; ++i)
+                {
+                    numbers_c[i] = numbers_a[i] / std::max(numbers_b[i], MIN_DENOMINATOR);
+                }
+            }
+        );
+    }
+
+    for (auto& thread : threads)
+    {
+        thread.join();
+    }
 }
 
 
@@ -286,16 +353,38 @@ void parallel_power(
     const std::vector<double>& numbers_b,
     std::vector<double>& numbers_c)
 {
-    std::transform(
-        std::execution::par,
-        numbers_a.begin(), numbers_a.end(),
-        numbers_b.begin(),
-        numbers_c.begin(),
-        [](double x, double y)
+    const auto n {std::size_t(numbers_a.size())};
+    const std::size_t num_threads = std::min(helper::get_num_threads(), n);
+    const std::size_t chunk = (n + num_threads - 1) / num_threads;
+
+    std::vector<std::thread> threads;
+    threads.reserve(num_threads);
+
+    for (std::size_t t = 0; t < num_threads; ++t)
+    {
+        const std::size_t begin = t * chunk;
+        const std::size_t end = std::min(begin + chunk, n);
+
+        if (begin >= n)
         {
-            return std::pow(x, y);
+            break;
         }
-    );
+
+        threads.emplace_back(
+            [&, begin, end]()
+            {
+                for (std::size_t i = begin; i < end; ++i)
+                {
+                    numbers_c[i] = std::pow(numbers_a[i], numbers_b[i]);
+                }
+            }
+        );
+    }
+
+    for (auto& thread : threads)
+    {
+        thread.join();
+    }    
 }
 
 
@@ -308,16 +397,38 @@ void parallel_exp(
     const std::vector<double>& numbers_b,
     std::vector<double>& numbers_c)
 {
-    std::transform(
-        std::execution::par,
-        numbers_a.begin(), numbers_a.end(),
-        numbers_b.begin(),
-        numbers_c.begin(),
-        [](double x, double y)
+    const auto n {std::size_t(numbers_a.size())};
+    const std::size_t num_threads = std::min(helper::get_num_threads(), n);
+    const std::size_t chunk = (n + num_threads - 1) / num_threads;
+
+    std::vector<std::thread> threads;
+    threads.reserve(num_threads);
+
+    for (std::size_t t = 0; t < num_threads; ++t)
+    {
+        const std::size_t begin = t * chunk;
+        const std::size_t end = std::min(begin + chunk, n);
+
+        if (begin >= n)
         {
-            return std::exp(x) + std::exp(y);
+            break;
         }
-    );
+
+        threads.emplace_back(
+            [&, begin, end]()
+            {
+                for (std::size_t i = begin; i < end; ++i)
+                {
+                    numbers_c[i] = std::exp(numbers_a[i]) + std::exp(numbers_b[i]);
+                }
+            }
+        );
+    }
+
+    for (auto& thread : threads)
+    {
+        thread.join();
+    }
 }
 
 
@@ -331,16 +442,38 @@ void parallel_log(
     const std::vector<double>& numbers_b,
     std::vector<double>& numbers_c)
 {
-    std::transform(
-        std::execution::par,
-        numbers_a.begin(), numbers_a.end(),
-        numbers_b.begin(),
-        numbers_c.begin(),
-        [](double x, double y)
+    const auto n {std::size_t(numbers_a.size())};
+    const std::size_t num_threads = std::min(helper::get_num_threads(), n);
+    const std::size_t chunk = (n + num_threads - 1) / num_threads;
+
+    std::vector<std::thread> threads;
+    threads.reserve(num_threads);
+
+    for (std::size_t t = 0; t < num_threads; ++t)
+    {
+        const std::size_t begin = t * chunk;
+        const std::size_t end = std::min(begin + chunk, n);
+
+        if (begin >= n)
         {
-            return std::log(x) + std::log(y);
+            break;
         }
-    );
+
+        threads.emplace_back(
+            [&, begin, end]()
+            {
+                for (std::size_t i = begin; i < end; ++i)
+                {
+                    numbers_c[i] = std::log(numbers_a[i]) + std::log(numbers_b[i]);
+                }
+            }
+        );
+    }
+
+    for (auto& thread : threads)
+    {
+        thread.join();
+    }
 }
 
 
@@ -354,16 +487,38 @@ void parallel_sqrt(
     const std::vector<double>& numbers_b,
     std::vector<double>& numbers_c)
 {
-    std::transform(
-        std::execution::par,
-        numbers_a.begin(), numbers_a.end(),
-        numbers_b.begin(),
-        numbers_c.begin(),
-        [](double x, double y)
+    const auto n {std::size_t(numbers_a.size())};
+    const std::size_t num_threads = std::min(helper::get_num_threads(), n);
+    const std::size_t chunk = (n + num_threads - 1) / num_threads;
+
+    std::vector<std::thread> threads;
+    threads.reserve(num_threads);
+
+    for (std::size_t t = 0; t < num_threads; ++t)
+    {
+        const std::size_t begin = t * chunk;
+        const std::size_t end = std::min(begin + chunk, n);
+
+        if (begin >= n)
         {
-            return std::sqrt(x) + std::sqrt(y);
+            break;
         }
-    );
+
+        threads.emplace_back(
+            [&, begin, end]()
+            {
+                for (std::size_t i = begin; i < end; ++i)
+                {
+                    numbers_c[i] = std::sqrt(numbers_a[i]) + std::sqrt(numbers_b[i]);
+                }
+            }
+        );
+    }
+
+    for (auto& thread : threads)
+    {
+        thread.join();
+    }
 }
 
 
@@ -424,7 +579,7 @@ void parallel_task(
 }
 
 
-}
+} // namespace
 
 
 /**
@@ -438,10 +593,6 @@ int main(int argc, char** argv)
         {
             THROW_INVALID_ARGUMENT("Usage: serial.x time_limit vec_size operation");
         }
-
-        tbb::global_control control(
-        tbb::global_control::max_allowed_parallelism,
-        helper::get_num_threads());
 
         const auto test_time_seconds {helper::parse_floating_point(argv[1])};
         const auto n {helper::parse_size(argv[2])};
@@ -515,13 +666,13 @@ int main(int argc, char** argv)
 
         const auto passed_check {std::abs(calculated_value - expected_value) < 1.0e-9};
 
-        const auto method {std::string("Parallel STL")};
+        const auto method {std::string("Parallel Thread")};
         const auto comments {std::string("operation:") + std::string(operation_string)};
 
         // Output
         {
 
-            const std::string base_file_name = "results/parallel_stl_" + std::string(operation_string);
+            const std::string base_file_name = "results/parallel_thread_" + std::string(operation_string);
             const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
 
             nlohmann::json j;

@@ -12,6 +12,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <concepts>
 #include "Error.hpp"
 #include "helper.hpp"
 #include "json.hpp"
@@ -21,7 +22,7 @@ using OperationKind = helper::OperationKind;
 namespace
 {
 
-inline constexpr float MIN_DENOMINATOR {1.0e-9};
+inline constexpr long double MIN_DENOMINATOR {1.0e-9};
 inline constexpr std::uint64_t RNG_SEED {123456789ULL};
 
 
@@ -30,9 +31,9 @@ inline constexpr std::uint64_t RNG_SEED {123456789ULL};
  * @brief Element-wise addition: c[i] = a[i] + b[i]
  */
 void serial_add(
-    const std::vector<float>& numbers_a,
-    const std::vector<float>& numbers_b,
-    std::vector<float>& numbers_c)
+    const std::vector<long double>& numbers_a,
+    const std::vector<long double>& numbers_b,
+    std::vector<long double>& numbers_c)
 {
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
@@ -47,9 +48,9 @@ void serial_add(
  * @brief Element-wise multiplication: c[i] = a[i] * b[i]
  */
 void serial_multiply(
-    const std::vector<float>& numbers_a,
-    const std::vector<float>& numbers_b,
-    std::vector<float>& numbers_c)
+    const std::vector<long double>& numbers_a,
+    const std::vector<long double>& numbers_b,
+    std::vector<long double>& numbers_c)
 {
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
@@ -64,9 +65,9 @@ void serial_multiply(
  * @brief Element-wise division: c[i] = a[i] / max(b[i], MIN_DENOMINATOR)
  */
 void serial_divide(
-    const std::vector<float>& numbers_a,
-    const std::vector<float>& numbers_b,
-    std::vector<float>& numbers_c)
+    const std::vector<long double>& numbers_a,
+    const std::vector<long double>& numbers_b,
+    std::vector<long double>& numbers_c)
 {
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
@@ -81,9 +82,9 @@ void serial_divide(
  * @brief Element-wise power: c[i] = pow(a[i], b[i])
  */
 void serial_power(
-    const std::vector<float>& numbers_a,
-    const std::vector<float>& numbers_b,
-    std::vector<float>& numbers_c)
+    const std::vector<long double>& numbers_a,
+    const std::vector<long double>& numbers_b,
+    std::vector<long double>& numbers_c)
 {
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
@@ -98,9 +99,9 @@ void serial_power(
  * @brief Element-wise exp sum: c[i] = exp(a[i]) + exp(b[i])
  */
 void serial_exp(
-    const std::vector<float>& numbers_a,
-    const std::vector<float>& numbers_b,
-    std::vector<float>& numbers_c)
+    const std::vector<long double>& numbers_a,
+    const std::vector<long double>& numbers_b,
+    std::vector<long double>& numbers_c)
 {
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
@@ -116,9 +117,9 @@ void serial_exp(
  * @warning Inputs must be > 0. No bounds/validity checking is performed in this hot loop.
  */
 void serial_log(
-    const std::vector<float>& numbers_a,
-    const std::vector<float>& numbers_b,
-    std::vector<float>& numbers_c)
+    const std::vector<long double>& numbers_a,
+    const std::vector<long double>& numbers_b,
+    std::vector<long double>& numbers_c)
 {
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
@@ -134,9 +135,9 @@ void serial_log(
  * @warning Inputs must be >= 0. No bounds/validity checking is performed in this hot loop.
  */
 void serial_sqrt(
-    const std::vector<float>& numbers_a,
-    const std::vector<float>& numbers_b,
-    std::vector<float>& numbers_c)
+    const std::vector<long double>& numbers_a,
+    const std::vector<long double>& numbers_b,
+    std::vector<long double>& numbers_c)
 {
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
@@ -156,9 +157,9 @@ void serial_sqrt(
  */
 void serial_task(
     OperationKind operation,
-    const std::vector<float>& numbers_a,
-    const std::vector<float>& numbers_b,
-    std::vector<float>& numbers_c)
+    const std::vector<long double>& numbers_a,
+    const std::vector<long double>& numbers_b,
+    std::vector<long double>& numbers_c)
 {
     switch (operation)
     {
@@ -235,69 +236,36 @@ int main(int argc, char** argv)
         std::mt19937_64 rng(RNG_SEED);
         std::uniform_real_distribution<double> dist(1.0, 2.0);
 
-        auto numbers_a {std::vector<float>{}};
-        auto numbers_b {std::vector<float>{}};
+        auto numbers_a {std::vector<long double>{}};
+        auto numbers_b {std::vector<long double>{}};
         numbers_a.reserve(n);
         numbers_b.reserve(n);
 
         for (auto i = std::size_t(0); i < n; i++)
         {
-            numbers_a.emplace_back(static_cast<float>(dist(rng)));
-            numbers_b.emplace_back(static_cast<float>(dist(rng)));
+            numbers_a.emplace_back(static_cast<long double>(dist(rng)));
+            numbers_b.emplace_back(static_cast<long double>(dist(rng)));
         }
-        
+
         auto expected_value {0.0};
-        {
-            auto numbers_c {std::vector<float>(n)};
-            helper::validate_sizes(numbers_a, numbers_b, numbers_c);
 
-            serial_task(operation, numbers_a, numbers_b, numbers_c);
-            expected_value = helper::check_sum(numbers_c);
-
-            std::cout << "Serial computed expected value: " << expected_value << "\n";
-        }
-
-        // ======= Calculation Starts ========
-
-        const auto t0 {std::chrono::steady_clock::now()};
-
-        const auto t1 {std::chrono::steady_clock::now()};
-        const auto deadline {t1 + std::chrono::duration<double>(test_time_seconds)};
-
-        auto iters {std::uint64_t(0)};
-        auto numbers_c {std::vector<float>(n)};
+        auto numbers_c {std::vector<long double>(n)};
         helper::validate_sizes(numbers_a, numbers_b, numbers_c);
 
-        do
-        {
-            serial_task(operation, numbers_a, numbers_b, numbers_c);
-            iters++;
-        }
-        while (std::chrono::steady_clock::now() < deadline);
+        serial_task(operation, numbers_a, numbers_b, numbers_c);
+        expected_value = helper::check_sum(numbers_c);
 
-        const auto t2 {std::chrono::steady_clock::now()};
-        const auto t3 {std::chrono::steady_clock::now()};
+        std::cout << "Precise computed expected value: " << expected_value << "\n";
 
-        // ======= Calculation Ends ========
 
-        const auto calculated_value {helper::check_sum(numbers_c)};
-
-        const auto time_setup {std::chrono::duration<double>(t1 - t0).count()};
-        const auto time_calc {std::chrono::duration<double>(t2 - t1).count()};
-        const auto time_cleanup {std::chrono::duration<double>(t3 - t2).count()};
-        const auto time_total {std::chrono::duration<double>(t3 - t0).count()};
-        const auto time_per_iteration {time_calc / static_cast<double>(iters)};
-
-        const auto passed_check {std::abs(calculated_value - expected_value) < 1.0e-9};
-
-        const auto method {std::string("Serial 32")};
+        const auto method {std::string("Precise Values")};
         const auto comments {std::string("operation:") + std::string(operation_string)};
 
         // Output
         {
 
-            const std::string base_file_name = "results/serial_32_" + std::string(operation_string);
-            const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
+            const std::string base_file_name = "results/precise_values_" + std::string(operation_string);
+            const std::string json_file = base_file_name + ".json";
 
             nlohmann::json j;
 
@@ -307,26 +275,10 @@ int main(int argc, char** argv)
             j["operation"] = operation_string;
             j["comments"] = comments;
             j["threads"] = 1;
-            j["device"] = "CPU";
 
-            // Iteration/timing            
-            j["test_time_seconds"] = test_time_seconds;
-            j["iterations"] = iters;
-            j["time_per_iteration"] = time_per_iteration;
-            j["time_setup"] = time_setup;
-            j["time_calc"] = time_calc;
-            j["time_cleanup"] = time_cleanup;
-            j["time_total"] = time_total;
-
-            // Values
             j["expected_value"] = helper::to_string_precise(expected_value);
-            j["calculated_value"] = helper::to_string_precise(calculated_value);;
-            j["difference"] = helper::to_string_precise(expected_value - calculated_value);
-            j["passed_check"] = passed_check;
             j["values"] = helper::to_string_precise_vector(numbers_c);
 
-            // Memory
-            j["max_rss_kb"] = helper::max_rss_kb();
 
             std::ofstream out(json_file);
             if (!out)
@@ -342,35 +294,6 @@ int main(int argc, char** argv)
     }
     catch (const std::exception& e)
     {
-        if (dev_a != nullptr)
-        {
-            clReleaseMemObject(dev_a);
-        }
-        if (dev_b != nullptr)
-        {
-            clReleaseMemObject(dev_b);
-        }
-        if (dev_c != nullptr)
-        {
-            clReleaseMemObject(dev_c);
-        }
-        if (kernel != nullptr)
-        {
-            clReleaseKernel(kernel);
-        }
-        if (program != nullptr)
-        {
-            clReleaseProgram(program);
-        }
-        if (queue != nullptr)
-        {
-            clReleaseCommandQueue(queue);
-        }
-        if (context != nullptr)
-        {
-            clReleaseContext(context);
-        }
-
         std::cerr << "Error: " << e.what() << "\n";
         return 1;
     }

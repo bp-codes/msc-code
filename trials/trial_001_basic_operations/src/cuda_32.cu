@@ -694,7 +694,7 @@ int main(int argc, char** argv)
                 throw std::runtime_error("Failed to open output JSON file.");
             }
 
-            // Pretty-print. Use `out << j;` if you want compact.
+            // Save JSON file.
             out << std::setw(2) << j << '\n';
         }
 

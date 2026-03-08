@@ -18,7 +18,7 @@ acpp -O3 -ffast-math -std=c++23 \
 
 
 nvcc -std=c++17 \
-    -O2 \
+    -O3 \
     -Xcompiler "-fno-fast-math -fno-unsafe-math-optimizations -ffp-contract=off" \
     src/cuda.cu \
     -o bin/cuda.x
@@ -29,6 +29,20 @@ nvcc -std=c++17 \
     -Xcompiler "-fno-fast-math -fno-unsafe-math-optimizations -ffp-contract=off" \
     src/cuda_32.cu \
     -o bin/cuda_32.x
+
+
+g++ -std=c++23 \
+    -O3 \
+    src/opencl.cpp \
+    -o bin/opencl.x \
+    -lOpenCL
+
+
+g++ -std=c++23 \
+    -O3 \
+    src/opencl_32.cpp \
+    -o bin/opencl_32.x \
+    -lOpenCL
 
 
 #g++ -std=c++17 -DCL_TARGET_OPENCL_VERSION=200 trial_001_adding_opencl_1.cpp -o trial_001_adding_opencl_1.x -lOpenCL

@@ -1,4 +1,5 @@
 // serial.cpp
+#include <execution>
 #include <algorithm>
 #include <charconv>
 #include <chrono>
@@ -15,6 +16,7 @@
 #include "Error.hpp"
 #include "helper.hpp"
 #include "json.hpp"
+#include <tbb/global_control.h>
 
 using OperationKind = helper::OperationKind;
 
@@ -26,6 +28,10 @@ inline constexpr std::uint64_t RNG_SEED {123456789ULL};
 
 
 
+// Serial versions
+
+
+
 /**
  * @brief Element-wise addition: c[i] = a[i] + b[i]
  */
@@ -34,14 +40,11 @@ void serial_add(
     const std::vector<float>& numbers_b,
     std::vector<float>& numbers_c)
 {
-    std::transform(
-        numbers_a.begin(), numbers_a.end(),
-        numbers_b.begin(),
-        numbers_c.begin(),
-        [](float x, float y) {
-            return x + y;
-        }
-    );
+    const auto n {std::size_t(numbers_a.size())};
+    for (auto i = std::size_t(0); i < n; i++)
+    {
+        numbers_c[i] = numbers_a[i] + numbers_b[i];
+    }
 }
 
 
@@ -54,14 +57,11 @@ void serial_multiply(
     const std::vector<float>& numbers_b,
     std::vector<float>& numbers_c)
 {
-    std::transform(
-        numbers_a.begin(), numbers_a.end(),
-        numbers_b.begin(),
-        numbers_c.begin(),
-        [](float x, float y) {
-            return x * y;
-        }
-    );
+    const auto n {std::size_t(numbers_a.size())};
+    for (auto i = std::size_t(0); i < n; i++)
+    {
+        numbers_c[i] = numbers_a[i] * numbers_b[i];
+    }
 }
 
 
@@ -74,15 +74,11 @@ void serial_divide(
     const std::vector<float>& numbers_b,
     std::vector<float>& numbers_c)
 {
-    std::transform(
-        numbers_a.begin(), numbers_a.end(),
-        numbers_b.begin(),
-        numbers_c.begin(),
-        [](float x, float y)
-        {
-            return x / std::max(y, MIN_DENOMINATOR);
-        }
-    );
+    const auto n {std::size_t(numbers_a.size())};
+    for (auto i = std::size_t(0); i < n; i++)
+    {
+        numbers_c[i] = numbers_a[i] / std::max(numbers_b[i], MIN_DENOMINATOR);
+    }
 }
 
 
@@ -95,15 +91,11 @@ void serial_power(
     const std::vector<float>& numbers_b,
     std::vector<float>& numbers_c)
 {
-    std::transform(
-        numbers_a.begin(), numbers_a.end(),
-        numbers_b.begin(),
-        numbers_c.begin(),
-        [](float x, float y)
-        {
-            return std::pow(x, y);
-        }
-    );
+    const auto n {std::size_t(numbers_a.size())};
+    for (auto i = std::size_t(0); i < n; i++)
+    {
+        numbers_c[i] = std::pow(numbers_a[i], numbers_b[i]);
+    }
 }
 
 
@@ -116,15 +108,11 @@ void serial_exp(
     const std::vector<float>& numbers_b,
     std::vector<float>& numbers_c)
 {
-    std::transform(
-        numbers_a.begin(), numbers_a.end(),
-        numbers_b.begin(),
-        numbers_c.begin(),
-        [](float x, float y)
-        {
-            return std::exp(x) + std::exp(y);
-        }
-    );
+    const auto n {std::size_t(numbers_a.size())};
+    for (auto i = std::size_t(0); i < n; i++)
+    {
+        numbers_c[i] = std::exp(numbers_a[i]) + std::exp(numbers_b[i]);
+    }
 }
 
 
@@ -138,15 +126,11 @@ void serial_log(
     const std::vector<float>& numbers_b,
     std::vector<float>& numbers_c)
 {
-    std::transform(
-        numbers_a.begin(), numbers_a.end(),
-        numbers_b.begin(),
-        numbers_c.begin(),
-        [](float x, float y)
-        {
-            return std::log(x) + std::log(y);
-        }
-    );
+    const auto n {std::size_t(numbers_a.size())};
+    for (auto i = std::size_t(0); i < n; i++)
+    {
+        numbers_c[i] = std::log(numbers_a[i]) + std::log(numbers_b[i]);
+    }
 }
 
 
@@ -160,15 +144,11 @@ void serial_sqrt(
     const std::vector<float>& numbers_b,
     std::vector<float>& numbers_c)
 {
-    std::transform(
-        numbers_a.begin(), numbers_a.end(),
-        numbers_b.begin(),
-        numbers_c.begin(),
-        [](float x, float y)
-        {
-            return std::sqrt(x) + std::sqrt(y);
-        }
-    );
+    const auto n {std::size_t(numbers_a.size())};
+    for (auto i = std::size_t(0); i < n; i++)
+    {
+        numbers_c[i] = std::sqrt(numbers_a[i]) + std::sqrt(numbers_b[i]);
+    }
 }
 
 
@@ -230,31 +210,221 @@ void serial_task(
 
 
 
+// Parallel versions
+
+
+
 /**
- * @brief Compute the sum of all elements in a vector (serial).
- * @param numbers Vector to sum.
- * @return Sum of elements.
+ * @brief Element-wise addition: c[i] = a[i] + b[i]
  */
-[[nodiscard]]
-double check_sum(const std::vector<double>& numbers)
+void parallel_add(
+    const std::vector<float>& numbers_a,
+    const std::vector<float>& numbers_b,
+    std::vector<float>& numbers_c)
 {
-    return std::accumulate(numbers.begin(), numbers.end(), 0.0);
+    std::transform(
+        std::execution::par,
+        numbers_a.begin(), numbers_a.end(),
+        numbers_b.begin(),
+        numbers_c.begin(),
+        [](float x, float y) {
+            return x + y;
+        }
+    );
 }
 
 
 
 /**
- * @brief Compute the sum of all elements in a vector (serial).
- * @param numbers Vector to sum.
- * @return Sum of elements.
+ * @brief Element-wise multiplication: c[i] = a[i] * b[i]
  */
-[[nodiscard]]
-float check_sum(const std::vector<float>& numbers)
+void parallel_multiply(
+    const std::vector<float>& numbers_a,
+    const std::vector<float>& numbers_b,
+    std::vector<float>& numbers_c)
 {
-    return std::accumulate(numbers.begin(), numbers.end(), 0.0f);
+    std::transform(
+        std::execution::par,
+        numbers_a.begin(), numbers_a.end(),
+        numbers_b.begin(),
+        numbers_c.begin(),
+        [](float x, float y) {
+            return x * y;
+        }
+    );
 }
 
-} // namespace
+
+
+/**
+ * @brief Element-wise division: c[i] = a[i] / max(b[i], MIN_DENOMINATOR)
+ */
+void parallel_divide(
+    const std::vector<float>& numbers_a,
+    const std::vector<float>& numbers_b,
+    std::vector<float>& numbers_c)
+{
+    std::transform(
+        std::execution::par,
+        numbers_a.begin(), numbers_a.end(),
+        numbers_b.begin(),
+        numbers_c.begin(),
+        [](float x, float y)
+        {
+            return x / std::max(y, MIN_DENOMINATOR);
+        }
+    );
+}
+
+
+
+/**
+ * @brief Element-wise power: c[i] = pow(a[i], b[i])
+ */
+void parallel_power(
+    const std::vector<float>& numbers_a,
+    const std::vector<float>& numbers_b,
+    std::vector<float>& numbers_c)
+{
+    std::transform(
+        std::execution::par,
+        numbers_a.begin(), numbers_a.end(),
+        numbers_b.begin(),
+        numbers_c.begin(),
+        [](float x, float y)
+        {
+            return std::pow(x, y);
+        }
+    );
+}
+
+
+
+/**
+ * @brief Element-wise exp sum: c[i] = exp(a[i]) + exp(b[i])
+ */
+void parallel_exp(
+    const std::vector<float>& numbers_a,
+    const std::vector<float>& numbers_b,
+    std::vector<float>& numbers_c)
+{
+    std::transform(
+        std::execution::par,
+        numbers_a.begin(), numbers_a.end(),
+        numbers_b.begin(),
+        numbers_c.begin(),
+        [](float x, float y)
+        {
+            return std::exp(x) + std::exp(y);
+        }
+    );
+}
+
+
+
+/**
+ * @brief Element-wise log sum: c[i] = log(a[i]) + log(b[i])
+ * @warning Inputs must be > 0. No bounds/validity checking is performed in this hot loop.
+ */
+void parallel_log(
+    const std::vector<float>& numbers_a,
+    const std::vector<float>& numbers_b,
+    std::vector<float>& numbers_c)
+{
+    std::transform(
+        std::execution::par,
+        numbers_a.begin(), numbers_a.end(),
+        numbers_b.begin(),
+        numbers_c.begin(),
+        [](float x, float y)
+        {
+            return std::log(x) + std::log(y);
+        }
+    );
+}
+
+
+
+/**
+ * @brief Element-wise sqrt sum: c[i] = sqrt(a[i]) + sqrt(b[i])
+ * @warning Inputs must be >= 0. No bounds/validity checking is performed in this hot loop.
+ */
+void parallel_sqrt(
+    const std::vector<float>& numbers_a,
+    const std::vector<float>& numbers_b,
+    std::vector<float>& numbers_c)
+{
+    std::transform(
+        std::execution::par,
+        numbers_a.begin(), numbers_a.end(),
+        numbers_b.begin(),
+        numbers_c.begin(),
+        [](float x, float y)
+        {
+            return std::sqrt(x) + std::sqrt(y);
+        }
+    );
+}
+
+
+
+/**
+ * @brief Dispatch the selected operation.
+ * @param operation Operation kind.
+ * @param numbers_a First input vector.
+ * @param numbers_b Second input vector.
+ * @param numbers_c Output vector (must be pre-sized).
+ */
+void parallel_task(
+    OperationKind operation,
+    const std::vector<float>& numbers_a,
+    const std::vector<float>& numbers_b,
+    std::vector<float>& numbers_c)
+{
+    switch (operation)
+    {
+        case OperationKind::Add:
+        {
+            parallel_add(numbers_a, numbers_b, numbers_c);
+            return;
+        }
+        case OperationKind::Multiply:
+        {
+            parallel_multiply(numbers_a, numbers_b, numbers_c);
+            return;
+        }
+        case OperationKind::Divide:
+        {
+            parallel_divide(numbers_a, numbers_b, numbers_c);
+            return;
+        }
+        case OperationKind::Power:
+        {
+            parallel_power(numbers_a, numbers_b, numbers_c);
+            return;
+        }
+        case OperationKind::Exp:
+        {
+            parallel_exp(numbers_a, numbers_b, numbers_c);
+            return;
+        }
+        case OperationKind::Log:
+        {
+            parallel_log(numbers_a, numbers_b, numbers_c);
+            return;
+        }
+        case OperationKind::Sqrt:
+        {
+            parallel_sqrt(numbers_a, numbers_b, numbers_c);
+            return;
+        }
+    }
+
+    THROW_RUNTIME_ERROR("Unhandled OperationKind value.");
+}
+
+
+}
 
 
 /**
@@ -268,6 +438,10 @@ int main(int argc, char** argv)
         {
             THROW_INVALID_ARGUMENT("Usage: serial.x time_limit vec_size operation");
         }
+
+        tbb::global_control control(
+        tbb::global_control::max_allowed_parallelism,
+        helper::get_num_threads());
 
         const auto test_time_seconds {helper::parse_floating_point(argv[1])};
         const auto n {helper::parse_size(argv[2])};
@@ -293,8 +467,8 @@ int main(int argc, char** argv)
 
         for (auto i = std::size_t(0); i < n; i++)
         {
-            numbers_a.emplace_back(static_cast<float>(dist(rng)));
-            numbers_b.emplace_back(static_cast<float>(dist(rng)));
+            numbers_a.emplace_back(dist(rng));
+            numbers_b.emplace_back(dist(rng));
         }
 
         auto expected_value {0.0};
@@ -321,7 +495,7 @@ int main(int argc, char** argv)
 
         do
         {
-            serial_task(operation, numbers_a, numbers_b, numbers_c);
+            parallel_task(operation, numbers_a, numbers_b, numbers_c);
             iters++;
         }
         while (std::chrono::steady_clock::now() < deadline);
@@ -331,7 +505,7 @@ int main(int argc, char** argv)
 
         // ======= Calculation Ends ========
 
-        const auto calculated_value {check_sum(numbers_c)};
+        const auto calculated_value {helper::check_sum(numbers_c)};
 
         const auto time_setup {std::chrono::duration<double>(t1 - t0).count()};
         const auto time_calc {std::chrono::duration<double>(t2 - t1).count()};
@@ -341,13 +515,13 @@ int main(int argc, char** argv)
 
         const auto passed_check {std::abs(calculated_value - expected_value) < 1.0e-9};
 
-        const auto method {std::string("Serial STL 32")};
+        const auto method {std::string("Parallel STL 32")};
         const auto comments {std::string("operation:") + std::string(operation_string)};
 
         // Output
         {
 
-            const std::string base_file_name = "results/serial_stl_32_" + std::string(operation_string);
+            const std::string base_file_name = "results/parallel_stl_32_" + std::string(operation_string);
             const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
 
             nlohmann::json j;
@@ -357,7 +531,7 @@ int main(int argc, char** argv)
             j["method"] = method;
             j["operation"] = operation_string;
             j["comments"] = comments;
-            j["threads"] = 1;
+            j["threads"] = helper::get_num_threads();
 
             // Iteration/timing            
             j["test_time_seconds"] = test_time_seconds;

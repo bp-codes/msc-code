@@ -1,24 +1,32 @@
 #!/bin/bash
 
+#  ./bin/precise.x 5.0 1000000 add
+#  ./bin/serial.x 5.0 1000000 add
+
 set -euo pipefail
 
 RUNS=1
-export OMP_NUM_THREADS=4
+export NUM_THREADS=6
 
 mkdir -p results
 
 # Each entry: "executable arguments"
 apps=(
     "./bin/serial.x"
-    "./bin/serial32.x"
-    "./bin/serial_simd.x"
-    "./bin/serial_simd_32.x"
+    "./bin/serial_32.x"
     "./bin/serial_stl.x"
     "./bin/serial_stl_32.x"
-    "./bin/openmp.x"
-    "./bin/openmp_32.x"
-    "./bin/openmp_simd.x"
-    "./bin/openmp_simd_32.x"
+    "./bin/serial_simd.x"
+    "./bin/serial_simd_32.x"
+    "./bin/parallel_stl.x"
+    "./bin/parallel_stl_32.x"
+    "./bin/parallel_thread.x"
+    "./bin/parallel_thread_32.x"
+    "./bin/parallel_openmp.x"
+    "./bin/parallel_openmp_32.x"
+    "./bin/parallel_openmp_simd.x"
+    "./bin/parallel_openmp_simd_32.x"
+    "./bin/precise.x"
 )
 
 operations=(
