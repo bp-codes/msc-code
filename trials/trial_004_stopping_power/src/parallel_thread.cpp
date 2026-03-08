@@ -4,12 +4,19 @@
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <fstream>
+#include <limits>
 #include <random>
 #include <string>
 #include <vector>
-#include <algorithm>
 #include <format>
-#include <omp.h>
+#include <algorithm>
+#include <numeric>
+#include "json.hpp"
+#include "helper.hpp"
+#include "Error.hpp"
+
+#include <thread>
 
 
 
@@ -64,10 +71,11 @@ static inline double stopping_power(
     static constexpr auto SPEED_OF_LIGHT_MS {299792458.0};    ///< [m/s]
     static constexpr auto ELECTRON_MASS_MEV {0.51099895000};  ///< [MeV]
     static constexpr auto BETHE_CONSTANT_K  {0.307075};       ///< [MeV·cm^2/mol]
+    static constexpr auto SMALL_VALUE  {1.0e-9};
 
     // Relativistic kinematics
     const auto beta_raw {projectile_velocity_ms / SPEED_OF_LIGHT_MS};
-    const auto beta {std::clamp(beta_raw, 1.0e-9, 0.99999)};            // Clamped to sensible values to avoid errors 
+    const auto beta {std::clamp(beta_raw, SMALL_VALUE, 0.99999)};            // Clamped to sensible values to avoid errors 
     const auto beta2 {beta * beta};
 
     const auto inv_one_minus_beta2 {1.0 / (1.0 - beta2)};
@@ -78,14 +86,14 @@ static inline double stopping_power(
     const auto total_energy_mev {std::max(0.0, gamma * projectile_atomic_mass_mev)};
 
     // Maximum energy transfer W_max (PDG Eq. 34.4)
-    const auto electron_to_projectile_mass {ELECTRON_MASS_MEV / std::max(1.0e-9, projectile_atomic_mass_mev)};
+    const auto electron_to_projectile_mass {ELECTRON_MASS_MEV / std::max(SMALL_VALUE, projectile_atomic_mass_mev)};
 
     const auto w_max_numerator {2.0 * ELECTRON_MASS_MEV * beta2 * gamma2};
     const auto w_max_denominator = std::max(
         1.0
       + 2.0 * gamma * electron_to_projectile_mass
       + (electron_to_projectile_mass * electron_to_projectile_mass),
-        1.0e-12);
+        SMALL_VALUE);
 
     const auto w_max_mev {w_max_numerator / w_max_denominator};
 
@@ -93,8 +101,8 @@ static inline double stopping_power(
     const auto mean_excitation_energy2_mev2 {mean_excitation_energy_mev * mean_excitation_energy_mev};
 
     const auto log_argument = std::max(
-        (2.0 * ELECTRON_MASS_MEV * beta2 * gamma2 * w_max_mev) / std::max(1.0e-9, mean_excitation_energy2_mev2),
-        1.0);
+        (2.0 * ELECTRON_MASS_MEV * beta2 * gamma2 * w_max_mev) / std::max(SMALL_VALUE, mean_excitation_energy2_mev2),
+        SMALL_VALUE);
 
     // Square-bracketed term (PDG Eq. 34.5 + optional corrections)
     auto bracket =
@@ -106,56 +114,13 @@ static inline double stopping_power(
     const auto projectile_charge {static_cast<double>(projectile_atomic_number)};
     const auto projectile_charge2 {projectile_charge * projectile_charge};
 
-    const auto z_over_a {static_cast<double>(target_atomic_number) / std::max(1.0e-9, target_atomic_mass_g_mol)};
+    const auto z_over_a {static_cast<double>(target_atomic_number) / std::max(SMALL_VALUE, target_atomic_mass_g_mol)};
     const auto prefactor_mass {BETHE_CONSTANT_K * projectile_charge2 * z_over_a / beta2};
 
     const auto mass_stopping_power_mev_cm2_per_g {prefactor_mass * bracket};
     const auto linear_stopping_power_mev_per_cm {target_density_g_cm3 * mass_stopping_power_mev_cm2_per_g};
 
     return linear_stopping_power_mev_per_cm;
-}
-
-
-
-/**
- * @brief Compute stopping power for an array of projectile velocities (OpenMP).
- *
- * @param velocity_array Projectile velocities in m/s.
- * @param results Output array (must be pre-sized to match velocity_array).
- *
- * @warning
- *      This routine does not validate sizes; callers must ensure `results.size() == velocity_array.size()`.
- */
-static inline void openmp_task(
-    const std::vector<double>& velocity_array,
-    std::vector<double>& results)
-{
-    // Parameters (example: proton in iron-like material; values chosen by caller/program)
-    static constexpr auto PROJECTILE_ATOMIC_NUMBER {1};
-    static constexpr auto PROJECTILE_ATOMIC_MASS_MEV {938.2720813}; // proton rest mass energy [MeV]
-
-    static constexpr auto TARGET_ATOMIC_NUMBER {26};
-    static constexpr auto TARGET_ATOMIC_MASS_G_MOL {55.845};
-    static constexpr auto TARGET_DENSITY_G_CM3 {7.874};
-
-    static constexpr auto MEAN_EXCITATION_ENERGY_MEV {286.0e-6}; // 286 eV = 286e-6 MeV
-    static constexpr auto DENSITY_EFFECT_DELTA {0.0};
-
-    const auto n {std::size_t(velocity_array.size())};
-
-    #pragma omp parallel for schedule(static)
-    for (auto i = std::size_t(0); i < n; i++)
-    {
-        results[i] = stopping_power(
-            velocity_array[i],
-            PROJECTILE_ATOMIC_NUMBER,
-            PROJECTILE_ATOMIC_MASS_MEV,
-            TARGET_ATOMIC_NUMBER,
-            TARGET_ATOMIC_MASS_G_MOL,
-            TARGET_DENSITY_G_CM3,
-            MEAN_EXCITATION_ENERGY_MEV,
-            DENSITY_EFFECT_DELTA);
-    }
 }
 
 
@@ -173,7 +138,7 @@ static inline void serial_task(
     const std::vector<double>& velocity_array,
     std::vector<double>& results)
 {
-    // Parameters (example: proton in iron-like material; values chosen by caller/program)
+    // Parameters
     static constexpr auto PROJECTILE_ATOMIC_NUMBER {1};
     static constexpr auto PROJECTILE_ATOMIC_MASS_MEV {938.2720813}; // proton rest mass energy [MeV]
 
@@ -183,6 +148,7 @@ static inline void serial_task(
 
     static constexpr auto MEAN_EXCITATION_ENERGY_MEV {286.0e-6}; // 286 eV = 286e-6 MeV
     static constexpr auto DENSITY_EFFECT_DELTA {0.0};
+    static constexpr auto SHELL_CORRECTION_C_OVER_Z {0.0};
 
     const auto n {std::size_t(velocity_array.size())};
 
@@ -203,21 +169,79 @@ static inline void serial_task(
 
 
 /**
- * @brief Compute the sum of an array (serial).
+ * @brief Compute stopping power for an array of projectile velocities (parallel).
  *
- * @param values Input values.
- * @return Sum of values.
+ * @param velocity_array Projectile velocities in m/s.
+ * @param results Output array (must be pre-sized to match velocity_array).
+ *
+ * @warning
+ *      This routine does not validate sizes; callers must ensure `results.size() == velocity_array.size()`.
  */
-[[nodiscard]]
-static inline double check_sum(const std::vector<double>& values) noexcept
+static inline void parallel_task(
+    const std::vector<double>& velocity_array,
+    std::vector<double>& results)
 {
-    return std::accumulate(values.begin(), values.end(), 0.0);
+    // Parameters
+    static constexpr auto PROJECTILE_ATOMIC_NUMBER {1};
+    static constexpr auto PROJECTILE_ATOMIC_MASS_MEV {938.2720813}; // proton rest mass energy [MeV]
+
+    static constexpr auto TARGET_ATOMIC_NUMBER {26};
+    static constexpr auto TARGET_ATOMIC_MASS_G_MOL {55.845};
+    static constexpr auto TARGET_DENSITY_G_CM3 {7.874};
+
+    static constexpr auto MEAN_EXCITATION_ENERGY_MEV {286.0e-6}; // 286 eV = 286e-6 MeV
+    static constexpr auto DENSITY_EFFECT_DELTA {0.0};
+    static constexpr auto SHELL_CORRECTION_C_OVER_Z {0.0};
+    
+    const auto n {std::size_t(velocity_array.size())};
+    const std::size_t num_threads = std::min(helper::get_num_threads(), n);
+    const std::size_t chunk = (n + num_threads - 1) / num_threads;
+
+    std::vector<std::thread> threads;
+    threads.reserve(num_threads);
+
+    for (std::size_t t = 0; t < num_threads; ++t)
+    {
+        const std::size_t begin = t * chunk;
+        const std::size_t end = std::min(begin + chunk, n);
+
+        if (begin >= n)
+        {
+            break;
+        }
+
+        threads.emplace_back(
+            [&, begin, end]()
+            {
+                for (std::size_t i = begin; i < end; ++i)
+                {        
+                    results[i] = stopping_power(
+                    velocity_array[i],
+                    PROJECTILE_ATOMIC_NUMBER,
+                    PROJECTILE_ATOMIC_MASS_MEV,
+                    TARGET_ATOMIC_NUMBER,
+                    TARGET_ATOMIC_MASS_G_MOL,
+                    TARGET_DENSITY_G_CM3,
+                    MEAN_EXCITATION_ENERGY_MEV,
+                    DENSITY_EFFECT_DELTA);
+                }
+            }
+        );
+    }
+
+    for (auto& thread : threads)
+    {
+        thread.join();
+    }
+
+
 }
 
 
 
 int main(int argc, char** argv)
 {
+
     // Must have 3 arguments
     if (argc < 3)
     {
@@ -239,17 +263,17 @@ int main(int argc, char** argv)
 
     // Random number generator
     std::mt19937_64 rng(123456789ULL);
-    std::uniform_real_distribution<double> dist(0.0, 1.0); // [0.0, 1.0)
+    std::uniform_real_distribution<double> dist(1.0e7, 1.0e8); // [0.0, 1.0)
 
     // Vector of numbers
     auto velocity_array {std::vector<double>{}};
     velocity_array.reserve(n);
 
     // Populate vectors
-    for (auto i = std::size_t(0); i < n; i++)
+    std::generate_n(std::back_inserter(velocity_array), n, [&]()
     {
-        velocity_array.emplace_back(1.0e6 * dist(rng));
-    }
+        return dist(rng);
+    });
 
     auto expected_value {0.0};
 
@@ -257,13 +281,14 @@ int main(int argc, char** argv)
     {
         auto stopping_power_values {std::vector<double>(n)};
         serial_task(velocity_array, stopping_power_values);
-        expected_value = check_sum(stopping_power_values);
-        std::cout << "Serial computed expected value: " << expected_value << '\n';
+        expected_value = helper::check_sum(stopping_power_values);
     }
 
     // ======= Calculation Starts ========
 
     const auto t0 {std::chrono::steady_clock::now()};
+
+    // Do calculation
     const auto t1 {std::chrono::steady_clock::now()};
     const auto deadline {t1 + std::chrono::duration<double>(test_time_s)};
     auto iters {std::uint64_t(0)};
@@ -273,17 +298,20 @@ int main(int argc, char** argv)
     // Do as many times as possible before time runs out
     do
     {
-        openmp_task(velocity_array, stopping_power_values);
+        parallel_task(velocity_array, stopping_power_values);
         iters++;
     }
     while (std::chrono::steady_clock::now() < deadline);
 
     const auto t2 {std::chrono::steady_clock::now()};
+
+    // Actual end time
     const auto t3 {std::chrono::steady_clock::now()};
 
     // ======= Calculation Ends ========
 
-    const auto calculated_value {check_sum(stopping_power_values)};
+    // Check
+    const auto calculated_value {helper::check_sum(stopping_power_values)};
 
     const auto time_setup_s {std::chrono::duration<double>(t1 - t0).count()};
     const auto time_calc_s {std::chrono::duration<double>(t2 - t1).count()};
@@ -291,23 +319,54 @@ int main(int argc, char** argv)
     const auto time_total_s {std::chrono::duration<double>(t3 - t0).count()};
     const auto time_per_iteration_s {time_calc_s / static_cast<double>(iters)};
 
-    const auto method {std::string("OpenMP")};
+    const auto method {std::string("Parallel Thread")};
     const auto comments {std::string("stopping_power")};
     const auto passed_check {(std::abs(calculated_value - expected_value) < 1.0e-9)};
 
-    std::cout << std::format(
-        "{},{:.17g},{:.17g},{},{:.9e},{:.6f},{:.6f},{:.6f},{:.6f},{},{}\n",
-        method,
-        expected_value,
-        calculated_value,
-        iters,
-        time_per_iteration_s,
-        time_setup_s,
-        time_calc_s,
-        time_cleanup_s,
-        time_total_s,
-        passed_check,
-        comments);
+    // Output
+    {
+
+        const std::string base_file_name = "results/parallel_thread";
+        const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
+
+        nlohmann::json j;
+
+        // Metadata / identity
+        j["file"] = json_file;
+        j["method"] = method;
+        j["operation"] = "Bethe-Bloch Stopping Power";
+        j["comments"] = comments;
+        j["threads"] = helper::get_num_threads();
+        j["device"] = "CPU";
+
+        // Iteration/timing            
+        j["test_time_seconds"] = test_time_s;
+        j["iterations"] = iters;
+        j["time_per_iteration"] = time_per_iteration_s;
+        j["time_setup"] = time_setup_s;
+        j["time_calc"] = time_calc_s;
+        j["time_cleanup"] = time_cleanup_s;
+        j["time_total"] = time_total_s;
+
+        // Values
+        j["expected_value"] = helper::to_string_precise(expected_value);
+        j["calculated_value"] = helper::to_string_precise(calculated_value);;
+        j["difference"] = helper::to_string_precise(expected_value - calculated_value);
+        j["passed_check"] = passed_check;
+        j["values"] = helper::to_string_precise_vector(stopping_power_values);
+
+        // Memory
+        j["max_rss_kb"] = helper::max_rss_kb();
+
+        std::ofstream out(json_file);
+        if (!out)
+        {
+            throw std::runtime_error("Failed to open output JSON file.");
+        }
+
+        // Pretty-print. Use `out << j;` if you want compact.
+        out << std::setw(2) << j << '\n';
+    }
 
     return 0;
 }

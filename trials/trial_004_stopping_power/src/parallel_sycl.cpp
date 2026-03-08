@@ -1,17 +1,26 @@
 // sycl_stopping_power_usm.cpp
-#include <algorithm>
+
 #include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <fstream>
+#include <iomanip>
+#include <stdexcept>
+#include <limits>
 #include <random>
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <numeric>
+
+#include "json.hpp"
+#include "helper.hpp"
+#include "Error.hpp"
+
 #include <sycl/sycl.hpp>
-#if defined(__cpp_lib_format)
-    #include <format>
-#endif
+
 
 
 /**
@@ -101,10 +110,11 @@ static inline double stopping_power(
     static constexpr auto SPEED_OF_LIGHT_MS {299792458.0};    ///< [m/s]
     static constexpr auto ELECTRON_MASS_MEV {0.51099895000};  ///< [MeV]
     static constexpr auto BETHE_CONSTANT_K  {0.307075};       ///< [MeV·cm^2/mol]
+    static constexpr auto SMALL_VALUE  {1.0e-9};
 
     // Relativistic kinematics
     const auto beta_raw {projectile_velocity_ms / SPEED_OF_LIGHT_MS};
-    const auto beta {std::clamp(beta_raw, 1.0e-9, 0.99999)};            // Clamped to sensible values to avoid errors 
+    const auto beta {std::clamp(beta_raw, SMALL_VALUE, 0.99999)};            // Clamped to sensible values to avoid errors 
     const auto beta2 {beta * beta};
 
     const auto inv_one_minus_beta2 {1.0 / (1.0 - beta2)};
@@ -115,14 +125,14 @@ static inline double stopping_power(
     const auto total_energy_mev {std::max(0.0, gamma * projectile_atomic_mass_mev)};
 
     // Maximum energy transfer W_max (PDG Eq. 34.4)
-    const auto electron_to_projectile_mass {ELECTRON_MASS_MEV / std::max(1.0e-9, projectile_atomic_mass_mev)};
+    const auto electron_to_projectile_mass {ELECTRON_MASS_MEV / std::max(SMALL_VALUE, projectile_atomic_mass_mev)};
 
     const auto w_max_numerator {2.0 * ELECTRON_MASS_MEV * beta2 * gamma2};
     const auto w_max_denominator = std::max(
         1.0
       + 2.0 * gamma * electron_to_projectile_mass
       + (electron_to_projectile_mass * electron_to_projectile_mass),
-        1.0e-12);
+        SMALL_VALUE);
 
     const auto w_max_mev {w_max_numerator / w_max_denominator};
 
@@ -130,8 +140,8 @@ static inline double stopping_power(
     const auto mean_excitation_energy2_mev2 {mean_excitation_energy_mev * mean_excitation_energy_mev};
 
     const auto log_argument = std::max(
-        (2.0 * ELECTRON_MASS_MEV * beta2 * gamma2 * w_max_mev) / std::max(1.0e-9, mean_excitation_energy2_mev2),
-        1.0);
+        (2.0 * ELECTRON_MASS_MEV * beta2 * gamma2 * w_max_mev) / std::max(SMALL_VALUE, mean_excitation_energy2_mev2),
+        SMALL_VALUE);
 
     // Square-bracketed term (PDG Eq. 34.5 + optional corrections)
     auto bracket =
@@ -143,7 +153,7 @@ static inline double stopping_power(
     const auto projectile_charge {static_cast<double>(projectile_atomic_number)};
     const auto projectile_charge2 {projectile_charge * projectile_charge};
 
-    const auto z_over_a {static_cast<double>(target_atomic_number) / std::max(1.0e-9, target_atomic_mass_g_mol)};
+    const auto z_over_a {static_cast<double>(target_atomic_number) / std::max(SMALL_VALUE, target_atomic_mass_g_mol)};
     const auto prefactor_mass {BETHE_CONSTANT_K * projectile_charge2 * z_over_a / beta2};
 
     const auto mass_stopping_power_mev_cm2_per_g {prefactor_mass * bracket};
@@ -242,20 +252,6 @@ static inline sycl::event sycl_task(
 
 
 
-/**
- * @brief Compute the sum of an array (serial).
- *
- * @param values Input values.
- * @return Sum of values.
- */
-[[nodiscard]]
-static inline double check_sum(const std::vector<double>& values) noexcept
-{
-    return std::accumulate(values.begin(), values.end(), 0.0);;
-}
-
-
-
 int main(int argc, char** argv)
 {
     if (argc < 3)
@@ -275,14 +271,27 @@ int main(int argc, char** argv)
 
     const auto n {static_cast<std::size_t>(n_raw)};
 
+    std::string_view device_string = "GPU";
+    if (argc >= 5)
+    {
+        device_string = argv[4];
+
+        if (device_string != "GPU" && device_string != "CPU")
+        {
+            THROW_INVALID_ARGUMENT("device must be GPU or CPU");
+        }
+    }
+
     // Setup timing start
     const auto t0 {std::chrono::steady_clock::now()};
 
-    sycl::queue queue {sycl::default_selector_v};
-    std::cerr
-        << "Using device: "
-        << queue.get_device().get_info<sycl::info::device::name>()
-        << '\n';
+    sycl::queue queue =
+    (device_string == "CPU")
+    ? sycl::queue{sycl::cpu_selector_v}
+    : sycl::queue{sycl::gpu_selector_v};
+
+    std::cerr << "Using device: " << queue.get_device().get_info<sycl::info::device::name>() << "\n";
+    
 
     // Allocate USM: shared (host visible) + device (device-only)
     auto* velocity_host {sycl::malloc_shared<double>(n, queue)};
@@ -306,11 +315,11 @@ int main(int argc, char** argv)
 
     // Fill input once (host writes shared memory)
     std::mt19937_64 rng(123456789ULL);
-    std::uniform_real_distribution<double> dist(0.0, 1.0);
+    std::uniform_real_distribution<double> dist(1.0e7, 1.0e8); 
 
     for (auto i = std::size_t(0); i < n; i++)
     {
-        velocity_host[i] = 1.0e6 * dist(rng);
+        velocity_host[i] = dist(rng);
     }
 
     auto expected_value {0.0};
@@ -320,7 +329,7 @@ int main(int argc, char** argv)
         auto velocity_host_vec {std::vector<double>(velocity_host, velocity_host + n)};
         auto stopping_power_host_vec {std::vector<double>(n)};
         serial_task(velocity_host_vec, stopping_power_host_vec);
-        expected_value = check_sum(stopping_power_host_vec);
+        expected_value = helper::check_sum(stopping_power_host_vec);
         std::cout << "Serial computed expected value: " << expected_value << '\n';
     }
 
@@ -348,11 +357,13 @@ int main(int argc, char** argv)
 
     queue.memcpy(stopping_power_host, stopping_power_device, sizeof(double) * n).wait();
 
+    auto stopping_power_values = std::vector<double>(stopping_power_host, stopping_power_host + n);
+
     // Sum stopping_power on host for comparison
     auto calculated_value {0.0};
     for (auto i = std::size_t(0); i < n; i++)
     {
-        calculated_value += stopping_power_host[i];
+        calculated_value += stopping_power_values[i];
     }
 
     // Free USM
@@ -371,38 +382,53 @@ int main(int argc, char** argv)
 
     const auto passed_check {(std::abs(calculated_value - expected_value) < 1.0e-6)};
 
-    const auto method {std::string("SYCL_USM_array")};
+    const auto method {std::string("Parallel Sycl")};
     const auto comments {std::string("stopping_power")};
 
-    #if defined(__cpp_lib_format)
-        std::cout << std::format(
-            "{},{:.17g},{:.17g},{},{:.9e},{:.6f},{:.6f},{:.6f},{:.6f},{},{}\n",
-            method,
-            expected_value,
-            calculated_value,
-            iters,
-            time_per_iteration_s,
-            time_setup_s,
-            time_calc_s,
-            time_cleanup_s,
-            time_total_s,
-            passed_check,
-            comments);
-    #else
-        std::cout
-            << method << ","
-            << expected_value << ","
-            << calculated_value << ","
-            << iters << ","
-            << time_per_iteration_s << ","
-            << time_setup_s << ","
-            << time_calc_s << ","
-            << time_cleanup_s << ","
-            << time_total_s << ","
-            << passed_check << ","
-            << comments
-            << '\n';
-    #endif
+    // Output
+    {
+
+        const std::string base_file_name = "results/parallel_sycl";
+        const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
+
+        nlohmann::json j;
+
+        // Metadata / identity
+        j["file"] = json_file;
+        j["method"] = method;
+        j["operation"] = "Bethe-Bloch Stopping Power";
+        j["comments"] = comments;
+        j["threads"] = 1;
+        j["device"] = "GPU";
+
+        // Iteration/timing            
+        j["test_time_seconds"] = test_time_s;
+        j["iterations"] = iters;
+        j["time_per_iteration"] = time_per_iteration_s;
+        j["time_setup"] = time_setup_s;
+        j["time_calc"] = time_calc_s;
+        j["time_cleanup"] = time_cleanup_s;
+        j["time_total"] = time_total_s;
+
+        // Values
+        j["expected_value"] = helper::to_string_precise(expected_value);
+        j["calculated_value"] = helper::to_string_precise(calculated_value);;
+        j["difference"] = helper::to_string_precise(expected_value - calculated_value);
+        j["passed_check"] = passed_check;
+        j["values"] = helper::to_string_precise_vector(stopping_power_values);
+
+        // Memory
+        //j["max_rss_kb"] = helper::max_rss_kb();
+
+        std::ofstream out(json_file);
+        if (!out)
+        {
+            throw std::runtime_error("Failed to open output JSON file.");
+        }
+
+        // Pretty-print. Use `out << j;` if you want compact.
+        out << std::setw(2) << j << '\n';
+    }
 
     return 0;
 }

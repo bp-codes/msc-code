@@ -14,193 +14,16 @@
 #include <vector>
 #include <immintrin.h>
 #include "Error.hpp"
+#include "helper.hpp"
 #include "json.hpp"
+
+using OperationKind = helper::OperationKind;
 
 namespace
 {
 
 inline constexpr double MIN_DENOMINATOR {1.0e-9};
 inline constexpr std::uint64_t RNG_SEED {123456789ULL};
-
-
-
-std::uint64_t max_rss_kb()
-{
-    rusage usage{};
-    getrusage(RUSAGE_SELF, &usage);
-
-#if defined(__APPLE__)
-    // macOS reports bytes
-    return usage.ru_maxrss / 1024;
-#else
-    // Linux reports kilobytes
-    return usage.ru_maxrss;
-#endif
-}
-
-
-
-[[nodiscard]]
-std::string random_suffix(const std::size_t n)
-{
-    static constexpr char charset[] =
-        "abcdefghijklmnopqrstuvwxyz"
-        "0123456789";
-
-    static thread_local std::mt19937 rng{std::random_device{}()};
-    std::uniform_int_distribution<std::size_t> dist(0, sizeof(charset) - 2);
-
-    std::string s;
-    s.reserve(n);
-    for (int i = 0; i < n; ++i)
-    {
-        s.push_back(charset[dist(rng)]);
-    }
-    return s;
-}
-
-
-
-/**
- * @enum OperationKind
- * @brief Supported element-wise operations.
- */
-enum class OperationKind
-{
-    Add,
-    Multiply,
-    Divide,
-    Power,
-    Exp,
-    Log,
-    Sqrt
-};
-
-
-
-/**
- * @brief Parse an operation string into an OperationKind.
- * @param operation Operation name (e.g. "add")
- * @return Parsed enum value.
- * @throws std::invalid_argument if the operation is unknown.
- */
-[[nodiscard]]
-OperationKind parse_operation(std::string_view operation)
-{
-    if (operation == "add")
-    {
-        return OperationKind::Add;
-    }
-    if (operation == "multiply")
-    {
-        return OperationKind::Multiply;
-    }
-    if (operation == "divide")
-    {
-        return OperationKind::Divide;
-    }
-    if (operation == "power")
-    {
-        return OperationKind::Power;
-    }
-    if (operation == "exp")
-    {
-        return OperationKind::Exp;
-    }
-    if (operation == "log")
-    {
-        return OperationKind::Log;
-    }
-    if (operation == "sqrt")
-    {
-        return OperationKind::Sqrt;
-    }
-
-    THROW_INVALID_ARGUMENT("Unknown operation.");
-}
-
-
-
-/**
- * @brief Parse a double from argv using std::from_chars.
- * @param s Null-terminated string.
- * @return Parsed double.
- * @throws std::invalid_argument on parse failure.
- */
-[[nodiscard]]
-double parse_double(const char* s)
-{
-    if (s == nullptr)
-    {
-        THROW_INVALID_ARGUMENT("Null argument encountered while parsing double.");
-    }
-
-    double value {};
-    const auto* first {s};
-    const auto* last {s + std::char_traits<char>::length(s)};
-
-    const auto result {std::from_chars(first, last, value)};
-    if (result.ec != std::errc{} || result.ptr != last)
-    {
-        THROW_INVALID_ARGUMENT("Failed to parse double argument.");
-    }
-
-    return value;
-}
-
-
-
-/**
- * @brief Parse a non-negative std::size_t from argv using std::from_chars.
- * @param s Null-terminated string.
- * @return Parsed size.
- * @throws std::invalid_argument on parse failure.
- */
-[[nodiscard]]
-std::size_t parse_size(const char* s)
-{
-    if (s == nullptr)
-    {
-        THROW_INVALID_ARGUMENT("Null argument encountered while parsing size.");
-    }
-
-    std::size_t value {};
-    const auto* first {s};
-    const auto* last {s + std::char_traits<char>::length(s)};
-
-    const auto result {std::from_chars(first, last, value)};
-    if (result.ec != std::errc{} || result.ptr != last)
-    {
-        THROW_INVALID_ARGUMENT("Failed to parse size argument.");
-    }
-
-    return value;
-}
-
-
-
-/**
- * @brief Validate that inputs/outputs are consistent before entering compute loops.
- * @param numbers_a First input vector.
- * @param numbers_b Second input vector.
- * @param numbers_c Output vector (must be pre-sized).
- * @throws std::invalid_argument if sizes do not match.
- */
-template<typename T>
-void validate_sizes(
-    const std::vector<T>& numbers_a,
-    const std::vector<T>& numbers_b,
-    const std::vector<T>& numbers_c)
-{
-    if (numbers_a.size() != numbers_b.size())
-    {
-        THROW_INVALID_ARGUMENT("Input vectors must have the same length.");
-    }
-    if (numbers_c.size() != numbers_a.size())
-    {
-        THROW_INVALID_ARGUMENT("Output vector must be pre-sized to match inputs.");
-    }
-}
 
 
 
@@ -430,31 +253,6 @@ void serial_task(
 }
 
 
-
-/**
- * @brief Compute the sum of all elements in a vector (serial).
- * @param numbers Vector to sum.
- * @return Sum of elements.
- */
-[[nodiscard]]
-double check_sum(const std::vector<double>& numbers)
-{
-    return std::accumulate(numbers.begin(), numbers.end(), 0.0);
-}
-
-
-
-/**
- * @brief Compute the sum of all elements in a vector (serial).
- * @param numbers Vector to sum.
- * @return Sum of elements.
- */
-[[nodiscard]]
-float check_sum(const std::vector<float>& numbers)
-{
-    return std::accumulate(numbers.begin(), numbers.end(), 0.0f);
-}
-
 } // namespace
 
 
@@ -470,10 +268,10 @@ int main(int argc, char** argv)
             THROW_INVALID_ARGUMENT("Usage: serial.x time_limit vec_size operation");
         }
 
-        const auto test_time_seconds {parse_double(argv[1])};
-        const auto n {parse_size(argv[2])};
+        const auto test_time_seconds {helper::parse_floating_point(argv[1])};
+        const auto n {helper::parse_size(argv[2])};
         const auto operation_string {std::string_view(argv[3])};
-        const auto operation {parse_operation(operation_string)};
+        const auto operation {helper::parse_operation(operation_string)};
 
         if (test_time_seconds <= 0.0)
         {
@@ -485,7 +283,7 @@ int main(int argc, char** argv)
         }
 
         std::mt19937_64 rng(RNG_SEED);
-        std::uniform_real_distribution<double> dist(0.0, 1.0);
+        std::uniform_real_distribution<double> dist(1.0, 2.0);
 
         auto numbers_a {std::vector<double>{}};
         auto numbers_b {std::vector<double>{}};
@@ -501,10 +299,10 @@ int main(int argc, char** argv)
         auto expected_value {0.0};
         {
             auto numbers_c {std::vector<double>(n)};
-            validate_sizes(numbers_a, numbers_b, numbers_c);
+            helper::validate_sizes(numbers_a, numbers_b, numbers_c);
 
             serial_task(operation, numbers_a, numbers_b, numbers_c);
-            expected_value = check_sum(numbers_c);
+            expected_value = helper::check_sum(numbers_c);
 
             std::cout << "Serial computed expected value: " << expected_value << "\n";
         }
@@ -518,7 +316,7 @@ int main(int argc, char** argv)
 
         auto iters {std::uint64_t(0)};
         auto numbers_c {std::vector<double>(n)};
-        validate_sizes(numbers_a, numbers_b, numbers_c);
+        helper::validate_sizes(numbers_a, numbers_b, numbers_c);
 
         do
         {
@@ -532,7 +330,7 @@ int main(int argc, char** argv)
 
         // ======= Calculation Ends ========
 
-        const auto calculated_value {check_sum(numbers_c)};
+        const auto calculated_value {helper::check_sum(numbers_c)};
 
         const auto time_setup {std::chrono::duration<double>(t1 - t0).count()};
         const auto time_calc {std::chrono::duration<double>(t2 - t1).count()};
@@ -549,7 +347,7 @@ int main(int argc, char** argv)
         {
 
             const std::string base_file_name = "results/serial_simd_" + std::string(operation_string);
-            const std::string json_file = base_file_name + "_" + random_suffix(12) + ".json";
+            const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
 
             nlohmann::json j;
 
@@ -558,6 +356,7 @@ int main(int argc, char** argv)
             j["method"] = method;
             j["operation"] = operation_string;
             j["comments"] = comments;
+            j["threads"] = 1;
 
             // Iteration/timing            
             j["test_time_seconds"] = test_time_seconds;
@@ -569,14 +368,14 @@ int main(int argc, char** argv)
             j["time_total"] = time_total;
 
             // Values
-            j["expected_value"] = expected_value;
-            j["calculated_value"] = calculated_value;
-            j["difference"] = (expected_value - calculated_value);
+            j["expected_value"] = helper::to_string_precise(expected_value);
+            j["calculated_value"] = helper::to_string_precise(calculated_value);;
+            j["difference"] = helper::to_string_precise(expected_value - calculated_value);
             j["passed_check"] = passed_check;
-            j["values"] = numbers_c;
+            j["values"] = helper::to_string_precise_vector(numbers_c);
 
             // Memory
-            j["max_rss_kb"] = max_rss_kb();
+            j["max_rss_kb"] = helper::max_rss_kb();
 
             std::ofstream out(json_file);
             if (!out)
@@ -584,7 +383,7 @@ int main(int argc, char** argv)
                 throw std::runtime_error("Failed to open output JSON file.");
             }
 
-            // Pretty-print. Use `out << j;` if you want compact.
+            // Save JSON file.
             out << std::setw(2) << j << '\n';
         }
 

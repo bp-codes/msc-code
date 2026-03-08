@@ -1,5 +1,4 @@
 // serial.cpp
-#include <execution>
 #include <algorithm>
 #include <charconv>
 #include <chrono>
@@ -13,10 +12,10 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <omp.h>
 #include "Error.hpp"
 #include "helper.hpp"
 #include "json.hpp"
-#include <tbb/global_control.h>
 
 using OperationKind = helper::OperationKind;
 
@@ -222,15 +221,12 @@ void parallel_add(
     const std::vector<double>& numbers_b,
     std::vector<double>& numbers_c)
 {
-    std::transform(
-        std::execution::par,
-        numbers_a.begin(), numbers_a.end(),
-        numbers_b.begin(),
-        numbers_c.begin(),
-        [](double x, double y) {
-            return x + y;
-        }
-    );
+    const auto n {std::size_t(numbers_a.size())};
+    #pragma omp parallel for schedule(static)
+    for (auto i = std::size_t(0); i < n; i++)
+    {
+        numbers_c[i] = numbers_a[i] + numbers_b[i];
+    }
 }
 
 
@@ -243,15 +239,12 @@ void parallel_multiply(
     const std::vector<double>& numbers_b,
     std::vector<double>& numbers_c)
 {
-    std::transform(
-        std::execution::par,
-        numbers_a.begin(), numbers_a.end(),
-        numbers_b.begin(),
-        numbers_c.begin(),
-        [](double x, double y) {
-            return x * y;
-        }
-    );
+    const auto n {std::size_t(numbers_a.size())};
+    #pragma omp parallel for schedule(static)
+    for (auto i = std::size_t(0); i < n; i++)
+    {
+        numbers_c[i] = numbers_a[i] * numbers_b[i];
+    }
 }
 
 
@@ -264,16 +257,12 @@ void parallel_divide(
     const std::vector<double>& numbers_b,
     std::vector<double>& numbers_c)
 {
-    std::transform(
-        std::execution::par,
-        numbers_a.begin(), numbers_a.end(),
-        numbers_b.begin(),
-        numbers_c.begin(),
-        [](double x, double y)
-        {
-            return x / std::max(y, MIN_DENOMINATOR);
-        }
-    );
+    const auto n {std::size_t(numbers_a.size())};
+    #pragma omp parallel for schedule(static)
+    for (auto i = std::size_t(0); i < n; i++)
+    {
+        numbers_c[i] = numbers_a[i] / std::max(numbers_b[i], MIN_DENOMINATOR);
+    }
 }
 
 
@@ -286,16 +275,12 @@ void parallel_power(
     const std::vector<double>& numbers_b,
     std::vector<double>& numbers_c)
 {
-    std::transform(
-        std::execution::par,
-        numbers_a.begin(), numbers_a.end(),
-        numbers_b.begin(),
-        numbers_c.begin(),
-        [](double x, double y)
-        {
-            return std::pow(x, y);
-        }
-    );
+    const auto n {std::size_t(numbers_a.size())};
+    #pragma omp parallel for schedule(static)
+    for (auto i = std::size_t(0); i < n; i++)
+    {
+        numbers_c[i] = std::pow(numbers_a[i], numbers_b[i]);
+    }
 }
 
 
@@ -308,16 +293,12 @@ void parallel_exp(
     const std::vector<double>& numbers_b,
     std::vector<double>& numbers_c)
 {
-    std::transform(
-        std::execution::par,
-        numbers_a.begin(), numbers_a.end(),
-        numbers_b.begin(),
-        numbers_c.begin(),
-        [](double x, double y)
-        {
-            return std::exp(x) + std::exp(y);
-        }
-    );
+    const auto n {std::size_t(numbers_a.size())};
+    #pragma omp parallel for schedule(static)
+    for (auto i = std::size_t(0); i < n; i++)
+    {
+        numbers_c[i] = std::exp(numbers_a[i]) + std::exp(numbers_b[i]);
+    }
 }
 
 
@@ -331,16 +312,12 @@ void parallel_log(
     const std::vector<double>& numbers_b,
     std::vector<double>& numbers_c)
 {
-    std::transform(
-        std::execution::par,
-        numbers_a.begin(), numbers_a.end(),
-        numbers_b.begin(),
-        numbers_c.begin(),
-        [](double x, double y)
-        {
-            return std::log(x) + std::log(y);
-        }
-    );
+    const auto n {std::size_t(numbers_a.size())};
+    #pragma omp parallel for schedule(static)
+    for (auto i = std::size_t(0); i < n; i++)
+    {
+        numbers_c[i] = std::log(numbers_a[i]) + std::log(numbers_b[i]);
+    }
 }
 
 
@@ -354,16 +331,12 @@ void parallel_sqrt(
     const std::vector<double>& numbers_b,
     std::vector<double>& numbers_c)
 {
-    std::transform(
-        std::execution::par,
-        numbers_a.begin(), numbers_a.end(),
-        numbers_b.begin(),
-        numbers_c.begin(),
-        [](double x, double y)
-        {
-            return std::sqrt(x) + std::sqrt(y);
-        }
-    );
+    const auto n {std::size_t(numbers_a.size())};
+    #pragma omp parallel for schedule(static)
+    for (auto i = std::size_t(0); i < n; i++)
+    {
+        numbers_c[i] = std::sqrt(numbers_a[i]) + std::sqrt(numbers_b[i]);
+    }
 }
 
 
@@ -424,7 +397,7 @@ void parallel_task(
 }
 
 
-}
+} // namespace
 
 
 /**
@@ -432,6 +405,9 @@ void parallel_task(
  */
 int main(int argc, char** argv)
 {
+    // Set threads
+    omp_set_num_threads(helper::get_num_threads());
+
     try
     {
         if (argc < 4)
@@ -439,9 +415,6 @@ int main(int argc, char** argv)
             THROW_INVALID_ARGUMENT("Usage: serial.x time_limit vec_size operation");
         }
 
-        tbb::global_control control(
-        tbb::global_control::max_allowed_parallelism,
-        helper::get_num_threads());
 
         const auto test_time_seconds {helper::parse_floating_point(argv[1])};
         const auto n {helper::parse_size(argv[2])};
@@ -515,13 +488,13 @@ int main(int argc, char** argv)
 
         const auto passed_check {std::abs(calculated_value - expected_value) < 1.0e-9};
 
-        const auto method {std::string("Parallel STL")};
+        const auto method {std::string("Parallel OpenMP")};
         const auto comments {std::string("operation:") + std::string(operation_string)};
 
         // Output
         {
 
-            const std::string base_file_name = "results/parallel_stl_" + std::string(operation_string);
+            const std::string base_file_name = "results/parallel_openmp_" + std::string(operation_string);
             const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
 
             nlohmann::json j;

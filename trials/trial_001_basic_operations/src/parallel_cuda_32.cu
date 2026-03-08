@@ -21,7 +21,7 @@
 namespace
 {
 
-inline constexpr double MIN_DENOMINATOR {1.0e-9};
+inline constexpr float MIN_DENOMINATOR {1.0e-9};
 inline constexpr std::uint64_t RNG_SEED {123456789ULL};
 
 
@@ -108,27 +108,27 @@ OperationKind parse_operation(std::string_view operation)
 
 
 /**
- * @brief Parse a double from argv using std::from_chars.
+ * @brief Parse a float from argv using std::from_chars.
  * @param s Null-terminated string.
- * @return Parsed double.
+ * @return Parsed float.
  * @throws std::invalid_argument on parse failure.
  */
 [[nodiscard]]
-double parse_double(const char* s)
+float parse_float(const char* s)
 {
     if (s == nullptr)
     {
-        THROW_INVALID_ARGUMENT("Null argument encountered while parsing double.");
+        THROW_INVALID_ARGUMENT("Null argument encountered while parsing float.");
     }
 
-    double value {};
+    float value {};
     const auto* first {s};
     const auto* last {s + std::char_traits<char>::length(s)};
 
     const auto result {std::from_chars(first, last, value)};
     if (result.ec != std::errc{} || result.ptr != last)
     {
-        THROW_INVALID_ARGUMENT("Failed to parse double argument.");
+        THROW_INVALID_ARGUMENT("Failed to parse float argument.");
     }
 
     return value;
@@ -198,9 +198,9 @@ void validate_sizes(
  * @brief Element-wise addition: c[i] = a[i] + b[i]
  */
 void serial_add(
-    const std::vector<double>& numbers_a,
-    const std::vector<double>& numbers_b,
-    std::vector<double>& numbers_c)
+    const std::vector<float>& numbers_a,
+    const std::vector<float>& numbers_b,
+    std::vector<float>& numbers_c)
 {
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
@@ -215,9 +215,9 @@ void serial_add(
  * @brief Element-wise multiplication: c[i] = a[i] * b[i]
  */
 void serial_multiply(
-    const std::vector<double>& numbers_a,
-    const std::vector<double>& numbers_b,
-    std::vector<double>& numbers_c)
+    const std::vector<float>& numbers_a,
+    const std::vector<float>& numbers_b,
+    std::vector<float>& numbers_c)
 {
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
@@ -232,9 +232,9 @@ void serial_multiply(
  * @brief Element-wise division: c[i] = a[i] / max(b[i], MIN_DENOMINATOR)
  */
 void serial_divide(
-    const std::vector<double>& numbers_a,
-    const std::vector<double>& numbers_b,
-    std::vector<double>& numbers_c)
+    const std::vector<float>& numbers_a,
+    const std::vector<float>& numbers_b,
+    std::vector<float>& numbers_c)
 {
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
@@ -249,9 +249,9 @@ void serial_divide(
  * @brief Element-wise power: c[i] = pow(a[i], b[i])
  */
 void serial_power(
-    const std::vector<double>& numbers_a,
-    const std::vector<double>& numbers_b,
-    std::vector<double>& numbers_c)
+    const std::vector<float>& numbers_a,
+    const std::vector<float>& numbers_b,
+    std::vector<float>& numbers_c)
 {
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
@@ -266,9 +266,9 @@ void serial_power(
  * @brief Element-wise exp sum: c[i] = exp(a[i]) + exp(b[i])
  */
 void serial_exp(
-    const std::vector<double>& numbers_a,
-    const std::vector<double>& numbers_b,
-    std::vector<double>& numbers_c)
+    const std::vector<float>& numbers_a,
+    const std::vector<float>& numbers_b,
+    std::vector<float>& numbers_c)
 {
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
@@ -284,9 +284,9 @@ void serial_exp(
  * @warning Inputs must be > 0. No bounds/validity checking is performed in this hot loop.
  */
 void serial_log(
-    const std::vector<double>& numbers_a,
-    const std::vector<double>& numbers_b,
-    std::vector<double>& numbers_c)
+    const std::vector<float>& numbers_a,
+    const std::vector<float>& numbers_b,
+    std::vector<float>& numbers_c)
 {
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
@@ -302,9 +302,9 @@ void serial_log(
  * @warning Inputs must be >= 0. No bounds/validity checking is performed in this hot loop.
  */
 void serial_sqrt(
-    const std::vector<double>& numbers_a,
-    const std::vector<double>& numbers_b,
-    std::vector<double>& numbers_c)
+    const std::vector<float>& numbers_a,
+    const std::vector<float>& numbers_b,
+    std::vector<float>& numbers_c)
 {
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
@@ -324,9 +324,9 @@ void serial_sqrt(
  */
 void serial_task(
     OperationKind operation,
-    const std::vector<double>& numbers_a,
-    const std::vector<double>& numbers_b,
-    std::vector<double>& numbers_c)
+    const std::vector<float>& numbers_a,
+    const std::vector<float>& numbers_b,
+    std::vector<float>& numbers_c)
 {
     switch (operation)
     {
@@ -387,7 +387,7 @@ inline void cuda_check(cudaError_t status, const char* message)
 
 
 
-__global__ void kernel_add(std::size_t n, const double* a, const double* b, double* c)
+__global__ void kernel_add(std::size_t n, const float* a, const float* b, float* c)
 {
     const auto idx {std::size_t(blockIdx.x) * std::size_t(blockDim.x) + std::size_t(threadIdx.x)};
     if (idx < n)
@@ -396,7 +396,7 @@ __global__ void kernel_add(std::size_t n, const double* a, const double* b, doub
     }
 }
 
-__global__ void kernel_multiply(std::size_t n, const double* a, const double* b, double* c)
+__global__ void kernel_multiply(std::size_t n, const float* a, const float* b, float* c)
 {
     const auto idx {std::size_t(blockIdx.x) * std::size_t(blockDim.x) + std::size_t(threadIdx.x)};
     if (idx < n)
@@ -405,7 +405,7 @@ __global__ void kernel_multiply(std::size_t n, const double* a, const double* b,
     }
 }
 
-__global__ void kernel_divide(std::size_t n, const double* a, const double* b, double* c)
+__global__ void kernel_divide(std::size_t n, const float* a, const float* b, float* c)
 {
     const auto idx {std::size_t(blockIdx.x) * std::size_t(blockDim.x) + std::size_t(threadIdx.x)};
     if (idx < n)
@@ -415,7 +415,7 @@ __global__ void kernel_divide(std::size_t n, const double* a, const double* b, d
     }
 }
 
-__global__ void kernel_power(std::size_t n, const double* a, const double* b, double* c)
+__global__ void kernel_power(std::size_t n, const float* a, const float* b, float* c)
 {
     const auto idx {std::size_t(blockIdx.x) * std::size_t(blockDim.x) + std::size_t(threadIdx.x)};
     if (idx < n)
@@ -424,7 +424,7 @@ __global__ void kernel_power(std::size_t n, const double* a, const double* b, do
     }
 }
 
-__global__ void kernel_exp(std::size_t n, const double* a, const double* b, double* c)
+__global__ void kernel_exp(std::size_t n, const float* a, const float* b, float* c)
 {
     const auto idx {std::size_t(blockIdx.x) * std::size_t(blockDim.x) + std::size_t(threadIdx.x)};
     if (idx < n)
@@ -433,7 +433,7 @@ __global__ void kernel_exp(std::size_t n, const double* a, const double* b, doub
     }
 }
 
-__global__ void kernel_log(std::size_t n, const double* a, const double* b, double* c)
+__global__ void kernel_log(std::size_t n, const float* a, const float* b, float* c)
 {
     const auto idx {std::size_t(blockIdx.x) * std::size_t(blockDim.x) + std::size_t(threadIdx.x)};
     if (idx < n)
@@ -442,7 +442,7 @@ __global__ void kernel_log(std::size_t n, const double* a, const double* b, doub
     }
 }
 
-__global__ void kernel_sqrt(std::size_t n, const double* a, const double* b, double* c)
+__global__ void kernel_sqrt(std::size_t n, const float* a, const float* b, float* c)
 {
     const auto idx {std::size_t(blockIdx.x) * std::size_t(blockDim.x) + std::size_t(threadIdx.x)};
     if (idx < n)
@@ -453,7 +453,7 @@ __global__ void kernel_sqrt(std::size_t n, const double* a, const double* b, dou
 
 
 
-cudaError_t launch_kernel(OperationKind operation, std::size_t n, cudaStream_t stream, const double* a, const double* b, double* c)
+cudaError_t launch_kernel(OperationKind operation, std::size_t n, cudaStream_t stream, const float* a, const float* b, float* c)
 {
     constexpr int BLOCK_SIZE {256};
     const auto grid_size {static_cast<unsigned int>((n + std::size_t(BLOCK_SIZE) - 1) / std::size_t(BLOCK_SIZE))};
@@ -542,7 +542,7 @@ int main(int argc, char** argv)
             THROW_INVALID_ARGUMENT("Usage: cuda.x time_limit vec_size operation");
         }
 
-        const auto test_time_seconds {parse_double(argv[1])};
+        const auto test_time_seconds {parse_float(argv[1])};
         const auto n {parse_size(argv[2])};
         const auto operation_string {std::string_view(argv[3])};
         const auto operation {parse_operation(operation_string)};
@@ -559,20 +559,20 @@ int main(int argc, char** argv)
         std::mt19937_64 rng(RNG_SEED);
         std::uniform_real_distribution<double> dist(0.0, 1.0);
 
-        auto numbers_a {std::vector<double>{}};
-        auto numbers_b {std::vector<double>{}};
+        auto numbers_a {std::vector<float>{}};
+        auto numbers_b {std::vector<float>{}};
         numbers_a.reserve(n);
         numbers_b.reserve(n);
 
         for (auto i = std::size_t(0); i < n; i++)
         {
-            numbers_a.emplace_back(dist(rng));
-            numbers_b.emplace_back(dist(rng));
+            numbers_a.emplace_back(static_cast<float>(dist(rng)));
+            numbers_b.emplace_back(static_cast<float>(dist(rng)));
         }
 
         auto expected_value {0.0};
         {
-            auto numbers_c {std::vector<double>(n)};
+            auto numbers_c {std::vector<float>(n)};
             validate_sizes(numbers_a, numbers_b, numbers_c);
 
             serial_task(operation, numbers_a, numbers_b, numbers_c);
@@ -592,23 +592,23 @@ int main(int argc, char** argv)
         std::cerr << "Using device: " << prop.name << "\n";
 
         // Results
-        auto numbers_c {std::vector<double>(n)};
+        auto numbers_c {std::vector<float>(n)};
 
         // Allocate device memory once
-        double* dev_a {};
-        double* dev_b {};
-        double* dev_c {};
+        float* dev_a {};
+        float* dev_b {};
+        float* dev_c {};
 
-        cuda_check(cudaMalloc(&dev_a, n * sizeof(double)), "cudaMalloc dev_a failed.");
-        cuda_check(cudaMalloc(&dev_b, n * sizeof(double)), "cudaMalloc dev_b failed.");
-        cuda_check(cudaMalloc(&dev_c, n * sizeof(double)), "cudaMalloc dev_c failed.");
+        cuda_check(cudaMalloc(&dev_a, n * sizeof(float)), "cudaMalloc dev_a failed.");
+        cuda_check(cudaMalloc(&dev_b, n * sizeof(float)), "cudaMalloc dev_b failed.");
+        cuda_check(cudaMalloc(&dev_c, n * sizeof(float)), "cudaMalloc dev_c failed.");
 
         cudaStream_t stream {};
         cuda_check(cudaStreamCreate(&stream), "cudaStreamCreate failed.");
 
         // Copy once
-        cuda_check(cudaMemcpyAsync(dev_a, numbers_a.data(), n * sizeof(double), cudaMemcpyHostToDevice, stream), "cudaMemcpyAsync dev_a failed.");
-        cuda_check(cudaMemcpyAsync(dev_b, numbers_b.data(), n * sizeof(double), cudaMemcpyHostToDevice, stream), "cudaMemcpyAsync dev_b failed.");
+        cuda_check(cudaMemcpyAsync(dev_a, numbers_a.data(), n * sizeof(float), cudaMemcpyHostToDevice, stream), "cudaMemcpyAsync dev_a failed.");
+        cuda_check(cudaMemcpyAsync(dev_b, numbers_b.data(), n * sizeof(float), cudaMemcpyHostToDevice, stream), "cudaMemcpyAsync dev_b failed.");
         cuda_check(cudaStreamSynchronize(stream), "cudaStreamSynchronize after H2D copies failed.");
 
         // ======= Start up =======
@@ -628,7 +628,7 @@ int main(int argc, char** argv)
         cuda_check(cudaStreamSynchronize(stream), "cudaStreamSynchronize after kernels failed.");
 
         // Copy results back
-        cuda_check(cudaMemcpyAsync(numbers_c.data(), dev_c, n * sizeof(double), cudaMemcpyDeviceToHost, stream), "cudaMemcpyAsync D2H failed.");
+        cuda_check(cudaMemcpyAsync(numbers_c.data(), dev_c, n * sizeof(float), cudaMemcpyDeviceToHost, stream), "cudaMemcpyAsync D2H failed.");
         cuda_check(cudaStreamSynchronize(stream), "cudaStreamSynchronize after D2H copy failed.");
 
         // ======= Clean up =======
@@ -652,13 +652,13 @@ int main(int argc, char** argv)
 
         const auto passed_check {std::abs(calculated_value - expected_value) < 1.0e-9};
 
-        const auto method {std::string("Parallel CUDA")};
+        const auto method {std::string("Parallel CUDA 32")};
         const auto comments {std::string("operation:") + std::string(operation_string)};
 
         // Output
         {
 
-            const std::string base_file_name = "results/parallel_cuda_" + std::string(operation_string);
+            const std::string base_file_name = "results/parallel_cuda_32_" + std::string(operation_string);
             const std::string json_file = base_file_name + "_" + random_suffix(12) + ".json";
 
             nlohmann::json j;
@@ -694,7 +694,7 @@ int main(int argc, char** argv)
                 throw std::runtime_error("Failed to open output JSON file.");
             }
 
-            // Pretty-print. Use `out << j;` if you want compact.
+            // Save JSON file.
             out << std::setw(2) << j << '\n';
         }
 

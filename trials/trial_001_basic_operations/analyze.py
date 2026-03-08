@@ -23,15 +23,16 @@ def load_targets(directory):
     target_values_json = os.path.join(directory, "target_values.json")
     targets = {}
 
-    with open(target_values_json, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    targets["checksum"] = data
-
     for op in operations_list:
-        target_values_json = os.path.join(directory, "serial_stl_" + op + ".json")
+        targets[op] = {}
+        target_values_json = os.path.join(directory, "precise_values_" + op + ".json")
         with open(target_values_json, "r", encoding="utf-8") as f:
             data = json.load(f)
-        targets[op] = data["values"]
+        targets[op]["expected_value"] = float(data["expected_value"])
+        try:
+            targets[op]["values"] = [float(v) for v in data.get("values", [])]
+        except (TypeError, ValueError):
+            continue
 
 
     return targets
@@ -48,6 +49,18 @@ def load_results(directory):
         try:
             with open(filepath, "r", encoding="utf-8") as f:
                 data = json.load(f)
+
+                try:
+                    calculated_value = float(data.get("calculated_value"))
+                    data["calculated_value"] = calculated_value
+                except (TypeError, ValueError):
+                    continue
+                try:
+                    values = [float(v) for v in data.get("values", [])]
+                    data["values"] = values
+                except (TypeError, ValueError):
+                    continue
+
                 results.append(data)
         except Exception as e:
             print(f"Skipping {filepath}: {e}")
@@ -79,16 +92,16 @@ def process(
             continue
         if not isinstance(calculated_value, (int, float)):
             continue
-        if operation not in target_values["checksum"]:
+        if operation not in target_values:
             continue
 
-        target = target_values["checksum"][operation]
+        expected_value = target_values[operation]["expected_value"]
 
         # avoid divide-by-zero
-        if target == 0:
+        if expected_value == 0:
             continue
 
-        pct_error = ((calculated_value - target) / target) * 100.0
+        pct_error = ((calculated_value - expected_value) / expected_value) * 100.0
 
         grouped_iters[operation][method].append(iterations)
         grouped_pct_err[operation][method].append(pct_error)
