@@ -1,52 +1,22 @@
-// sycl_stopping_power_usm.cpp
-#include <algorithm>
+// serial.cpp
 #include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <fstream>
+#include <limits>
 #include <random>
 #include <string>
 #include <vector>
-#include <sycl/sycl.hpp>
-#if defined(__cpp_lib_format)
-    #include <format>
-#endif
+#include <format>
+#include <algorithm>
+#include <numeric>
+#include "json.hpp"
+#include "helper.hpp"
+#include "Error.hpp"
 
-
-/**
- * @brief Log function usable on host and SYCL device.
- *
- * @param x Input value.
- * @return Natural logarithm of x.
- */
-[[nodiscard]]
-static inline double sycl_compatible_log(const double x)
-{
-#ifdef __SYCL_DEVICE_ONLY__
-    return sycl::log(x);
-#else
-    return std::log(x);
-#endif
-}
-
-
-
-/**
- * @brief Square-root function usable on host and SYCL device.
- *
- * @param x Input value.
- * @return Square root of x.
- */
-[[nodiscard]]
-static inline double sycl_compatible_sqrt(const double x)
-{
-#ifdef __SYCL_DEVICE_ONLY__
-    return sycl::sqrt(x);
-#else
-    return std::sqrt(x);
-#endif
-}
+#include <omp.h>
 
 
 
@@ -109,7 +79,7 @@ static inline double stopping_power(
 
     const auto inv_one_minus_beta2 {1.0 / (1.0 - beta2)};
     const auto gamma2 {std::max(0.0, inv_one_minus_beta2)};
-    const auto gamma {sycl_compatible_sqrt(gamma2)};
+    const auto gamma {std::sqrt(gamma2)};
 
     // Total energy E = gamma * M c^2 [MeV]
     const auto total_energy_mev {std::max(0.0, gamma * projectile_atomic_mass_mev)};
@@ -135,7 +105,7 @@ static inline double stopping_power(
 
     // Square-bracketed term (PDG Eq. 34.5 + optional corrections)
     auto bracket =
-        0.5 * sycl_compatible_log(log_argument)
+        0.5 * std::log(log_argument)
       - beta2
       - 0.5 * density_effect_delta;
 
@@ -167,15 +137,17 @@ static inline void serial_task(
     const std::vector<double>& velocity_array,
     std::vector<double>& results)
 {
+    // Parameters
     static constexpr auto PROJECTILE_ATOMIC_NUMBER {1};
-    static constexpr auto PROJECTILE_ATOMIC_MASS_MEV {938.2720813};
+    static constexpr auto PROJECTILE_ATOMIC_MASS_MEV {938.2720813}; // proton rest mass energy [MeV]
 
     static constexpr auto TARGET_ATOMIC_NUMBER {26};
     static constexpr auto TARGET_ATOMIC_MASS_G_MOL {55.845};
     static constexpr auto TARGET_DENSITY_G_CM3 {7.874};
 
-    static constexpr auto MEAN_EXCITATION_ENERGY_MEV {286.0e-6};
+    static constexpr auto MEAN_EXCITATION_ENERGY_MEV {286.0e-6}; // 286 eV = 286e-6 MeV
     static constexpr auto DENSITY_EFFECT_DELTA {0.0};
+    static constexpr auto SHELL_CORRECTION_C_OVER_Z {0.0};
 
     const auto n {std::size_t(velocity_array.size())};
 
@@ -196,76 +168,64 @@ static inline void serial_task(
 
 
 /**
- * @brief Fill per-particle stopping power array on device (USM device allocations).
+ * @brief Compute stopping power for an array of projectile velocities (parallel).
  *
- * @param queue SYCL queue.
- * @param n Number of elements.
- * @param velocity_device Device pointer to velocities (length n).
- * @param stopping_power_device Device pointer to outputs (length n).
+ * @param velocity_array Projectile velocities in m/s.
+ * @param results Output array (must be pre-sized to match velocity_array).
  *
- * @return Event for the submitted kernel.
+ * @warning
+ *      This routine does not validate sizes; callers must ensure `results.size() == velocity_array.size()`.
  */
-[[nodiscard]]
-static inline sycl::event sycl_task(
-    sycl::queue& queue,
-    const std::size_t n,
-    const double* const velocity_device,
-    double* const stopping_power_device)
+static inline void parallel_task(
+    const std::vector<double>& velocity_array,
+    std::vector<double>& results)
 {
-    return queue.parallel_for(
-        sycl::range<1>(n),
-        [=](sycl::item<1> item)
-        {
-            static constexpr auto PROJECTILE_ATOMIC_NUMBER {1};
-            static constexpr auto PROJECTILE_ATOMIC_MASS_MEV {938.2720813};
+    // Parameters
+    static constexpr auto PROJECTILE_ATOMIC_NUMBER {1};
+    static constexpr auto PROJECTILE_ATOMIC_MASS_MEV {938.2720813}; // proton rest mass energy [MeV]
 
-            static constexpr auto TARGET_ATOMIC_NUMBER {26};
-            static constexpr auto TARGET_ATOMIC_MASS_G_MOL {55.845};
-            static constexpr auto TARGET_DENSITY_G_CM3 {7.874};
+    static constexpr auto TARGET_ATOMIC_NUMBER {26};
+    static constexpr auto TARGET_ATOMIC_MASS_G_MOL {55.845};
+    static constexpr auto TARGET_DENSITY_G_CM3 {7.874};
 
-            static constexpr auto MEAN_EXCITATION_ENERGY_MEV {286.0e-6};
-            static constexpr auto DENSITY_EFFECT_DELTA {0.0};
+    static constexpr auto MEAN_EXCITATION_ENERGY_MEV {286.0e-6}; // 286 eV = 286e-6 MeV
+    static constexpr auto DENSITY_EFFECT_DELTA {0.0};
+    static constexpr auto SHELL_CORRECTION_C_OVER_Z {0.0};
 
-            const auto i {item.get_linear_id()};
+    const auto n {std::size_t(velocity_array.size())};
 
-            stopping_power_device[i] = stopping_power(
-                velocity_device[i],
-                PROJECTILE_ATOMIC_NUMBER,
-                PROJECTILE_ATOMIC_MASS_MEV,
-                TARGET_ATOMIC_NUMBER,
-                TARGET_ATOMIC_MASS_G_MOL,
-                TARGET_DENSITY_G_CM3,
-                MEAN_EXCITATION_ENERGY_MEV,
-                DENSITY_EFFECT_DELTA);
-        });
-}
-
-
-
-/**
- * @brief Compute the sum of an array (serial).
- *
- * @param values Input values.
- * @return Sum of values.
- */
-[[nodiscard]]
-static inline double check_sum(const std::vector<double>& values) noexcept
-{
-    return std::accumulate(values.begin(), values.end(), 0.0);;
+    #pragma omp parallel for schedule(static)
+    for (auto i = std::size_t(0); i < n; i++)
+    {
+        results[i] = stopping_power(
+            velocity_array[i],
+            PROJECTILE_ATOMIC_NUMBER,
+            PROJECTILE_ATOMIC_MASS_MEV,
+            TARGET_ATOMIC_NUMBER,
+            TARGET_ATOMIC_MASS_G_MOL,
+            TARGET_DENSITY_G_CM3,
+            MEAN_EXCITATION_ENERGY_MEV,
+            DENSITY_EFFECT_DELTA);
+    }
 }
 
 
 
 int main(int argc, char** argv)
 {
+    // Set threads
+    omp_set_num_threads(helper::get_num_threads());
+
+    // Must have 3 arguments
     if (argc < 3)
     {
         std::cerr << "Usage: " << argv[0] << " time_limit vec_size\n";
         return 1;
     }
 
+    // Read in test_time and size of vector
     const auto test_time_s {std::atof(argv[1])};
-    const auto n_raw {std::atoll(argv[2])};
+    const auto n_raw {std::atoi(argv[2])};
 
     if (n_raw <= 0)
     {
@@ -275,134 +235,112 @@ int main(int argc, char** argv)
 
     const auto n {static_cast<std::size_t>(n_raw)};
 
-    // Setup timing start
-    const auto t0 {std::chrono::steady_clock::now()};
-
-    sycl::queue queue {sycl::default_selector_v};
-    std::cerr
-        << "Using device: "
-        << queue.get_device().get_info<sycl::info::device::name>()
-        << '\n';
-
-    // Allocate USM: shared (host visible) + device (device-only)
-    auto* velocity_host {sycl::malloc_shared<double>(n, queue)};
-    auto* stopping_power_host {sycl::malloc_shared<double>(n, queue)};
-
-    auto* velocity_device {sycl::malloc_device<double>(n, queue)};
-    auto* stopping_power_device {sycl::malloc_device<double>(n, queue)};
-
-    if ((velocity_host == nullptr)
-     || (stopping_power_host == nullptr)
-     || (velocity_device == nullptr)
-     || (stopping_power_device == nullptr))
-    {
-        std::cerr << "Memory allocation failed\n";
-        if (stopping_power_device != nullptr) sycl::free(stopping_power_device, queue);
-        if (velocity_device != nullptr) sycl::free(velocity_device, queue);
-        if (stopping_power_host != nullptr) sycl::free(stopping_power_host, queue);
-        if (velocity_host != nullptr) sycl::free(velocity_host, queue);
-        return 2;
-    }
-
-    // Fill input once (host writes shared memory)
+    // Random number generator
     std::mt19937_64 rng(123456789ULL);
-    std::uniform_real_distribution<double> dist(0.0, 1.0);
+    std::uniform_real_distribution<double> dist(1.0e7, 1.0e8); // [0.0, 1.0)
 
-    for (auto i = std::size_t(0); i < n; i++)
+    // Vector of numbers
+    auto velocity_array {std::vector<double>{}};
+    velocity_array.reserve(n);
+
+    // Populate vectors
+    std::generate_n(std::back_inserter(velocity_array), n, [&]()
     {
-        velocity_host[i] = 1.0e6 * dist(rng);
-    }
+        return dist(rng);
+    });
 
     auto expected_value {0.0};
 
-    // Expected value (serial reference)
+    // Expected value
     {
-        auto velocity_host_vec {std::vector<double>(velocity_host, velocity_host + n)};
-        auto stopping_power_host_vec {std::vector<double>(n)};
-        serial_task(velocity_host_vec, stopping_power_host_vec);
-        expected_value = check_sum(stopping_power_host_vec);
-        std::cout << "Serial computed expected value: " << expected_value << '\n';
+        auto stopping_power_values {std::vector<double>(n)};
+        serial_task(velocity_array, stopping_power_values);
+        expected_value = helper::check_sum(stopping_power_values);
     }
 
-    queue.memcpy(velocity_device, velocity_host, sizeof(double) * n).wait();
+    // ======= Calculation Starts ========
 
-    // Calc timing start
+    const auto t0 {std::chrono::steady_clock::now()};
+
+    // Do calculation
     const auto t1 {std::chrono::steady_clock::now()};
     const auto deadline {t1 + std::chrono::duration<double>(test_time_s)};
     auto iters {std::uint64_t(0)};
 
-    sycl::event last_event;
+    auto stopping_power_values {std::vector<double>(n)};
 
-    // Run as many iterations as possible
+    // Do as many times as possible before time runs out
     do
     {
-        last_event = sycl_task(queue, n, velocity_device, stopping_power_device);
+        parallel_task(velocity_array, stopping_power_values);
         iters++;
     }
     while (std::chrono::steady_clock::now() < deadline);
 
-    // Ensure last submitted kernel finished before reading result
-    last_event.wait();
-
     const auto t2 {std::chrono::steady_clock::now()};
 
-    queue.memcpy(stopping_power_host, stopping_power_device, sizeof(double) * n).wait();
-
-    // Sum stopping_power on host for comparison
-    auto calculated_value {0.0};
-    for (auto i = std::size_t(0); i < n; i++)
-    {
-        calculated_value += stopping_power_host[i];
-    }
-
-    // Free USM
-    sycl::free(stopping_power_device, queue);
-    sycl::free(stopping_power_host, queue);
-    sycl::free(velocity_device, queue);
-    sycl::free(velocity_host, queue);
-
+    // Actual end time
     const auto t3 {std::chrono::steady_clock::now()};
+
+    // ======= Calculation Ends ========
+
+    // Check
+    const auto calculated_value {helper::check_sum(stopping_power_values)};
 
     const auto time_setup_s {std::chrono::duration<double>(t1 - t0).count()};
     const auto time_calc_s {std::chrono::duration<double>(t2 - t1).count()};
     const auto time_cleanup_s {std::chrono::duration<double>(t3 - t2).count()};
     const auto time_total_s {std::chrono::duration<double>(t3 - t0).count()};
-    const auto time_per_iteration_s {(iters > 0) ? (time_calc_s / static_cast<double>(iters)) : 0.0};
+    const auto time_per_iteration_s {time_calc_s / static_cast<double>(iters)};
 
-    const auto passed_check {(std::abs(calculated_value - expected_value) < 1.0e-6)};
-
-    const auto method {std::string("SYCL_USM_array")};
+    const auto method {std::string("Openmp")};
     const auto comments {std::string("stopping_power")};
+    const auto passed_check {(std::abs(calculated_value - expected_value) < 1.0e-9)};
 
-    #if defined(__cpp_lib_format)
-        std::cout << std::format(
-            "{},{:.17g},{:.17g},{},{:.9e},{:.6f},{:.6f},{:.6f},{:.6f},{},{}\n",
-            method,
-            expected_value,
-            calculated_value,
-            iters,
-            time_per_iteration_s,
-            time_setup_s,
-            time_calc_s,
-            time_cleanup_s,
-            time_total_s,
-            passed_check,
-            comments);
-    #else
-        std::cout
-            << method << ","
-            << expected_value << ","
-            << calculated_value << ","
-            << iters << ","
-            << time_per_iteration_s << ","
-            << time_setup_s << ","
-            << time_calc_s << ","
-            << time_cleanup_s << ","
-            << time_total_s << ","
-            << passed_check << ","
-            << comments
-            << '\n';
-    #endif
+    // Output
+    {
+
+        const std::string base_file_name = "results/openmp";
+        const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
+
+        nlohmann::json j;
+
+        // Metadata / identity
+        j["file"] = json_file;
+        j["method"] = method;
+        j["operation"] = "Bethe-Bloch Stopping Power";
+        j["comments"] = comments;
+        j["threads"] = helper::get_num_threads();
+        j["device"] = "CPU";
+
+        // Iteration/timing            
+        j["test_time_seconds"] = test_time_s;
+        j["iterations"] = iters;
+        j["time_per_iteration"] = time_per_iteration_s;
+        j["time_setup"] = time_setup_s;
+        j["time_calc"] = time_calc_s;
+        j["time_cleanup"] = time_cleanup_s;
+        j["time_total"] = time_total_s;
+
+        // Values
+        j["expected_value"] = helper::to_string_precise(expected_value);
+        j["calculated_value"] = helper::to_string_precise(calculated_value);;
+        j["difference"] = helper::to_string_precise(expected_value - calculated_value);
+        j["passed_check"] = passed_check;
+        j["values"] = helper::to_string_precise_vector(stopping_power_values);
+
+        // Memory
+        j["max_rss_kb"] = helper::max_rss_kb();
+
+        std::ofstream out(json_file);
+        if (!out)
+        {
+            throw std::runtime_error("Failed to open output JSON file.");
+        }
+
+        // Pretty-print. Use `out << j;` if you want compact.
+        out << std::setw(2) << j << '\n';
+    }
 
     return 0;
 }

@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <fstream>
 #include <limits>
 #include <random>
 #include <string>
@@ -11,6 +12,10 @@
 #include <format>
 #include <algorithm>
 #include <numeric>
+#include "json.hpp"
+#include "helper.hpp"
+#include "Error.hpp"
+
 
 
 /**
@@ -141,7 +146,6 @@ static inline void serial_task(
     static constexpr auto MEAN_EXCITATION_ENERGY_MEV {286.0e-6}; // 286 eV = 286e-6 MeV
     static constexpr auto DENSITY_EFFECT_DELTA {0.0};
     static constexpr auto SHELL_CORRECTION_C_OVER_Z {0.0};
-    static constexpr auto INCLUDE_SPIN_HALF_CORRECTION {false};
 
     const auto n {std::size_t(velocity_array.size())};
 
@@ -157,20 +161,6 @@ static inline void serial_task(
             MEAN_EXCITATION_ENERGY_MEV,
             DENSITY_EFFECT_DELTA);
     }
-}
-
-
-
-/**
- * @brief Compute the sum of an array (serial).
- *
- * @param values Input values.
- * @return Sum of values.
- */
-[[nodiscard]]
-static inline double check_sum(const std::vector<double>& values) noexcept
-{
-    return std::accumulate(values.begin(), values.end(), 0.0);
 }
 
 
@@ -198,7 +188,7 @@ int main(int argc, char** argv)
 
     // Random number generator
     std::mt19937_64 rng(123456789ULL);
-    std::uniform_real_distribution<double> dist(0.0, 1.0); // [0.0, 1.0)
+    std::uniform_real_distribution<double> dist(1.0e7, 1.0e8); // [0.0, 1.0)
 
     // Vector of numbers
     auto velocity_array {std::vector<double>{}};
@@ -207,7 +197,7 @@ int main(int argc, char** argv)
     // Populate vectors
     std::generate_n(std::back_inserter(velocity_array), n, [&]()
     {
-        return 1.0e6 * dist(rng);
+        return dist(rng);
     });
 
     auto expected_value {0.0};
@@ -216,8 +206,7 @@ int main(int argc, char** argv)
     {
         auto stopping_power_values {std::vector<double>(n)};
         serial_task(velocity_array, stopping_power_values);
-        expected_value = check_sum(stopping_power_values);
-        std::cout << "Serial computed expected value: " << expected_value << '\n';
+        expected_value = helper::check_sum(stopping_power_values);
     }
 
     // ======= Calculation Starts ========
@@ -247,7 +236,7 @@ int main(int argc, char** argv)
     // ======= Calculation Ends ========
 
     // Check
-    const auto calculated_value {check_sum(stopping_power_values)};
+    const auto calculated_value {helper::check_sum(stopping_power_values)};
 
     const auto time_setup_s {std::chrono::duration<double>(t1 - t0).count()};
     const auto time_calc_s {std::chrono::duration<double>(t2 - t1).count()};
@@ -259,19 +248,50 @@ int main(int argc, char** argv)
     const auto comments {std::string("stopping_power")};
     const auto passed_check {(std::abs(calculated_value - expected_value) < 1.0e-9)};
 
-    std::cout << std::format(
-        "{},{:.17g},{:.17g},{},{:.9e},{:.6f},{:.6f},{:.6f},{:.6f},{},{}\n",
-        method,
-        expected_value,
-        calculated_value,
-        iters,
-        time_per_iteration_s,
-        time_setup_s,
-        time_calc_s,
-        time_cleanup_s,
-        time_total_s,
-        passed_check,
-        comments);
+    // Output
+    {
+
+        const std::string base_file_name = "results/serial";
+        const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
+
+        nlohmann::json j;
+
+        // Metadata / identity
+        j["file"] = json_file;
+        j["method"] = method;
+        j["operation"] = "Bethe-Bloch Stopping Power";
+        j["comments"] = comments;
+        j["threads"] = 1;
+        j["device"] = "CPU";
+
+        // Iteration/timing            
+        j["test_time_seconds"] = test_time_s;
+        j["iterations"] = iters;
+        j["time_per_iteration"] = time_per_iteration_s;
+        j["time_setup"] = time_setup_s;
+        j["time_calc"] = time_calc_s;
+        j["time_cleanup"] = time_cleanup_s;
+        j["time_total"] = time_total_s;
+
+        // Values
+        j["expected_value"] = helper::to_string_precise(expected_value);
+        j["calculated_value"] = helper::to_string_precise(calculated_value);;
+        j["difference"] = helper::to_string_precise(expected_value - calculated_value);
+        j["passed_check"] = passed_check;
+        j["values"] = helper::to_string_precise_vector(stopping_power_values);
+
+        // Memory
+        j["max_rss_kb"] = helper::max_rss_kb();
+
+        std::ofstream out(json_file);
+        if (!out)
+        {
+            throw std::runtime_error("Failed to open output JSON file.");
+        }
+
+        // Pretty-print. Use `out << j;` if you want compact.
+        out << std::setw(2) << j << '\n';
+    }
 
     return 0;
 }
