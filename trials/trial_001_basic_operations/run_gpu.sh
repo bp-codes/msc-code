@@ -14,12 +14,12 @@ mkdir -p results
 
 # Each entry: "executable arguments"
 apps=(
-    "./bin/cuda.x"
-    "./bin/cuda_32.x"
-    "./bin/sycl.x"
-    "./bin/sycl_32.x"
-    "./bin/opencl.x"
-    "./bin/opencl_32.x"
+    "./bin/parallel_cuda.x"
+    "./bin/parallel_cuda_32.x"
+    "./bin/parallel_sycl.x"
+    "./bin/parallel_sycl_32.x"
+    "./bin/parallel_opencl.x"
+    "./bin/parallel_opencl_32.x"
 )
 
 operations=(
