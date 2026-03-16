@@ -1,6 +1,6 @@
 // serial.cpp
 // apt update && apt install ocl-icd-opencl-dev
-// apt install -y ocl-icd-opencl-dev pocl-opencl-icd clinfo
+// apt update && apt install -y ocl-icd-opencl-dev pocl-opencl-icd clinfo
 // echo "libnvidia-opencl.so.1" > /etc/OpenCL/vendors/nvidia.icd
 #include <algorithm>
 #include <charconv>

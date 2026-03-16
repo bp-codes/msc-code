@@ -342,35 +342,6 @@ int main(int argc, char** argv)
     }
     catch (const std::exception& e)
     {
-        if (dev_a != nullptr)
-        {
-            clReleaseMemObject(dev_a);
-        }
-        if (dev_b != nullptr)
-        {
-            clReleaseMemObject(dev_b);
-        }
-        if (dev_c != nullptr)
-        {
-            clReleaseMemObject(dev_c);
-        }
-        if (kernel != nullptr)
-        {
-            clReleaseKernel(kernel);
-        }
-        if (program != nullptr)
-        {
-            clReleaseProgram(program);
-        }
-        if (queue != nullptr)
-        {
-            clReleaseCommandQueue(queue);
-        }
-        if (context != nullptr)
-        {
-            clReleaseContext(context);
-        }
-
         std::cerr << "Error: " << e.what() << "\n";
         return 1;
     }
