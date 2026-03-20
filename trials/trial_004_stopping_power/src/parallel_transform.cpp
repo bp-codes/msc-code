@@ -5,11 +5,12 @@
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
+#include <iomanip>
+#include <stdexcept>
 #include <limits>
 #include <random>
 #include <string>
 #include <vector>
-#include <format>
 #include <algorithm>
 #include <numeric>
 
@@ -17,7 +18,7 @@
 #include "helper.hpp"
 #include "Error.hpp"
 
-#include <thread>
+#include <execution>
 
 
 
@@ -106,7 +107,7 @@ static inline double stopping_power(
         SMALL_VALUE);
 
     // Square-bracketed term (PDG Eq. 34.5 + optional corrections)
-    const auto bracket =
+    auto bracket =
         0.5 * std::log(log_argument)
       - beta2
       - 0.5 * density_effect_delta;
@@ -193,49 +194,26 @@ static inline void parallel_task(
     static constexpr auto MEAN_EXCITATION_ENERGY_MEV {286.0e-6}; // 286 eV = 286e-6 MeV
     static constexpr auto DENSITY_EFFECT_DELTA {0.0};
     static constexpr auto SHELL_CORRECTION_C_OVER_Z {0.0};
-    
+
     const auto n {std::size_t(velocity_array.size())};
-    const std::size_t num_threads = std::min(helper::get_num_threads(), n);
-    const std::size_t chunk = (n + num_threads - 1) / num_threads;
 
-    std::vector<std::thread> threads;
-    threads.reserve(num_threads);
-
-    for (std::size_t t = 0; t < num_threads; ++t)
-    {
-        const std::size_t begin = t * chunk;
-        const std::size_t end = std::min(begin + chunk, n);
-
-        if (begin >= n)
+    std::transform(
+        std::execution::par,
+        velocity_array.begin(),
+        velocity_array.end(),
+        results.begin(),
+        [=](const double velocity)
         {
-            break;
-        }
-
-        threads.emplace_back(
-            [&, begin, end]()
-            {
-                for (std::size_t i = begin; i < end; ++i)
-                {        
-                    results[i] = stopping_power(
-                    velocity_array[i],
-                    PROJECTILE_ATOMIC_NUMBER,
-                    PROJECTILE_ATOMIC_MASS_MEV,
-                    TARGET_ATOMIC_NUMBER,
-                    TARGET_ATOMIC_MASS_G_MOL,
-                    TARGET_DENSITY_G_CM3,
-                    MEAN_EXCITATION_ENERGY_MEV,
-                    DENSITY_EFFECT_DELTA);
-                }
-            }
-        );
-    }
-
-    for (auto& thread : threads)
-    {
-        thread.join();
-    }
-
-
+            return stopping_power(
+                velocity,
+                PROJECTILE_ATOMIC_NUMBER,
+                PROJECTILE_ATOMIC_MASS_MEV,
+                TARGET_ATOMIC_NUMBER,
+                TARGET_ATOMIC_MASS_G_MOL,
+                TARGET_DENSITY_G_CM3,
+                MEAN_EXCITATION_ENERGY_MEV,
+                DENSITY_EFFECT_DELTA);
+        });
 }
 
 
@@ -320,14 +298,14 @@ int main(int argc, char** argv)
     const auto time_total_s {std::chrono::duration<double>(t3 - t0).count()};
     const auto time_per_iteration_s {time_calc_s / static_cast<double>(iters)};
 
-    const auto method {std::string("Parallel Thread")};
+    const auto method {std::string("Parallel Transform")};
     const auto comments {std::string("stopping_power")};
     const auto passed_check {(std::abs(calculated_value - expected_value) < 1.0e-9)};
 
     // Output
     {
 
-        const std::string base_file_name = "results/parallel_thread";
+        const std::string base_file_name = "results/parallel_transform";
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
 
         nlohmann::json j;
@@ -351,7 +329,7 @@ int main(int argc, char** argv)
 
         // Values
         j["expected_value"] = helper::to_string_precise(expected_value);
-        j["calculated_value"] = helper::to_string_precise(calculated_value);
+        j["calculated_value"] = helper::to_string_precise(calculated_value);;
         j["difference"] = helper::to_string_precise(expected_value - calculated_value);
         j["passed_check"] = passed_check;
         j["values"] = helper::to_string_precise_vector(stopping_power_values);

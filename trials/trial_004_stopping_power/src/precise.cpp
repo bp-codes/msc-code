@@ -1,15 +1,17 @@
 // serial.cpp
+
 #include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
+#include <iomanip>
+#include <stdexcept>
 #include <limits>
 #include <random>
 #include <string>
 #include <vector>
-#include <format>
 #include <algorithm>
 #include <numeric>
 
@@ -17,8 +19,7 @@
 #include "helper.hpp"
 #include "Error.hpp"
 
-#include <thread>
-
+#include <quadmath.h>
 
 
 /**
@@ -58,68 +59,69 @@
  *      This implementation clamps beta to avoid divide-by-zero and gamma overflow; that changes physics.
  */
 [[nodiscard]]
-static inline double stopping_power(
-    const double projectile_velocity_ms,
+static inline __float128 stopping_power(
+    const __float128 projectile_velocity_ms,
     const int projectile_atomic_number,
-    const double projectile_atomic_mass_mev,
+    const __float128 projectile_atomic_mass_mev,
     const int target_atomic_number,
-    const double target_atomic_mass_g_mol,
-    const double target_density_g_cm3,
-    const double mean_excitation_energy_mev,
-    const double density_effect_delta)
+    const __float128 target_atomic_mass_g_mol,
+    const __float128 target_density_g_cm3,
+    const __float128 mean_excitation_energy_mev,
+    const __float128 density_effect_delta)
 {
     // Fundamental constants (PDG)
-    static constexpr auto SPEED_OF_LIGHT_MS {299792458.0};    ///< [m/s]
-    static constexpr auto ELECTRON_MASS_MEV {0.51099895000};  ///< [MeV]
-    static constexpr auto BETHE_CONSTANT_K  {0.307075};       ///< [MeV·cm^2/mol]
-    static constexpr auto SMALL_VALUE  {1.0e-9};
+    static constexpr __float128 SPEED_OF_LIGHT_MS {299792458.0Q};    ///< [m/s]
+    static constexpr __float128 ELECTRON_MASS_MEV {0.51099895000Q};  ///< [MeV]
+    static constexpr __float128 BETHE_CONSTANT_K  {0.307075Q};       ///< [MeV·cm^2/mol]
+    static constexpr __float128 SMALL_VALUE  {1.0e-9Q};
 
     // Relativistic kinematics
-    const auto beta_raw {projectile_velocity_ms / SPEED_OF_LIGHT_MS};
-    const auto beta {std::clamp(beta_raw, SMALL_VALUE, 0.99999)};            // Clamped to sensible values to avoid errors 
-    const auto beta2 {beta * beta};
+    const __float128 beta_raw {projectile_velocity_ms / SPEED_OF_LIGHT_MS};
+    const __float128 beta {std::clamp(beta_raw, SMALL_VALUE, 0.99999Q)};            // Clamped to sensible values to avoid errors 
+    const __float128 beta2 {beta * beta};
 
-    const auto inv_one_minus_beta2 {1.0 / (1.0 - beta2)};
-    const auto gamma2 {std::max(0.0, inv_one_minus_beta2)};
-    const auto gamma {std::sqrt(gamma2)};
+    const __float128 inv_one_minus_beta2 {1.0Q / (1.0Q - beta2)};
+    const __float128 gamma2 {std::max(0.0Q, inv_one_minus_beta2)};
+    const __float128 gamma {std::sqrt(gamma2)};
 
     // Total energy E = gamma * M c^2 [MeV]
-    const auto total_energy_mev {std::max(0.0, gamma * projectile_atomic_mass_mev)};
+    const __float128 total_energy_mev {std::max(0.0Q, gamma * projectile_atomic_mass_mev)};
 
     // Maximum energy transfer W_max (PDG Eq. 34.4)
-    const auto electron_to_projectile_mass {ELECTRON_MASS_MEV / std::max(SMALL_VALUE, projectile_atomic_mass_mev)};
+    const __float128 electron_to_projectile_mass {ELECTRON_MASS_MEV / std::max(SMALL_VALUE, projectile_atomic_mass_mev)};
 
-    const auto w_max_numerator {2.0 * ELECTRON_MASS_MEV * beta2 * gamma2};
-    const auto w_max_denominator = std::max(
-        1.0
-      + 2.0 * gamma * electron_to_projectile_mass
-      + (electron_to_projectile_mass * electron_to_projectile_mass),
+    const __float128 w_max_numerator {2.0Q * ELECTRON_MASS_MEV * beta2 * gamma2};
+    const __float128 w_max_denominator_inner = 1.0Q
+      + 2.0Q * gamma * electron_to_projectile_mass
+      + (electron_to_projectile_mass * electron_to_projectile_mass);
+    const __float128 w_max_denominator = std::max(
+        w_max_denominator_inner,
         SMALL_VALUE);
 
-    const auto w_max_mev {w_max_numerator / w_max_denominator};
+    const __float128 w_max_mev {w_max_numerator / w_max_denominator};
 
     // Logarithmic argument (PDG Eq. 34.5)
-    const auto mean_excitation_energy2_mev2 {mean_excitation_energy_mev * mean_excitation_energy_mev};
+    const __float128 mean_excitation_energy2_mev2 {mean_excitation_energy_mev * mean_excitation_energy_mev};
 
-    const auto log_argument = std::max(
-        (2.0 * ELECTRON_MASS_MEV * beta2 * gamma2 * w_max_mev) / std::max(SMALL_VALUE, mean_excitation_energy2_mev2),
+    const __float128 log_argument = std::max(
+        (2.0Q * ELECTRON_MASS_MEV * beta2 * gamma2 * w_max_mev) / std::max(SMALL_VALUE, mean_excitation_energy2_mev2),
         SMALL_VALUE);
 
     // Square-bracketed term (PDG Eq. 34.5 + optional corrections)
-    const auto bracket =
-        0.5 * std::log(log_argument)
+    const __float128 bracket =
+        0.5Q * std::log(log_argument)
       - beta2
-      - 0.5 * density_effect_delta;
+      - 0.5Q * density_effect_delta;
 
     // Mass stopping power [MeV·cm^2/g] and linear stopping power [MeV/cm]
-    const auto projectile_charge {static_cast<double>(projectile_atomic_number)};
-    const auto projectile_charge2 {projectile_charge * projectile_charge};
+    const __float128 projectile_charge {static_cast<__float128>(projectile_atomic_number)};
+    const __float128 projectile_charge2 {projectile_charge * projectile_charge};
 
-    const auto z_over_a {static_cast<double>(target_atomic_number) / std::max(SMALL_VALUE, target_atomic_mass_g_mol)};
-    const auto prefactor_mass {BETHE_CONSTANT_K * projectile_charge2 * z_over_a / beta2};
+    const __float128 z_over_a {static_cast<__float128>(target_atomic_number) / std::max(SMALL_VALUE, target_atomic_mass_g_mol)};
+    const __float128 prefactor_mass {BETHE_CONSTANT_K * projectile_charge2 * z_over_a / beta2};
 
-    const auto mass_stopping_power_mev_cm2_per_g {prefactor_mass * bracket};
-    const auto linear_stopping_power_mev_per_cm {target_density_g_cm3 * mass_stopping_power_mev_cm2_per_g};
+    const __float128 mass_stopping_power_mev_cm2_per_g {prefactor_mass * bracket};
+    const __float128 linear_stopping_power_mev_per_cm {target_density_g_cm3 * mass_stopping_power_mev_cm2_per_g};
 
     return linear_stopping_power_mev_per_cm;
 }
@@ -136,20 +138,20 @@ static inline double stopping_power(
  *      This routine does not validate sizes; callers must ensure `results.size() == velocity_array.size()`.
  */
 static inline void serial_task(
-    const std::vector<double>& velocity_array,
-    std::vector<double>& results)
+    const std::vector<__float128>& velocity_array,
+    std::vector<__float128>& results)
 {
     // Parameters
     static constexpr auto PROJECTILE_ATOMIC_NUMBER {1};
-    static constexpr auto PROJECTILE_ATOMIC_MASS_MEV {938.2720813}; // proton rest mass energy [MeV]
+    static constexpr auto PROJECTILE_ATOMIC_MASS_MEV {938.2720813Q}; // proton rest mass energy [MeV]
 
     static constexpr auto TARGET_ATOMIC_NUMBER {26};
-    static constexpr auto TARGET_ATOMIC_MASS_G_MOL {55.845};
-    static constexpr auto TARGET_DENSITY_G_CM3 {7.874};
+    static constexpr auto TARGET_ATOMIC_MASS_G_MOL {55.845Q};
+    static constexpr auto TARGET_DENSITY_G_CM3 {7.874Q};
 
-    static constexpr auto MEAN_EXCITATION_ENERGY_MEV {286.0e-6}; // 286 eV = 286e-6 MeV
-    static constexpr auto DENSITY_EFFECT_DELTA {0.0};
-    static constexpr auto SHELL_CORRECTION_C_OVER_Z {0.0};
+    static constexpr auto MEAN_EXCITATION_ENERGY_MEV {286.0e-6Q}; // 286 eV = 286e-6 MeV
+    static constexpr auto DENSITY_EFFECT_DELTA {0.0Q};
+    static constexpr auto SHELL_CORRECTION_C_OVER_Z {0.0Q};
 
     const auto n {std::size_t(velocity_array.size())};
 
@@ -169,80 +171,8 @@ static inline void serial_task(
 
 
 
-/**
- * @brief Compute stopping power for an array of projectile velocities (parallel).
- *
- * @param velocity_array Projectile velocities in m/s.
- * @param results Output array (must be pre-sized to match velocity_array).
- *
- * @warning
- *      This routine does not validate sizes; callers must ensure `results.size() == velocity_array.size()`.
- */
-static inline void parallel_task(
-    const std::vector<double>& velocity_array,
-    std::vector<double>& results)
-{
-    // Parameters
-    static constexpr auto PROJECTILE_ATOMIC_NUMBER {1};
-    static constexpr auto PROJECTILE_ATOMIC_MASS_MEV {938.2720813}; // proton rest mass energy [MeV]
-
-    static constexpr auto TARGET_ATOMIC_NUMBER {26};
-    static constexpr auto TARGET_ATOMIC_MASS_G_MOL {55.845};
-    static constexpr auto TARGET_DENSITY_G_CM3 {7.874};
-
-    static constexpr auto MEAN_EXCITATION_ENERGY_MEV {286.0e-6}; // 286 eV = 286e-6 MeV
-    static constexpr auto DENSITY_EFFECT_DELTA {0.0};
-    static constexpr auto SHELL_CORRECTION_C_OVER_Z {0.0};
-    
-    const auto n {std::size_t(velocity_array.size())};
-    const std::size_t num_threads = std::min(helper::get_num_threads(), n);
-    const std::size_t chunk = (n + num_threads - 1) / num_threads;
-
-    std::vector<std::thread> threads;
-    threads.reserve(num_threads);
-
-    for (std::size_t t = 0; t < num_threads; ++t)
-    {
-        const std::size_t begin = t * chunk;
-        const std::size_t end = std::min(begin + chunk, n);
-
-        if (begin >= n)
-        {
-            break;
-        }
-
-        threads.emplace_back(
-            [&, begin, end]()
-            {
-                for (std::size_t i = begin; i < end; ++i)
-                {        
-                    results[i] = stopping_power(
-                    velocity_array[i],
-                    PROJECTILE_ATOMIC_NUMBER,
-                    PROJECTILE_ATOMIC_MASS_MEV,
-                    TARGET_ATOMIC_NUMBER,
-                    TARGET_ATOMIC_MASS_G_MOL,
-                    TARGET_DENSITY_G_CM3,
-                    MEAN_EXCITATION_ENERGY_MEV,
-                    DENSITY_EFFECT_DELTA);
-                }
-            }
-        );
-    }
-
-    for (auto& thread : threads)
-    {
-        thread.join();
-    }
-
-
-}
-
-
-
 int main(int argc, char** argv)
 {
-
     // Must have 3 arguments
     if (argc < 3)
     {
@@ -267,7 +197,7 @@ int main(int argc, char** argv)
     std::uniform_real_distribution<double> dist(1.0e7, 1.0e8); // [0.0, 1.0)
 
     // Vector of numbers
-    auto velocity_array {std::vector<double>{}};
+    auto velocity_array {std::vector<__float128>{}};
     velocity_array.reserve(n);
 
     // Populate vectors
@@ -280,7 +210,7 @@ int main(int argc, char** argv)
 
     // Expected value
     {
-        auto stopping_power_values {std::vector<double>(n)};
+        auto stopping_power_values {std::vector<__float128>(n)};
         serial_task(velocity_array, stopping_power_values);
         expected_value = helper::check_sum(stopping_power_values);
     }
@@ -294,12 +224,12 @@ int main(int argc, char** argv)
     const auto deadline {t1 + std::chrono::duration<double>(test_time_s)};
     auto iters {std::uint64_t(0)};
 
-    auto stopping_power_values {std::vector<double>(n)};
+    auto stopping_power_values {std::vector<__float128>(n)};
 
     // Do as many times as possible before time runs out
     do
     {
-        parallel_task(velocity_array, stopping_power_values);
+        serial_task(velocity_array, stopping_power_values);
         iters++;
     }
     while (std::chrono::steady_clock::now() < deadline);
@@ -320,15 +250,22 @@ int main(int argc, char** argv)
     const auto time_total_s {std::chrono::duration<double>(t3 - t0).count()};
     const auto time_per_iteration_s {time_calc_s / static_cast<double>(iters)};
 
-    const auto method {std::string("Parallel Thread")};
+    const auto method {std::string("Precise")};
     const auto comments {std::string("stopping_power")};
     const auto passed_check {(std::abs(calculated_value - expected_value) < 1.0e-9)};
+
+    auto stopping_power_values_out {std::vector<double>{}};
+    stopping_power_values_out.reserve(n);
+    for (auto i = std::size_t(0); i < n; i++)
+    {
+        stopping_power_values_out.emplace_back(static_cast<double>(stopping_power_values[i]));
+    }
 
     // Output
     {
 
-        const std::string base_file_name = "results/parallel_thread";
-        const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
+        const std::string base_file_name = "results/precise";
+        const std::string json_file = base_file_name + ".json";
 
         nlohmann::json j;
 
@@ -337,7 +274,7 @@ int main(int argc, char** argv)
         j["method"] = method;
         j["operation"] = "Bethe-Bloch Stopping Power";
         j["comments"] = comments;
-        j["threads"] = helper::get_num_threads();
+        j["threads"] = 1;
         j["device"] = "CPU";
 
         // Iteration/timing            
@@ -350,11 +287,11 @@ int main(int argc, char** argv)
         j["time_total"] = time_total_s;
 
         // Values
-        j["expected_value"] = helper::to_string_precise(expected_value);
-        j["calculated_value"] = helper::to_string_precise(calculated_value);
-        j["difference"] = helper::to_string_precise(expected_value - calculated_value);
+        j["expected_value"] = helper::to_string_precise(static_cast<double>(expected_value));
+        j["calculated_value"] = helper::to_string_precise(static_cast<double>(calculated_value));
+        j["difference"] = helper::to_string_precise(static_cast<double>(expected_value - calculated_value));
         j["passed_check"] = passed_check;
-        j["values"] = helper::to_string_precise_vector(stopping_power_values);
+        j["values"] = helper::to_string_precise_vector(stopping_power_values_out);
 
         // Memory
         j["max_rss_kb"] = helper::max_rss_kb();

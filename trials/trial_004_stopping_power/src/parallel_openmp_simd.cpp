@@ -105,7 +105,7 @@ static inline double stopping_power(
         SMALL_VALUE);
 
     // Square-bracketed term (PDG Eq. 34.5 + optional corrections)
-    auto bracket =
+    const auto bracket =
         0.5 * std::log(log_argument)
       - beta2
       - 0.5 * density_effect_delta;

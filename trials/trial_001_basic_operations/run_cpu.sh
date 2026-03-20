@@ -5,6 +5,16 @@
 
 set -euo pipefail
 
+
+./bin/precise.x 5.0 1000000 add
+./bin/precise.x 5.0 1000000 multiply
+./bin/precise.x 5.0 1000000 divide
+./bin/precise.x 5.0 1000000 power
+./bin/precise.x 5.0 1000000 exp
+./bin/precise.x 5.0 1000000 log
+./bin/precise.x 5.0 1000000 sqrt
+
+
 RUNS=1
 export NUM_THREADS=6
 

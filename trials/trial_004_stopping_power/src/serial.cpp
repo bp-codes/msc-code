@@ -83,9 +83,6 @@ static inline double stopping_power(
     const auto gamma2 {std::max(0.0, inv_one_minus_beta2)};
     const auto gamma {std::sqrt(gamma2)};
 
-    // Total energy E = gamma * M c^2 [MeV]
-    const auto total_energy_mev {std::max(0.0, gamma * projectile_atomic_mass_mev)};
-
     // Maximum energy transfer W_max (PDG Eq. 34.4)
     const auto electron_to_projectile_mass {ELECTRON_MASS_MEV / std::max(SMALL_VALUE, projectile_atomic_mass_mev)};
 
@@ -106,7 +103,7 @@ static inline double stopping_power(
         SMALL_VALUE);
 
     // Square-bracketed term (PDG Eq. 34.5 + optional corrections)
-    auto bracket =
+    const auto bracket =
         0.5 * std::log(log_argument)
       - beta2
       - 0.5 * density_effect_delta;
