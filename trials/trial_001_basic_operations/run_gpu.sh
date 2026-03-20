@@ -12,6 +12,8 @@ RUNS=5
 
 mkdir -p results
 
+
+
 # Each entry: "executable arguments"
 apps=(
     "./bin/parallel_cuda.x"

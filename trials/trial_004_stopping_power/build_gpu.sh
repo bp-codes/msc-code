@@ -17,11 +17,18 @@ acpp -O3 -ffast-math -std=c++23 \
      -o bin/parallel_sycl_32.x
 
 
-nvcc -std=c++17 \
+nvcc -std=c++20 --use_fast_math \
     -O3 \
     -Xcompiler "-fno-fast-math -fno-unsafe-math-optimizations -ffp-contract=off" \
     src/parallel_cuda.cu \
     -o bin/parallel_cuda.x
+
+nvcc -std=c++20 --use_fast_math \
+    -O3 \
+    -Xcompiler "-fno-fast-math -fno-unsafe-math-optimizations -ffp-contract=off" \
+    src/parallel_cuda_32.cu \
+    -o bin/parallel_cuda_32.x
+
 
 exit 0
 

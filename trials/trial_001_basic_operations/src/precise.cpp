@@ -17,12 +17,14 @@
 #include "helper.hpp"
 #include "json.hpp"
 
+#include <quadmath.h>
+
 using OperationKind = helper::OperationKind;
 
 namespace
 {
 
-inline constexpr long double MIN_DENOMINATOR {1.0e-9};
+inline constexpr __float128 MIN_DENOMINATOR {1.0e-9Q};
 inline constexpr std::uint64_t RNG_SEED {123456789ULL};
 
 
@@ -31,9 +33,9 @@ inline constexpr std::uint64_t RNG_SEED {123456789ULL};
  * @brief Element-wise addition: c[i] = a[i] + b[i]
  */
 void serial_add(
-    const std::vector<long double>& numbers_a,
-    const std::vector<long double>& numbers_b,
-    std::vector<long double>& numbers_c)
+    const std::vector<__float128>& numbers_a,
+    const std::vector<__float128>& numbers_b,
+    std::vector<__float128>& numbers_c)
 {
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
@@ -48,9 +50,9 @@ void serial_add(
  * @brief Element-wise multiplication: c[i] = a[i] * b[i]
  */
 void serial_multiply(
-    const std::vector<long double>& numbers_a,
-    const std::vector<long double>& numbers_b,
-    std::vector<long double>& numbers_c)
+    const std::vector<__float128>& numbers_a,
+    const std::vector<__float128>& numbers_b,
+    std::vector<__float128>& numbers_c)
 {
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
@@ -65,9 +67,9 @@ void serial_multiply(
  * @brief Element-wise division: c[i] = a[i] / max(b[i], MIN_DENOMINATOR)
  */
 void serial_divide(
-    const std::vector<long double>& numbers_a,
-    const std::vector<long double>& numbers_b,
-    std::vector<long double>& numbers_c)
+    const std::vector<__float128>& numbers_a,
+    const std::vector<__float128>& numbers_b,
+    std::vector<__float128>& numbers_c)
 {
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
@@ -82,9 +84,9 @@ void serial_divide(
  * @brief Element-wise power: c[i] = pow(a[i], b[i])
  */
 void serial_power(
-    const std::vector<long double>& numbers_a,
-    const std::vector<long double>& numbers_b,
-    std::vector<long double>& numbers_c)
+    const std::vector<__float128>& numbers_a,
+    const std::vector<__float128>& numbers_b,
+    std::vector<__float128>& numbers_c)
 {
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
@@ -99,9 +101,9 @@ void serial_power(
  * @brief Element-wise exp sum: c[i] = exp(a[i]) + exp(b[i])
  */
 void serial_exp(
-    const std::vector<long double>& numbers_a,
-    const std::vector<long double>& numbers_b,
-    std::vector<long double>& numbers_c)
+    const std::vector<__float128>& numbers_a,
+    const std::vector<__float128>& numbers_b,
+    std::vector<__float128>& numbers_c)
 {
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
@@ -117,9 +119,9 @@ void serial_exp(
  * @warning Inputs must be > 0. No bounds/validity checking is performed in this hot loop.
  */
 void serial_log(
-    const std::vector<long double>& numbers_a,
-    const std::vector<long double>& numbers_b,
-    std::vector<long double>& numbers_c)
+    const std::vector<__float128>& numbers_a,
+    const std::vector<__float128>& numbers_b,
+    std::vector<__float128>& numbers_c)
 {
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
@@ -135,9 +137,9 @@ void serial_log(
  * @warning Inputs must be >= 0. No bounds/validity checking is performed in this hot loop.
  */
 void serial_sqrt(
-    const std::vector<long double>& numbers_a,
-    const std::vector<long double>& numbers_b,
-    std::vector<long double>& numbers_c)
+    const std::vector<__float128>& numbers_a,
+    const std::vector<__float128>& numbers_b,
+    std::vector<__float128>& numbers_c)
 {
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
@@ -157,9 +159,9 @@ void serial_sqrt(
  */
 void serial_task(
     OperationKind operation,
-    const std::vector<long double>& numbers_a,
-    const std::vector<long double>& numbers_b,
-    std::vector<long double>& numbers_c)
+    const std::vector<__float128>& numbers_a,
+    const std::vector<__float128>& numbers_b,
+    std::vector<__float128>& numbers_c)
 {
     switch (operation)
     {
@@ -236,27 +238,33 @@ int main(int argc, char** argv)
         std::mt19937_64 rng(RNG_SEED);
         std::uniform_real_distribution<double> dist(1.0, 2.0);
 
-        auto numbers_a {std::vector<long double>{}};
-        auto numbers_b {std::vector<long double>{}};
+        auto numbers_a {std::vector<__float128>{}};
+        auto numbers_b {std::vector<__float128>{}};
         numbers_a.reserve(n);
         numbers_b.reserve(n);
 
         for (auto i = std::size_t(0); i < n; i++)
         {
-            numbers_a.emplace_back(static_cast<long double>(dist(rng)));
-            numbers_b.emplace_back(static_cast<long double>(dist(rng)));
+            numbers_a.emplace_back(static_cast<__float128>(dist(rng)));
+            numbers_b.emplace_back(static_cast<__float128>(dist(rng)));
         }
 
         auto expected_value {0.0};
 
-        auto numbers_c {std::vector<long double>(n)};
+        auto numbers_c {std::vector<__float128>(n)};
         helper::validate_sizes(numbers_a, numbers_b, numbers_c);
 
         serial_task(operation, numbers_a, numbers_b, numbers_c);
         expected_value = helper::check_sum(numbers_c);
 
-        std::cout << "Precise computed expected value: " << expected_value << "\n";
+        auto numbers_c_out {std::vector<double>{}};
+        numbers_c_out.reserve(n);
+        for (auto i = std::size_t(0); i < n; i++)
+        {
+            numbers_c_out.emplace_back(static_cast<double>(numbers_c[i]));
+        }
 
+        std::cout << "Precise computed expected value: " << expected_value << "\n";
 
         const auto method {std::string("Precise Values")};
         const auto comments {std::string("operation:") + std::string(operation_string)};
@@ -277,7 +285,7 @@ int main(int argc, char** argv)
             j["threads"] = 1;
 
             j["expected_value"] = helper::to_string_precise(expected_value);
-            j["values"] = helper::to_string_precise_vector(numbers_c);
+            j["values"] = helper::to_string_precise_vector(numbers_c_out);
 
 
             std::ofstream out(json_file);

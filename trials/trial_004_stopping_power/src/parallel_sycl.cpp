@@ -144,7 +144,7 @@ static inline double stopping_power(
         SMALL_VALUE);
 
     // Square-bracketed term (PDG Eq. 34.5 + optional corrections)
-    auto bracket =
+    const auto bracket =
         0.5 * sycl_compatible_log(log_argument)
       - beta2
       - 0.5 * density_effect_delta;
@@ -412,7 +412,7 @@ int main(int argc, char** argv)
 
         // Values
         j["expected_value"] = helper::to_string_precise(expected_value);
-        j["calculated_value"] = helper::to_string_precise(calculated_value);;
+        j["calculated_value"] = helper::to_string_precise(calculated_value);
         j["difference"] = helper::to_string_precise(expected_value - calculated_value);
         j["passed_check"] = passed_check;
         j["values"] = helper::to_string_precise_vector(stopping_power_values);

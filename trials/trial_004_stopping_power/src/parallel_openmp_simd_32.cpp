@@ -105,7 +105,7 @@ static inline float stopping_power(
         SMALL_VALUE);
 
     // Square-bracketed term (PDG Eq. 34.5 + optional corrections)
-    auto bracket =
+    const auto bracket =
         0.5f * std::log(log_argument)
       - beta2
       - 0.5f * density_effect_delta;
@@ -140,15 +140,15 @@ static inline void serial_task(
 {
     // Parameters
     static constexpr auto PROJECTILE_ATOMIC_NUMBER {1};
-    static constexpr auto PROJECTILE_ATOMIC_MASS_MEV {938.2720813}; // proton rest mass energy [MeV]
+    static constexpr auto PROJECTILE_ATOMIC_MASS_MEV {938.2720813f}; // proton rest mass energy [MeV]
 
     static constexpr auto TARGET_ATOMIC_NUMBER {26};
-    static constexpr auto TARGET_ATOMIC_MASS_G_MOL {55.845};
-    static constexpr auto TARGET_DENSITY_G_CM3 {7.874};
+    static constexpr auto TARGET_ATOMIC_MASS_G_MOL {55.845f};
+    static constexpr auto TARGET_DENSITY_G_CM3 {7.874f};
 
-    static constexpr auto MEAN_EXCITATION_ENERGY_MEV {286.0e-6}; // 286 eV = 286e-6 MeV
-    static constexpr auto DENSITY_EFFECT_DELTA {0.0};
-    static constexpr auto SHELL_CORRECTION_C_OVER_Z {0.0};
+    static constexpr auto MEAN_EXCITATION_ENERGY_MEV {286.0e-6f}; // 286 eV = 286e-6 MeV
+    static constexpr auto DENSITY_EFFECT_DELTA {0.0f};
+    static constexpr auto SHELL_CORRECTION_C_OVER_Z {0.0f};
 
     const auto n {std::size_t(velocity_array.size())};
 
@@ -183,15 +183,15 @@ static inline void parallel_task(
 {
     // Parameters
     static constexpr auto PROJECTILE_ATOMIC_NUMBER {1};
-    static constexpr auto PROJECTILE_ATOMIC_MASS_MEV {938.2720813}; // proton rest mass energy [MeV]
+    static constexpr auto PROJECTILE_ATOMIC_MASS_MEV {938.2720813f}; // proton rest mass energy [MeV]
 
     static constexpr auto TARGET_ATOMIC_NUMBER {26};
-    static constexpr auto TARGET_ATOMIC_MASS_G_MOL {55.845};
+    static constexpr auto TARGET_ATOMIC_MASS_G_MOL {55.845f};
     static constexpr auto TARGET_DENSITY_G_CM3 {7.874};
 
-    static constexpr auto MEAN_EXCITATION_ENERGY_MEV {286.0e-6}; // 286 eV = 286e-6 MeV
-    static constexpr auto DENSITY_EFFECT_DELTA {0.0};
-    static constexpr auto SHELL_CORRECTION_C_OVER_Z {0.0};
+    static constexpr auto MEAN_EXCITATION_ENERGY_MEV {286.0e-6f}; // 286 eV = 286e-6 MeV
+    static constexpr auto DENSITY_EFFECT_DELTA {0.0f};
+    static constexpr auto SHELL_CORRECTION_C_OVER_Z {0.0f};
 
     const auto n {std::size_t(velocity_array.size())};
 
@@ -304,6 +304,14 @@ int main(int argc, char** argv)
         const std::string base_file_name = "results/parallel_openmp_simd_32";
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
 
+        // Cast to double for output
+        auto stopping_power_values_out {std::vector<double>{}};
+        stopping_power_values_out.reserve(stopping_power_values.size());
+        for (auto i = std::size_t(0); i < stopping_power_values.size(); i++)
+        {
+            stopping_power_values_out.emplace_back(static_cast<double>(stopping_power_values[i]));
+        }
+
         nlohmann::json j;
 
         // Metadata / identity
@@ -325,10 +333,10 @@ int main(int argc, char** argv)
 
         // Values
         j["expected_value"] = helper::to_string_precise(expected_value);
-        j["calculated_value"] = helper::to_string_precise(calculated_value);;
+        j["calculated_value"] = helper::to_string_precise(calculated_value);
         j["difference"] = helper::to_string_precise(expected_value - calculated_value);
         j["passed_check"] = passed_check;
-        j["values"] = helper::to_string_precise_vector(stopping_power_values);
+        j["values"] = helper::to_string_precise_vector(stopping_power_values_out);
 
         // Memory
         j["max_rss_kb"] = helper::max_rss_kb();

@@ -121,9 +121,6 @@ static inline float stopping_power(
     const auto gamma2 {std::max(0.0f, inv_one_minus_beta2)};
     const auto gamma {sycl_compatible_sqrt(gamma2)};
 
-    // Total energy E = gamma * M c^2 [MeV]
-    const auto total_energy_mev {std::max(0.0f, gamma * projectile_atomic_mass_mev)};
-
     // Maximum energy transfer W_max (PDG Eq. 34.4)
     const auto electron_to_projectile_mass {ELECTRON_MASS_MEV / std::max(SMALL_VALUE, projectile_atomic_mass_mev)};
 
@@ -144,7 +141,7 @@ static inline float stopping_power(
         SMALL_VALUE);
 
     // Square-bracketed term (PDG Eq. 34.5 + optional corrections)
-    auto bracket =
+    const auto bracket =
         0.5f * sycl_compatible_log(log_argument)
       - beta2
       - 0.5f * density_effect_delta;
@@ -178,14 +175,14 @@ static inline void serial_task(
     std::vector<float>& results)
 {
     static constexpr auto PROJECTILE_ATOMIC_NUMBER {1};
-    static constexpr auto PROJECTILE_ATOMIC_MASS_MEV {938.2720813};
+    static constexpr auto PROJECTILE_ATOMIC_MASS_MEV {938.2720813f};
 
     static constexpr auto TARGET_ATOMIC_NUMBER {26};
-    static constexpr auto TARGET_ATOMIC_MASS_G_MOL {55.845};
-    static constexpr auto TARGET_DENSITY_G_CM3 {7.874};
+    static constexpr auto TARGET_ATOMIC_MASS_G_MOL {55.845f};
+    static constexpr auto TARGET_DENSITY_G_CM3 {7.874f};
 
-    static constexpr auto MEAN_EXCITATION_ENERGY_MEV {286.0e-6};
-    static constexpr auto DENSITY_EFFECT_DELTA {0.0};
+    static constexpr auto MEAN_EXCITATION_ENERGY_MEV {286.0e-6f};
+    static constexpr auto DENSITY_EFFECT_DELTA {0.0f};
 
     const auto n {std::size_t(velocity_array.size())};
 
@@ -227,14 +224,14 @@ static inline sycl::event sycl_task(
         [=](sycl::item<1> item)
         {
             static constexpr auto PROJECTILE_ATOMIC_NUMBER {1};
-            static constexpr auto PROJECTILE_ATOMIC_MASS_MEV {938.2720813};
+            static constexpr auto PROJECTILE_ATOMIC_MASS_MEV {938.2720813f};
 
             static constexpr auto TARGET_ATOMIC_NUMBER {26};
-            static constexpr auto TARGET_ATOMIC_MASS_G_MOL {55.845};
-            static constexpr auto TARGET_DENSITY_G_CM3 {7.874};
+            static constexpr auto TARGET_ATOMIC_MASS_G_MOL {55.845f};
+            static constexpr auto TARGET_DENSITY_G_CM3 {7.874f};
 
-            static constexpr auto MEAN_EXCITATION_ENERGY_MEV {286.0e-6};
-            static constexpr auto DENSITY_EFFECT_DELTA {0.0};
+            static constexpr auto MEAN_EXCITATION_ENERGY_MEV {286.0e-6f};
+            static constexpr auto DENSITY_EFFECT_DELTA {0.0f};
 
             const auto i {item.get_linear_id()};
 
@@ -391,6 +388,14 @@ int main(int argc, char** argv)
         const std::string base_file_name = "results/parallel_sycl_32";
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
 
+        // Cast to double for output
+        auto stopping_power_values_out {std::vector<double>{}};
+        stopping_power_values_out.reserve(stopping_power_values.size());
+        for (auto i = std::size_t(0); i < stopping_power_values.size(); i++)
+        {
+            stopping_power_values_out.emplace_back(static_cast<double>(stopping_power_values[i]));
+        }
+
         nlohmann::json j;
 
         // Metadata / identity
@@ -412,10 +417,10 @@ int main(int argc, char** argv)
 
         // Values
         j["expected_value"] = helper::to_string_precise(expected_value);
-        j["calculated_value"] = helper::to_string_precise(calculated_value);;
+        j["calculated_value"] = helper::to_string_precise(calculated_value);
         j["difference"] = helper::to_string_precise(expected_value - calculated_value);
         j["passed_check"] = passed_check;
-        j["values"] = helper::to_string_precise_vector(stopping_power_values);
+        j["values"] = helper::to_string_precise_vector(stopping_power_values_out);
 
         // Memory
         //j["max_rss_kb"] = helper::max_rss_kb();

@@ -42,39 +42,39 @@
 // Host/device math helpers
 // -----------------------------
 [[nodiscard]] __host__ __device__
-static inline double hd_log(const double x)
+static inline float hd_log(const float x)
 {
 #if defined(__CUDA_ARCH__)
-    return ::log(x);
+    return ::logf(x);
 #else
     return std::log(x);
 #endif
 }
 
 [[nodiscard]] __host__ __device__
-static inline double hd_sqrt(const double x)
+static inline float hd_sqrt(const float x)
 {
 #if defined(__CUDA_ARCH__)
-    return ::sqrt(x);
+    return ::sqrtf(x);
 #else
     return std::sqrt(x);
 #endif
 }
 
 [[nodiscard]] __host__ __device__
-static inline double hd_max(const double a, const double b) noexcept
+static inline float hd_max(const float a, const float b) noexcept
 {
     return (a > b) ? a : b;
 }
 
 [[nodiscard]] __host__ __device__
-static inline double hd_min(const double a, const double b) noexcept
+static inline float hd_min(const float a, const float b) noexcept
 {
     return (a < b) ? a : b;
 }
 
 [[nodiscard]] __host__ __device__
-static inline double hd_clamp(const double x, const double lo, const double hi) noexcept
+static inline float hd_clamp(const float x, const float lo, const float hi) noexcept
 {
     return hd_min(hi, hd_max(lo, x));
 }
@@ -118,67 +118,67 @@ static inline double hd_clamp(const double x, const double lo, const double hi) 
  *      This implementation clamps beta to avoid divide-by-zero and gamma overflow; that changes physics.
  */
 [[nodiscard]] __host__ __device__
-static inline double stopping_power(
-    const double projectile_velocity_ms,
+static inline float stopping_power(
+    const float projectile_velocity_ms,
     const int projectile_atomic_number,
-    const double projectile_atomic_mass_mev,
+    const float projectile_atomic_mass_mev,
     const int target_atomic_number,
-    const double target_atomic_mass_g_mol,
-    const double target_density_g_cm3,
-    const double mean_excitation_energy_mev,
-    const double density_effect_delta)
+    const float target_atomic_mass_g_mol,
+    const float target_density_g_cm3,
+    const float mean_excitation_energy_mev,
+    const float density_effect_delta)
 {
     // Fundamental constants (PDG)
-    static constexpr double SPEED_OF_LIGHT_MS = 299792458.0;     // [m/s]
-    static constexpr double ELECTRON_MASS_MEV = 0.51099895000;   // [MeV]
-    static constexpr double BETHE_CONSTANT_K  = 0.307075;        // [MeV·cm^2/mol]
-    static constexpr auto SMALL_VALUE  {1.0e-9};
+    static constexpr float SPEED_OF_LIGHT_MS = 299792458.0f;     // [m/s]
+    static constexpr float ELECTRON_MASS_MEV = 0.51099895000f;   // [MeV]
+    static constexpr float BETHE_CONSTANT_K  = 0.307075f;        // [MeV·cm^2/mol]
+    static constexpr auto SMALL_VALUE  {1.0e-9f};
 
     // Relativistic kinematics
-    const double beta_raw = projectile_velocity_ms / SPEED_OF_LIGHT_MS;
-    const double beta = hd_clamp(beta_raw, SMALL_VALUE, 0.99999);     // clamped to avoid errors
-    const double beta2 = beta * beta;
+    const float beta_raw = projectile_velocity_ms / SPEED_OF_LIGHT_MS;
+    const float beta = hd_clamp(beta_raw, SMALL_VALUE, 0.99999f);     // clamped to avoid errors
+    const float beta2 = beta * beta;
 
-    const double inv_one_minus_beta2 = 1.0 / (1.0 - beta2);
-    const double gamma2 = hd_max(0.0, inv_one_minus_beta2);
-    const double gamma  = hd_sqrt(gamma2);
+    const float inv_one_minus_beta2 = 1.0f / (1.0f - beta2);
+    const float gamma2 = hd_max(0.0f, inv_one_minus_beta2);
+    const float gamma  = hd_sqrt(gamma2);
 
     // Maximum energy transfer W_max (PDG Eq. 34.4)
-    const double denom_mass = hd_max(SMALL_VALUE, projectile_atomic_mass_mev);
-    const double electron_to_projectile_mass = ELECTRON_MASS_MEV / denom_mass;
+    const float denom_mass = hd_max(SMALL_VALUE, projectile_atomic_mass_mev);
+    const float electron_to_projectile_mass = ELECTRON_MASS_MEV / denom_mass;
 
-    const double w_max_numerator = 2.0 * ELECTRON_MASS_MEV * beta2 * gamma2;
+    const float w_max_numerator = 2.0f * ELECTRON_MASS_MEV * beta2 * gamma2;
 
-    const double w_max_denominator_raw =
-        1.0
-      + 2.0 * gamma * electron_to_projectile_mass
+    const float w_max_denominator_raw =
+        1.0f
+      + 2.0f * gamma * electron_to_projectile_mass
       + (electron_to_projectile_mass * electron_to_projectile_mass);
 
-    const double w_max_denominator = hd_max(w_max_denominator_raw, SMALL_VALUE);
-    const double w_max_mev = w_max_numerator / w_max_denominator;
+    const float w_max_denominator = hd_max(w_max_denominator_raw, SMALL_VALUE);
+    const float w_max_mev = w_max_numerator / w_max_denominator;
 
     // Logarithmic argument (PDG Eq. 34.5)
-    const double mean_excitation_energy2_mev2 = mean_excitation_energy_mev * mean_excitation_energy_mev;
+    const float mean_excitation_energy2_mev2 = mean_excitation_energy_mev * mean_excitation_energy_mev;
 
-    const double log_arg_num = (2.0 * ELECTRON_MASS_MEV * beta2 * gamma2 * w_max_mev);
-    const double log_arg_den = hd_max(SMALL_VALUE, mean_excitation_energy2_mev2);
-    const double log_argument = hd_max(log_arg_num / log_arg_den, SMALL_VALUE);
+    const float log_arg_num = (2.0f * ELECTRON_MASS_MEV * beta2 * gamma2 * w_max_mev);
+    const float log_arg_den = hd_max(SMALL_VALUE, mean_excitation_energy2_mev2);
+    const float log_argument = hd_max(log_arg_num / log_arg_den, SMALL_VALUE);
 
     // Square-bracketed term (PDG Eq. 34.5 + density effect)
-    const double bracket =
-        0.5 * hd_log(log_argument)
+    const float bracket =
+        0.5f * hd_log(log_argument)
       - beta2
-      - 0.5 * density_effect_delta;
+      - 0.5f * density_effect_delta;
 
     // Mass stopping power [MeV·cm^2/g] and linear stopping power [MeV/cm]
-    const double projectile_charge  = static_cast<double>(projectile_atomic_number);
-    const double projectile_charge2 = projectile_charge * projectile_charge;
+    const float projectile_charge  = static_cast<float>(projectile_atomic_number);
+    const float projectile_charge2 = projectile_charge * projectile_charge;
 
-    const double z_over_a = static_cast<double>(target_atomic_number) / hd_max(SMALL_VALUE, target_atomic_mass_g_mol);
-    const double prefactor_mass = BETHE_CONSTANT_K * projectile_charge2 * z_over_a / beta2;
+    const float z_over_a = static_cast<float>(target_atomic_number) / hd_max(SMALL_VALUE, target_atomic_mass_g_mol);
+    const float prefactor_mass = BETHE_CONSTANT_K * projectile_charge2 * z_over_a / beta2;
 
-    const double mass_stopping_power_mev_cm2_per_g = prefactor_mass * bracket;
-    const double linear_stopping_power_mev_per_cm  = target_density_g_cm3 * mass_stopping_power_mev_cm2_per_g;
+    const float mass_stopping_power_mev_cm2_per_g = prefactor_mass * bracket;
+    const float linear_stopping_power_mev_per_cm  = target_density_g_cm3 * mass_stopping_power_mev_cm2_per_g;
 
     return linear_stopping_power_mev_per_cm;
 }
@@ -195,18 +195,18 @@ static inline double stopping_power(
  *      This routine does not validate sizes; callers must ensure `results.size() == velocity_array.size()`.
  */
 static inline void serial_task(
-    const std::vector<double>& velocity_array,
-    std::vector<double>& results)
+    const std::vector<float>& velocity_array,
+    std::vector<float>& results)
 {
     static constexpr auto PROJECTILE_ATOMIC_NUMBER {1};
-    static constexpr auto PROJECTILE_ATOMIC_MASS_MEV {938.2720813};
+    static constexpr auto PROJECTILE_ATOMIC_MASS_MEV {938.2720813f};
 
     static constexpr auto TARGET_ATOMIC_NUMBER {26};
-    static constexpr auto TARGET_ATOMIC_MASS_G_MOL {55.845};
-    static constexpr auto TARGET_DENSITY_G_CM3 {7.874};
+    static constexpr auto TARGET_ATOMIC_MASS_G_MOL {55.845f};
+    static constexpr auto TARGET_DENSITY_G_CM3 {7.874f};
 
-    static constexpr auto MEAN_EXCITATION_ENERGY_MEV {286.0e-6};
-    static constexpr auto DENSITY_EFFECT_DELTA {0.0};
+    static constexpr auto MEAN_EXCITATION_ENERGY_MEV {286.0e-6f};
+    static constexpr auto DENSITY_EFFECT_DELTA {0.0f};
 
     const auto n {std::size_t(velocity_array.size())};
 
@@ -231,18 +231,18 @@ static inline void serial_task(
 // -----------------------------
 __global__ void stopping_power_kernel(
     const std::size_t n,
-    const double* __restrict__ velocity_device,
-    double* __restrict__ stopping_power_device)
+    const float* __restrict__ velocity_device,
+    float* __restrict__ stopping_power_device)
 {
     static constexpr int    PROJECTILE_ATOMIC_NUMBER   = 1;
-    static constexpr double PROJECTILE_ATOMIC_MASS_MEV = 938.2720813;
+    static constexpr float PROJECTILE_ATOMIC_MASS_MEV = 938.2720813f;
 
     static constexpr int    TARGET_ATOMIC_NUMBER       = 26;
-    static constexpr double TARGET_ATOMIC_MASS_G_MOL   = 55.845;
-    static constexpr double TARGET_DENSITY_G_CM3       = 7.874;
+    static constexpr float TARGET_ATOMIC_MASS_G_MOL   = 55.845f;
+    static constexpr float TARGET_DENSITY_G_CM3       = 7.874f;
 
-    static constexpr double MEAN_EXCITATION_ENERGY_MEV = 286.0e-6;
-    static constexpr double DENSITY_EFFECT_DELTA       = 0.0;
+    static constexpr float MEAN_EXCITATION_ENERGY_MEV = 286.0e-6f;
+    static constexpr float DENSITY_EFFECT_DELTA       = 0.0f;
 
     const std::size_t tid = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
     const std::size_t stride = static_cast<std::size_t>(gridDim.x) * blockDim.x;
@@ -263,8 +263,8 @@ __global__ void stopping_power_kernel(
 
 static inline void launch_cuda_task(
     const std::size_t n,
-    const double* velocity_device,
-    double* stopping_power_device)
+    const float* velocity_device,
+    float* stopping_power_device)
 {
     constexpr int block_size = 256;
     int device = 0;
@@ -317,18 +317,18 @@ int main(int argc, char** argv)
     std::cerr << "Using CUDA device: " << prop.name << "\n";
 
     // Host buffers (pinned for faster H2D/D2H, similar “host visible” intent)
-    double* velocity_host = nullptr;
-    double* stopping_power_host = nullptr;
+    float* velocity_host = nullptr;
+    float* stopping_power_host = nullptr;
 
-    CUDA_CHECK(cudaMallocHost(&velocity_host, sizeof(double) * n));
-    CUDA_CHECK(cudaMallocHost(&stopping_power_host, sizeof(double) * n));
+    CUDA_CHECK(cudaMallocHost(&velocity_host, sizeof(float) * n));
+    CUDA_CHECK(cudaMallocHost(&stopping_power_host, sizeof(float) * n));
 
     // Device buffers
-    double* velocity_device = nullptr;
-    double* stopping_power_device = nullptr;
+    float* velocity_device = nullptr;
+    float* stopping_power_device = nullptr;
 
-    CUDA_CHECK(cudaMalloc(&velocity_device, sizeof(double) * n));
-    CUDA_CHECK(cudaMalloc(&stopping_power_device, sizeof(double) * n));
+    CUDA_CHECK(cudaMalloc(&velocity_device, sizeof(float) * n));
+    CUDA_CHECK(cudaMalloc(&stopping_power_device, sizeof(float) * n));
 
     // Fill input once (host writes shared memory)
     std::mt19937_64 rng(123456789ULL);
@@ -336,21 +336,21 @@ int main(int argc, char** argv)
 
     for (auto i = std::size_t(0); i < n; i++)
     {
-        velocity_host[i] = dist(rng);
+        velocity_host[i] = static_cast<float>(dist(rng));
     }
 
     auto expected_value {0.0};
 
     // Expected value (serial reference)
     {
-        auto velocity_host_vec {std::vector<double>(velocity_host, velocity_host + n)};
-        auto stopping_power_host_vec {std::vector<double>(n)};
+        auto velocity_host_vec {std::vector<float>(velocity_host, velocity_host + n)};
+        auto stopping_power_host_vec {std::vector<float>(n)};
         serial_task(velocity_host_vec, stopping_power_host_vec);
         expected_value = helper::check_sum(stopping_power_host_vec);
         std::cout << "Serial computed expected value: " << expected_value << '\n';
     }
 
-    CUDA_CHECK(cudaMemcpy(velocity_device, velocity_host, sizeof(double) * n, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(velocity_device, velocity_host, sizeof(float) * n, cudaMemcpyHostToDevice));
 
     // Calc timing start
     const auto t1 {std::chrono::steady_clock::now()};
@@ -371,9 +371,9 @@ int main(int argc, char** argv)
 
     const auto t2 {std::chrono::steady_clock::now()};
 
-    CUDA_CHECK(cudaMemcpy(stopping_power_host, stopping_power_device, sizeof(double) * n, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(stopping_power_host, stopping_power_device, sizeof(float) * n, cudaMemcpyDeviceToHost));
 
-    auto stopping_power_values = std::vector<double>(stopping_power_host, stopping_power_host + n);
+    auto stopping_power_values = std::vector<float>(stopping_power_host, stopping_power_host + n);
 
     // Sum stopping_power on host for comparison
     auto calculated_value {0.0};
@@ -398,14 +398,22 @@ int main(int argc, char** argv)
 
     const auto passed_check {(std::abs(calculated_value - expected_value) < 1.0e-6)};
 
-    const auto method {std::string("Parallel CUDA")};
+    const auto method {std::string("Parallel CUDA 32")};
     const auto comments {std::string("stopping_power")};
 
     // Output
     {
 
-        const std::string base_file_name = "results/parallel_cuda";
+        const std::string base_file_name = "results/parallel_cuda_32";
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
+
+        // Cast to double for output
+        auto stopping_power_values_out {std::vector<double>{}};
+        stopping_power_values_out.reserve(stopping_power_values.size());
+        for (auto i = std::size_t(0); i < stopping_power_values.size(); i++)
+        {
+            stopping_power_values_out.emplace_back(static_cast<double>(stopping_power_values[i]));
+        }
 
         nlohmann::json j;
 
