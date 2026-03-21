@@ -2,6 +2,10 @@
 source /opt/intel/oneapi/setvars.sh
 export SYCL_DEVICE_FILTER=cuda
 
+# apt update
+# apt install -y ocl-icd-opencl-dev
+#
+
 
 acpp -O3 -ffast-math -std=c++23 \
      -v \
@@ -28,6 +32,20 @@ nvcc -std=c++20 --use_fast_math \
     -Xcompiler "-fno-fast-math -fno-unsafe-math-optimizations -ffp-contract=off" \
     src/parallel_cuda_32.cu \
     -o bin/parallel_cuda_32.x
+
+
+g++ -std=c++23 \
+    -O3 \
+    src/parallel_opencl.cpp \
+    -o bin/parallel_opencl.x \
+    -lOpenCL
+
+
+g++ -std=c++23 \
+    -O3 \
+    src/parallel_opencl_32.cpp \
+    -o bin/parallel_opencl_32.x \
+    -lOpenCL
 
 
 exit 0

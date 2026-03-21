@@ -214,7 +214,7 @@ void validate_sizes(
 
 
 /**
- * @brief Returns a calue converted to string.
+ * @brief Returns a value converted to string.
  * @param value to convert to string.
  * @return string.
  */
@@ -265,7 +265,25 @@ T check_sum(const std::vector<T>& numbers)
 
 
 
+[[nodiscard]]
+std::vector<double> to_double(std::vector<float>& vf)
+{
+    std::vector<double> vd;  
+    vd.resize(vf.size());  
+
+    std::transform(  
+    vf.begin(),  
+    vf.end(),  
+    vd.begin(),  
+    [](float x) { return static_cast<double>(x); }  
+    );
+
+    return vd;
 }
 
+
+
+
+}
 
 #endif
