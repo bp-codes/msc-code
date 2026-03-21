@@ -282,7 +282,7 @@ int main(int argc, char** argv)
         }
     }
 
-    // Setup timing start
+    // ======= Set up before calculation ========
     const auto t0 {std::chrono::steady_clock::now()};
 
     sycl::queue queue =
@@ -335,7 +335,7 @@ int main(int argc, char** argv)
 
     queue.memcpy(velocity_device, velocity_host, sizeof(double) * n).wait();
 
-    // Calc timing start
+    // ======= Carry out calculation ========
     const auto t1 {std::chrono::steady_clock::now()};
     const auto deadline {t1 + std::chrono::duration<double>(test_time_s)};
     auto iters {std::uint64_t(0)};
@@ -353,18 +353,16 @@ int main(int argc, char** argv)
     // Ensure last submitted kernel finished before reading result
     last_event.wait();
 
+    // ======= Copy back and clean up after calculation ========
     const auto t2 {std::chrono::steady_clock::now()};
 
+    // Copy data back from 
     queue.memcpy(stopping_power_host, stopping_power_device, sizeof(double) * n).wait();
 
     auto stopping_power_values = std::vector<double>(stopping_power_host, stopping_power_host + n);
 
     // Sum stopping_power on host for comparison
-    auto calculated_value {0.0};
-    for (auto i = std::size_t(0); i < n; i++)
-    {
-        calculated_value += stopping_power_values[i];
-    }
+    const auto calculated_value {helper::check_sum(stopping_power_values)};
 
     // Free USM
     sycl::free(stopping_power_device, queue);
@@ -372,6 +370,7 @@ int main(int argc, char** argv)
     sycl::free(velocity_device, queue);
     sycl::free(velocity_host, queue);
 
+    // ======= End ========
     const auto t3 {std::chrono::steady_clock::now()};
 
     const auto time_setup_s {std::chrono::duration<double>(t1 - t0).count()};
