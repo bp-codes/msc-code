@@ -486,17 +486,9 @@ void print_build_log(cl_program program, cl_device_id device)
 int main(int argc, char** argv)
 {
 
-    cl_context context {nullptr};
-    cl_command_queue queue {nullptr};
-    cl_program program {nullptr};
-    cl_kernel kernel {nullptr};
-    cl_mem dev_a {nullptr};
-    cl_mem dev_b {nullptr};
-    cl_mem dev_c {nullptr};
-
-
     try
     {
+
         if (argc < 4)
         {
             THROW_INVALID_ARGUMENT("Usage: serial.x time_limit vec_size operation");
@@ -555,14 +547,18 @@ int main(int argc, char** argv)
         // ======= Calculation Starts ========
         const auto t0 {std::chrono::steady_clock::now()};
 
-        /*
-        sycl::queue q =
-        (device_string == "CPU")
-        ? sycl::queue{sycl::cpu_selector_v}
-        : sycl::queue{sycl::gpu_selector_v};
 
-        std::cerr << "Using device: " << q.get_device().get_info<sycl::info::device::name>() << "\n";
-        */
+        // Vector to store numbers_c
+        auto numbers_c {std::vector<double>(n)};
+
+        // device variables
+        cl_context context {nullptr};
+        cl_command_queue queue {nullptr};
+        cl_program program {nullptr};
+        cl_kernel kernel {nullptr};
+        cl_mem dev_a {nullptr};
+        cl_mem dev_b {nullptr};
+        cl_mem dev_c {nullptr};
 
         const auto device {pick_device(device_string)};
 
@@ -606,8 +602,6 @@ int main(int argc, char** argv)
 
         kernel = clCreateKernel(program, kernel_name(operation), &status);
         opencl_check(status, "clCreateKernel failed.");
-
-        auto numbers_c {std::vector<double>(n)};
 
         dev_a = clCreateBuffer(context, CL_MEM_READ_ONLY, n * sizeof(double), nullptr, &status);
         opencl_check(status, "clCreateBuffer(dev_a) failed.");

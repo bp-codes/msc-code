@@ -257,10 +257,11 @@ int main(int argc, char** argv)
             std::cout << "Serial computed expected value: " << expected_value << "\n";
         }
 
-        // ======= Calculation Starts ========
-
+        // ======= Set up before calculation ========
         const auto t0 {std::chrono::steady_clock::now()};
 
+
+        // ======= Carry out calculation ========
         const auto t1 {std::chrono::steady_clock::now()};
         const auto deadline {t1 + std::chrono::duration<double>(test_time_seconds)};
 
@@ -275,10 +276,12 @@ int main(int argc, char** argv)
         }
         while (std::chrono::steady_clock::now() < deadline);
 
+        // ======= Copy back and clean up after calculation ========
         const auto t2 {std::chrono::steady_clock::now()};
+
+        // ======= End ========
         const auto t3 {std::chrono::steady_clock::now()};
 
-        // ======= Calculation Ends ========
 
         const auto calculated_value {helper::check_sum(numbers_c)};
 
