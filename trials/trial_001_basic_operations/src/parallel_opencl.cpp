@@ -658,25 +658,20 @@ int main(int argc, char** argv)
 
         // Free device allocations
         opencl_check(clReleaseMemObject(dev_a), "clReleaseMemObject(dev_a) failed.");
-        dev_a = nullptr;
-
         opencl_check(clReleaseMemObject(dev_b), "clReleaseMemObject(dev_b) failed.");
-        dev_b = nullptr;
-
         opencl_check(clReleaseMemObject(dev_c), "clReleaseMemObject(dev_c) failed.");
-        dev_c = nullptr;
-
         opencl_check(clReleaseKernel(kernel), "clReleaseKernel failed.");
-        kernel = nullptr;
-
         opencl_check(clReleaseProgram(program), "clReleaseProgram failed.");
-        program = nullptr;
-
         opencl_check(clReleaseCommandQueue(queue), "clReleaseCommandQueue failed.");
-        queue = nullptr;
-
         opencl_check(clReleaseContext(context), "clReleaseContext failed.");
+        dev_a = nullptr;
+        dev_b = nullptr;
+        dev_c = nullptr;
+        kernel = nullptr;
+        program = nullptr;
+        queue = nullptr;
         context = nullptr;
+
 
         // ======= Calculation Ends ========
 
