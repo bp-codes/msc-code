@@ -108,7 +108,7 @@ private:
         {
             sum += (v * v) / a.size();
         }
-        return std::sqrt(sum);
+        return sycl::sqrt(sum);
     }
 
     /**
@@ -180,10 +180,10 @@ private:
         const auto alpha_max {*std::max_element(model_grid.alpha.begin(), model_grid.alpha.end())};
         if (alpha_max <= 0) throw std::runtime_error("alpha must be > 0");
 
-        const auto dt_max {1.0 / (2.0 * alpha_max * (model_grid.invdx2 + model_grid.invdy2))};
+        const auto dt_max {1.0f / (2.0f * alpha_max * (model_grid.invdx2 + model_grid.invdy2))};
         if (dt <= 0.0f || dt > dt_max)
         {
-            const auto chosen {0.9 * dt_max};
+            const auto chosen {0.9f * dt_max};
             if (dt > 0.0f && dt > dt_max)
             {
                 std::cerr << "Warning: provided dt=" << dt
@@ -249,10 +249,10 @@ private:
         // Start looping through time steps
         //####################################
 
-        while (t < t_final - 1e-15)
+        while (t < t_final - 1e-15f)
         {
             // sample sources at midpoint time
-            const auto t_sample {t + 0.5 * dt};
+            const auto t_sample {t + 0.5f * dt};
 
             // Calculate grid at next time step
             sycl_engine.heat_step(dt, t_sample);
@@ -268,7 +268,7 @@ private:
             step++;
 
             // Save grid to file (at time t)
-            if (step % snapshot_every == 0 || t >= t_final - 1e-15)
+            if (step % snapshot_every == 0 || t >= t_final - 1e-15f)
             {
                 // Copy u from device
                 sycl_engine.download_grid(model_grid);

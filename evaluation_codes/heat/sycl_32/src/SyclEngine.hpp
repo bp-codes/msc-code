@@ -49,21 +49,21 @@ inline float source_value_at_device(
         {
             const float dx0 = x - s.x0;
             const float dy0 = y - s.y0;
-            const float two_sigma2 = 2.0 * s.sigma * s.sigma + 1e-300;
+            const float two_sigma2 = 2.0f * s.sigma * s.sigma + 1.0e-38f;
             spatial = sycl::exp(-(dx0*dx0 + dy0*dy0) / two_sigma2);
             break;
         }
         case Source::SpatialKind::Block:
         {
             spatial = (x >= s.x_min && x <= s.x_max &&
-                       y >= s.y_min && y <= s.y_max) ? 1.0 : 0.0f;
+                       y >= s.y_min && y <= s.y_max) ? 1.0f : 0.0f;
             break;
         }
         case Source::SpatialKind::Point: {
             // Act only on the cell that contains (x0, y0)
-            const float hx = 0.5 * dx;
-            const float hy = 0.5 * dy;
-            spatial = (sycl::fabs(x - s.x0) <= hx && sycl::fabs(y - s.y0) <= hy) ? 1.0 : 0.0f;
+            const float hx = 0.5f * dx;
+            const float hy = 0.5f * dy;
+            spatial = (sycl::fabs(x - s.x0) <= hx && sycl::fabs(y - s.y0) <= hy) ? 1.0f : 0.0f;
             break;
         }
     }
@@ -205,11 +205,11 @@ struct SyclEngine
             const float y = j * dy;
 
             const float uij = u[idx];
-            const float lap = (u[idx + 1] - 2.0*uij + u[idx - 1]) * invdx2
-                            + (u[idx + NX] - 2.0*uij + u[idx - NX]) * invdy2;
+            const float lap = (u[idx + 1] - 2.0f*uij + u[idx - 1]) * invdx2
+                            + (u[idx + NX] - 2.0f*uij + u[idx - NX]) * invdy2;
 
             float source_acc = 0.0f;
-            float constant   = -1.0;
+            float constant   = -1.0f;
 
             if (src && src_count) {
                 for (size_t k = 0; k < src_count; ++k) {
@@ -221,7 +221,7 @@ struct SyclEngine
                 }
             }
 
-            const float aij = (a ? a[idx] : 1.0);
+            const float aij = (a ? a[idx] : 1.0f);
             un[idx] = (constant > 0.0f) ? constant : (uij + aij * dt * (lap + source_acc));
         }).wait();
     }

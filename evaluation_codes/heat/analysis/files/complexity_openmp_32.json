@@ -1,0 +1,184 @@
+[
+  {
+    "name": "Grid::Grid(...)",
+    "file": "../openmp_32/src/Grid.hpp",
+    "line": 46,
+    "nloc": 1,
+    "ccn": 1
+  },
+  {
+    "name": "Grid::Grid(...)",
+    "file": "../openmp_32/src/Grid.hpp",
+    "line": 60,
+    "nloc": 15,
+    "ccn": 3
+  },
+  {
+    "name": "Grid::id(...)",
+    "file": "../openmp_32/src/Grid.hpp",
+    "line": 89,
+    "nloc": 4,
+    "ccn": 1
+  },
+  {
+    "name": "Grid::at(...)",
+    "file": "../openmp_32/src/Grid.hpp",
+    "line": 103,
+    "nloc": 4,
+    "ccn": 1
+  },
+  {
+    "name": "Grid::at(...)",
+    "file": "../openmp_32/src/Grid.hpp",
+    "line": 118,
+    "nloc": 4,
+    "ccn": 1
+  },
+  {
+    "name": "Grid::nxt(...)",
+    "file": "../openmp_32/src/Grid.hpp",
+    "line": 132,
+    "nloc": 4,
+    "ccn": 1
+  },
+  {
+    "name": "Grid::a(...)",
+    "file": "../openmp_32/src/Grid.hpp",
+    "line": 147,
+    "nloc": 4,
+    "ccn": 1
+  },
+  {
+    "name": "Grid::Load_settings(...)",
+    "file": "../openmp_32/src/Grid.hpp",
+    "line": 164,
+    "nloc": 9,
+    "ccn": 1
+  },
+  {
+    "name": "Grid::dirichlet_boundaries(...)",
+    "file": "../openmp_32/src/Grid.hpp",
+    "line": 182,
+    "nloc": 13,
+    "ccn": 3
+  },
+  {
+    "name": "Grid::grid_to_csv(...)",
+    "file": "../openmp_32/src/Grid.hpp",
+    "line": 208,
+    "nloc": 21,
+    "ccn": 5
+  },
+  {
+    "name": "set_alpha_regions(...)",
+    "file": "../openmp_32/src/Grid.hpp",
+    "line": 250,
+    "nloc": 64,
+    "ccn": 22
+  },
+  {
+    "name": "Heat::run(...)",
+    "file": "../openmp_32/src/Heat.hpp",
+    "line": 47,
+    "nloc": 30,
+    "ccn": 2
+  },
+  {
+    "name": "Heat::rss(...)",
+    "file": "../openmp_32/src/Heat.hpp",
+    "line": 107,
+    "nloc": 9,
+    "ccn": 2
+  },
+  {
+    "name": "Heat::read_input(...)",
+    "file": "../openmp_32/src/Heat.hpp",
+    "line": 137,
+    "nloc": 45,
+    "ccn": 8
+  },
+  {
+    "name": "Heat::heat_grid(...)",
+    "file": "../openmp_32/src/Heat.hpp",
+    "line": 213,
+    "nloc": 80,
+    "ccn": 12
+  },
+  {
+    "name": "parse_sources(...)",
+    "file": "../openmp_32/src/Source.hpp",
+    "line": 82,
+    "nloc": 82,
+    "ccn": 19
+  },
+  {
+    "name": "source_value_at(...)",
+    "file": "../openmp_32/src/Source.hpp",
+    "line": 202,
+    "nloc": 34,
+    "ccn": 17
+  },
+  {
+    "name": "Writer::Writer(...)",
+    "file": "../openmp_32/src/Writer.hpp",
+    "line": 55,
+    "nloc": 5,
+    "ccn": 1
+  },
+  {
+    "name": "Writer::enqueue(...)",
+    "file": "../openmp_32/src/Writer.hpp",
+    "line": 74,
+    "nloc": 8,
+    "ccn": 1
+  },
+  {
+    "name": "Writer::enqueue(...)",
+    "file": "../openmp_32/src/Writer.hpp",
+    "line": 92,
+    "nloc": 16,
+    "ccn": 1
+  },
+  {
+    "name": "Writer::stop(...)",
+    "file": "../openmp_32/src/Writer.hpp",
+    "line": 118,
+    "nloc": 12,
+    "ccn": 2
+  },
+  {
+    "name": "Writer::~Writer(...)",
+    "file": "../openmp_32/src/Writer.hpp",
+    "line": 136,
+    "nloc": 4,
+    "ccn": 1
+  },
+  {
+    "name": "Writer::run(...)",
+    "file": "../openmp_32/src/Writer.hpp",
+    "line": 145,
+    "nloc": 31,
+    "ccn": 6
+  },
+  {
+    "name": "Writer::grid_to_csv(...)",
+    "file": "../openmp_32/src/Writer.hpp",
+    "line": 192,
+    "nloc": 12,
+    "ccn": 1
+  },
+  {
+    "name": "Writer::grid_to_csv(...)",
+    "file": "../openmp_32/src/Writer.hpp",
+    "line": 216,
+    "nloc": 30,
+    "ccn": 5
+  },
+  {
+    "name": "main(...)",
+    "file": "../openmp_32/src/main.cpp",
+    "line": 34,
+    "nloc": 50,
+    "ccn": 8
+  }
+]

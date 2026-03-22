@@ -8,12 +8,6 @@
  *
  * Reads all inputs from a JSON configuration file and runs the solver.
  *
- * Build (single header):
- *   g++ -O3 -std=c++17 heat_solver_json.cpp -o heat
- *
- * Build (system nlohmann-json package):
- *   sudo apt-get install nlohmann-json3-dev
- *   g++ -O3 -std=c++17 heat_solver_json.cpp -o heat -I/usr/include
  */
 
 #include <iostream>
@@ -24,7 +18,7 @@
 
 #include "json.hpp"
 #include "Heat.hpp"
-#include "helper.hpp"
+#include "helper_cuda.hpp"
 
 /**
  * @brief Program entry point.
@@ -51,14 +45,14 @@ int main(int argc, char** argv)
 
         auto input_file {std::string{argv[1]}};
 
-        // Run heat
+        // Run heat solver
         Heat::run(input_file);
 
         // End timer and save
         const auto t1 {std::chrono::steady_clock::now()};
         std::filesystem::create_directory("../results");
 
-        const std::string base_file_name = "../results/serial_heat";
+        const std::string base_file_name = "../results/cuda_32_heat";
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
         const auto time_total {std::chrono::duration<double>(t1 - t0).count()};
         nlohmann::json j;

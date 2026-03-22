@@ -1,4 +1,4 @@
 #!/bin/bash
-./main.x input.json
+./bin/main.x input.json
 
 
