@@ -1,0 +1,289 @@
+[
+  {
+    "name": "CudaEngine::CudaEngine(...)",
+    "file": "../cuda_32/src/CudaEngine.hpp",
+    "line": 58,
+    "nloc": 5,
+    "ccn": 1
+  },
+  {
+    "name": "CudaEngine::~CudaEngine(...)",
+    "file": "../cuda_32/src/CudaEngine.hpp",
+    "line": 64,
+    "nloc": 1,
+    "ccn": 1
+  },
+  {
+    "name": "Grid::Grid(...)",
+    "file": "../cuda_32/src/Grid.hpp",
+    "line": 46,
+    "nloc": 1,
+    "ccn": 1
+  },
+  {
+    "name": "Grid::Grid(...)",
+    "file": "../cuda_32/src/Grid.hpp",
+    "line": 60,
+    "nloc": 15,
+    "ccn": 3
+  },
+  {
+    "name": "Grid::id(...)",
+    "file": "../cuda_32/src/Grid.hpp",
+    "line": 89,
+    "nloc": 4,
+    "ccn": 1
+  },
+  {
+    "name": "Grid::at(...)",
+    "file": "../cuda_32/src/Grid.hpp",
+    "line": 103,
+    "nloc": 4,
+    "ccn": 1
+  },
+  {
+    "name": "Grid::at(...)",
+    "file": "../cuda_32/src/Grid.hpp",
+    "line": 118,
+    "nloc": 4,
+    "ccn": 1
+  },
+  {
+    "name": "Grid::nxt(...)",
+    "file": "../cuda_32/src/Grid.hpp",
+    "line": 132,
+    "nloc": 4,
+    "ccn": 1
+  },
+  {
+    "name": "Grid::a(...)",
+    "file": "../cuda_32/src/Grid.hpp",
+    "line": 147,
+    "nloc": 4,
+    "ccn": 1
+  },
+  {
+    "name": "Grid::Load_settings(...)",
+    "file": "../cuda_32/src/Grid.hpp",
+    "line": 164,
+    "nloc": 9,
+    "ccn": 1
+  },
+  {
+    "name": "Grid::dirichlet_boundaries(...)",
+    "file": "../cuda_32/src/Grid.hpp",
+    "line": 182,
+    "nloc": 13,
+    "ccn": 3
+  },
+  {
+    "name": "Grid::grid_to_csv(...)",
+    "file": "../cuda_32/src/Grid.hpp",
+    "line": 208,
+    "nloc": 21,
+    "ccn": 5
+  },
+  {
+    "name": "set_alpha_regions(...)",
+    "file": "../cuda_32/src/Grid.hpp",
+    "line": 250,
+    "nloc": 64,
+    "ccn": 22
+  },
+  {
+    "name": "Heat::run(...)",
+    "file": "../cuda_32/src/Heat.hpp",
+    "line": 47,
+    "nloc": 26,
+    "ccn": 2
+  },
+  {
+    "name": "Heat::rss(...)",
+    "file": "../cuda_32/src/Heat.hpp",
+    "line": 102,
+    "nloc": 9,
+    "ccn": 2
+  },
+  {
+    "name": "Heat::read_input(...)",
+    "file": "../cuda_32/src/Heat.hpp",
+    "line": 131,
+    "nloc": 43,
+    "ccn": 8
+  },
+  {
+    "name": "Heat::heat_grid_cuda(...)",
+    "file": "../cuda_32/src/Heat.hpp",
+    "line": 205,
+    "nloc": 53,
+    "ccn": 6
+  },
+  {
+    "name": "parse_sources(...)",
+    "file": "../cuda_32/src/Source.hpp",
+    "line": 80,
+    "nloc": 82,
+    "ccn": 19
+  },
+  {
+    "name": "source_value_at(...)",
+    "file": "../cuda_32/src/Source.hpp",
+    "line": 200,
+    "nloc": 34,
+    "ccn": 17
+  },
+  {
+    "name": "Writer::Writer(...)",
+    "file": "../cuda_32/src/Writer.hpp",
+    "line": 55,
+    "nloc": 5,
+    "ccn": 1
+  },
+  {
+    "name": "Writer::enqueue(...)",
+    "file": "../cuda_32/src/Writer.hpp",
+    "line": 74,
+    "nloc": 8,
+    "ccn": 1
+  },
+  {
+    "name": "Writer::enqueue(...)",
+    "file": "../cuda_32/src/Writer.hpp",
+    "line": 92,
+    "nloc": 16,
+    "ccn": 1
+  },
+  {
+    "name": "Writer::stop(...)",
+    "file": "../cuda_32/src/Writer.hpp",
+    "line": 118,
+    "nloc": 12,
+    "ccn": 2
+  },
+  {
+    "name": "Writer::~Writer(...)",
+    "file": "../cuda_32/src/Writer.hpp",
+    "line": 136,
+    "nloc": 4,
+    "ccn": 1
+  },
+  {
+    "name": "Writer::run(...)",
+    "file": "../cuda_32/src/Writer.hpp",
+    "line": 145,
+    "nloc": 31,
+    "ccn": 6
+  },
+  {
+    "name": "Writer::grid_to_csv(...)",
+    "file": "../cuda_32/src/Writer.hpp",
+    "line": 186,
+    "nloc": 12,
+    "ccn": 1
+  },
+  {
+    "name": "Writer::grid_to_csv(...)",
+    "file": "../cuda_32/src/Writer.hpp",
+    "line": 206,
+    "nloc": 30,
+    "ccn": 5
+  },
+  {
+    "name": "main(...)",
+    "file": "../cuda_32/src/main.cpp",
+    "line": 32,
+    "nloc": 50,
+    "ccn": 8
+  },
+  {
+    "name": "set_top_bottom(...)",
+    "file": "../cuda_32/src/CudaEngine.cu",
+    "line": 32,
+    "nloc": 10,
+    "ccn": 3
+  },
+  {
+    "name": "set_left_right(...)",
+    "file": "../cuda_32/src/CudaEngine.cu",
+    "line": 53,
+    "nloc": 10,
+    "ccn": 3
+  },
+  {
+    "name": "device_source_value_at(...)",
+    "file": "../cuda_32/src/CudaEngine.cu",
+    "line": 83,
+    "nloc": 40,
+    "ccn": 13
+  },
+  {
+    "name": "heat_step_kernel(...)",
+    "file": "../cuda_32/src/CudaEngine.cu",
+    "line": 138,
+    "nloc": 47,
+    "ccn": 9
+  },
+  {
+    "name": "CudaEngine::_check_data_dims(...)",
+    "file": "../cuda_32/src/CudaEngine.cu",
+    "line": 200,
+    "nloc": 14,
+    "ccn": 6
+  },
+  {
+    "name": "CudaEngine::_check_sources_dims(...)",
+    "file": "../cuda_32/src/CudaEngine.cu",
+    "line": 217,
+    "nloc": 7,
+    "ccn": 2
+  },
+  {
+    "name": "CudaEngine::_allocate(...)",
+    "file": "../cuda_32/src/CudaEngine.cu",
+    "line": 227,
+    "nloc": 18,
+    "ccn": 1
+  },
+  {
+    "name": "CudaEngine::_cleanup(...)",
+    "file": "../cuda_32/src/CudaEngine.cu",
+    "line": 252,
+    "nloc": 16,
+    "ccn": 14
+  },
+  {
+    "name": "CudaEngine::upload_grid(...)",
+    "file": "../cuda_32/src/CudaEngine.cu",
+    "line": 274,
+    "nloc": 27,
+    "ccn": 2
+  },
+  {
+    "name": "CudaEngine::download_grid(...)",
+    "file": "../cuda_32/src/CudaEngine.cu",
+    "line": 311,
+    "nloc": 8,
+    "ccn": 1
+  },
+  {
+    "name": "CudaEngine::dirichlet_boundaries(...)",
+    "file": "../cuda_32/src/CudaEngine.cu",
+    "line": 324,
+    "nloc": 12,
+    "ccn": 3
+  },
+  {
+    "name": "CudaEngine::swap_buffers(...)",
+    "file": "../cuda_32/src/CudaEngine.cu",
+    "line": 341,
+    "nloc": 8,
+    "ccn": 3
+  },
+  {
+    "name": "CudaEngine::heat_step(...)",
+    "file": "../cuda_32/src/CudaEngine.cu",
+    "line": 351,
+    "nloc": 22,
+    "ccn": 3
+  }
+]

@@ -13,14 +13,11 @@
 
 /**
  * @file Source.hpp
- * @brief Heat source definitions, JSON parsing, and source evaluation helpers.
+ * @brief Heat source definitions and JSON parsing helpers.
  *
  * Defines a Source descriptor plus helper functions to:
  * - parse a list of sources from a JSON configuration
- * - test whether a source is active at a given time
- * - evaluate the spatial source contribution at (x,y,t)
- *
- * @warning This header provides free functions in the global namespace.
+ * - evaluate the source contribution S(x,y,t) at a given point in space and time
  */
 
 /**
@@ -29,7 +26,7 @@
  * Spatial kinds:
  * - Gaussian: centered at (x0,y0) with width sigma
  * - Block: rectangular region [x_min,x_max] x [y_min,y_max]
- * - Point: single-cell region starting at (x0,y0) using grid cell size (dx,dy)
+ * - Point: single cell at (x0,y0) interpreted on a grid cell of size (dx,dy)
  *
  * Temporal kinds:
  * - Constant, Rate, Impulse (Impulse may be unsupported depending on parsing/solver logic).
@@ -43,17 +40,20 @@ struct Source
     TemporalKind temporal_kind{TemporalKind::Constant};
 
     // Time, duration, amplitude of source
-    float t0{0.0f};
-    float duration{0.0f};
-    float amplitude{0.0f};
+    float t0 {0.0f};
+    float duration {0.0f};
+    float amplitude {0.0f};
 
     // Gaussian params
-    float x0{0.0f};
-    float y0{0.0f};
-    float sigma{0.0f};
+    float x0 {0.0f};
+    float y0 {0.0f};
+    float sigma {0.0f};
 
     // block params
-    float x_min{0.0f}, x_max{0.0f}, y_min{0.0f}, y_max{0.0f};
+    float x_min {0.0f};
+    float x_max {0.0f};
+    float y_min {0.0f};
+    float y_max {0.0f};
 };
 
 /**
@@ -82,7 +82,7 @@ static std::vector<Source> parse_sources(const nlohmann::json& config_file, cons
     auto sources {std::vector<Source>{}};
     if (!config_file.contains("source")) return sources; // optional
 
-    const nlohmann::json& arr = config_file.at("source");
+    const auto& arr = config_file.at("source");
     if (!arr.is_array())
     {
         throw std::runtime_error("\"source\" must be an array");
@@ -98,7 +98,7 @@ static std::vector<Source> parse_sources(const nlohmann::json& config_file, cons
         if (!js.contains("temporal_kind")) throw std::runtime_error("source item missing \"temporal_kind\"");
         const auto temporal_kind {js.at("temporal_kind").get<std::string>()};
 
-        auto s {Source{}};
+        auto s = Source{};
         s.t0 = js.value("t0", 0.0f);
         s.duration = js.value("duration", 0.0f);
         s.amplitude = js.value("amplitude", 0.0f);
@@ -107,8 +107,8 @@ static std::vector<Source> parse_sources(const nlohmann::json& config_file, cons
         if (spatial_kind == "gaussian")
         {
             s.spatial_kind = Source::SpatialKind::Gaussian;
-            s.x0 = js.value("x0", 0.5 * model_grid.length_x);
-            s.y0 = js.value("y0", 0.5 * model_grid.length_y);
+            s.x0 = js.value("x0", 0.5f * model_grid.length_x);
+            s.y0 = js.value("y0", 0.5f * model_grid.length_y);
 
             if (js.contains("sigma"))
             {
@@ -116,7 +116,7 @@ static std::vector<Source> parse_sources(const nlohmann::json& config_file, cons
             }
             else
             {
-                const auto frac {js.value("sigma_fraction", 0.1)};
+                const auto frac {js.value("sigma_fraction", 0.1f)};
                 s.sigma = frac * std::min(model_grid.length_x, model_grid.length_y);
             }
 
@@ -125,8 +125,8 @@ static std::vector<Source> parse_sources(const nlohmann::json& config_file, cons
         else if (spatial_kind == "point")
         {
             s.spatial_kind = Source::SpatialKind::Point;
-            s.x0 = js.value("x0", 0.5 * model_grid.length_x);
-            s.y0 = js.value("y0", 0.5 * model_grid.length_y);
+            s.x0 = js.value("x0", 0.5f * model_grid.length_x);
+            s.y0 = js.value("y0", 0.5f * model_grid.length_y);
         }
         else if (spatial_kind == "block")
         {
@@ -178,42 +178,11 @@ static std::vector<Source> parse_sources(const nlohmann::json& config_file, cons
 }
 
 /**
- * @brief Test whether a source is active at time t.
- *
- * Uses an inclusive window: [t0, t0 + duration].
- *
- * @param s Source descriptor.
- * @param t Time.
- * @return True if active, false otherwise.
- */
-[[nodiscard]]
-static inline bool is_active(const Source& s, const float t) noexcept
-{
-    return (t >= s.t0) && (t <= s.t0 + s.duration);
-}
-
-/**
- * @brief Negated activity test.
- *
- * @note This function preserves the original boolean expression as provided.
- *       (It may not be a strict logical negation of is_active().)
- *
- * @param s Source descriptor.
- * @param t Time.
- * @return Boolean result of the stored expression.
- */
-[[nodiscard]]
-static inline bool is_not_active(const Source& s, const float t) noexcept
-{
-    // inclusive window [t0, t0+duration]
-    return !(t >= s.t0) && (t <= s.t0 + s.duration);
-}
-
-/**
  * @brief Evaluate the source contribution at a given time and point.
  *
- * If is_not_active(s,t) returns true, this returns 0. Otherwise, evaluates the
- * spatial kind:
+ * Returns 0 outside the active time window [t0, t0+duration).
+ *
+ * Spatial behaviour:
  * - Gaussian: amplitude * exp(-r^2/(2*sigma^2))
  * - Point: amplitude if (x,y) lies inside [x0,x0+dx) x [y0,y0+dy)
  * - Block: amplitude if (x,y) lies inside [x_min,x_max] x [y_min,y_max]
@@ -238,19 +207,19 @@ static inline float source_value_at(const Source& s,
 {
     (void)dt;
 
-    if (is_not_active(s, t))
+    if (!(t >= s.t0 && t < (s.t0 + s.duration)))
     {
         return 0.0f;
     }
 
     if (s.spatial_kind == Source::SpatialKind::Gaussian)
     {
-        const auto r2 {(x - s.x0) * (x - s.x0) + (y - s.y0) * (y - s.y0)};
-        return s.amplitude * std::exp(-r2 / (2.0 * s.sigma * s.sigma));
+        const float r2 {(x - s.x0) * (x - s.x0) + (y - s.y0) * (y - s.y0)};
+        return s.amplitude * expf(-r2 / (2.0f * s.sigma * s.sigma));
     }
     else if (s.spatial_kind == Source::SpatialKind::Point)
     {
-        if (x >= s.x0 && x < (s.x0 + dx) && y >= s.y0 && y < (s.y0 + dy))
+        if (x >= s.x0 && x < (s.x0 + dx) && y >= s.y0 && y < (s.y0 + dy) && t >= s.t0 && t < (s.t0 + s.duration))
         {
             return s.amplitude;
         }
@@ -258,7 +227,7 @@ static inline float source_value_at(const Source& s,
     else
     {
         // block
-        if (x >= s.x_min && x <= s.x_max && y >= s.y_min && y <= s.y_max)
+        if (x >= s.x_min && x <= s.x_max && y >= s.y_min && y <= s.y_max && t >= s.t0 && t < (s.t0 + s.duration))
         {
             return s.amplitude;
         }

@@ -94,7 +94,7 @@ void serial_power(
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
     {
-        numbers_c[i] = std::pow(numbers_a[i], numbers_b[i]);
+        numbers_c[i] = sycl::pow(numbers_a[i], numbers_b[i]);
     }
 }
 
@@ -111,7 +111,7 @@ void serial_exp(
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
     {
-        numbers_c[i] = std::exp(numbers_a[i]) + std::exp(numbers_b[i]);
+        numbers_c[i] = sycl::exp(numbers_a[i]) + std::exp(numbers_b[i]);
     }
 }
 
@@ -129,7 +129,7 @@ void serial_log(
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
     {
-        numbers_c[i] = std::log(numbers_a[i]) + std::log(numbers_b[i]);
+        numbers_c[i] = sycl::log(numbers_a[i]) + std::log(numbers_b[i]);
     }
 }
 
@@ -147,7 +147,7 @@ void serial_sqrt(
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
     {
-        numbers_c[i] = std::sqrt(numbers_a[i]) + std::sqrt(numbers_b[i]);
+        numbers_c[i] = sycl::sqrt(numbers_a[i]) + std::sqrt(numbers_b[i]);
     }
 }
 

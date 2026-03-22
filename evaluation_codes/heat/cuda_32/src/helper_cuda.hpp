@@ -4,7 +4,6 @@
 
 #include <charconv>
 #include <chrono>
-#include <concepts>
 #include <sys/resource.h>
 #include <cstdint>
 #include <random>
@@ -219,7 +218,6 @@ void validate_sizes(
  * @return string.
  */
 template<typename T>
-requires (std::floating_point<T>)
 [[nodiscard]]
 std::string to_string_precise(const T& value)
 {
@@ -233,11 +231,8 @@ std::string to_string_precise(const T& value)
 
 
 template<typename Range>
-requires std::ranges::input_range<Range> &&
-         std::floating_point<std::ranges::range_value_t<Range>>
 [[nodiscard]]
-nlohmann::json
-to_string_precise_vector(const Range& values_in)
+nlohmann::json to_string_precise_vector(const Range& values_in)
 {
     auto values = nlohmann::json::array();
 
@@ -257,16 +252,10 @@ to_string_precise_vector(const Range& values_in)
  * @return Sum of elements.
  */
 template<typename T>
-[[nodiscard]]
 T check_sum(const std::vector<T>& numbers)
 {
     return std::accumulate(numbers.begin(), numbers.end(), 0.0);
 }
-
-
-
-
-
 
 
 

@@ -1,0 +1,286 @@
+<?xml version="1.0" ?>
+<?xml-stylesheet type="text/xsl" href="https://raw.githubusercontent.com/terryyin/lizard/master/lizard.xsl"?>
+<cppncss>
+	<measure type="Function">
+		<labels>
+			<label>Nr.</label>
+			<label>NCSS</label>
+			<label>CCN</label>
+		</labels>
+		<item name="Grid::Grid(...) at ../sycl_32/src/Grid.hpp:46">
+			<value>1</value>
+			<value>1</value>
+			<value>1</value>
+		</item>
+		<item name="Grid::Grid(...) at ../sycl_32/src/Grid.hpp:60">
+			<value>2</value>
+			<value>15</value>
+			<value>3</value>
+		</item>
+		<item name="Grid::id(...) at ../sycl_32/src/Grid.hpp:89">
+			<value>3</value>
+			<value>4</value>
+			<value>1</value>
+		</item>
+		<item name="Grid::at(...) at ../sycl_32/src/Grid.hpp:103">
+			<value>4</value>
+			<value>4</value>
+			<value>1</value>
+		</item>
+		<item name="Grid::at(...) at ../sycl_32/src/Grid.hpp:118">
+			<value>5</value>
+			<value>4</value>
+			<value>1</value>
+		</item>
+		<item name="Grid::nxt(...) at ../sycl_32/src/Grid.hpp:132">
+			<value>6</value>
+			<value>4</value>
+			<value>1</value>
+		</item>
+		<item name="Grid::a(...) at ../sycl_32/src/Grid.hpp:147">
+			<value>7</value>
+			<value>4</value>
+			<value>1</value>
+		</item>
+		<item name="Grid::Load_settings(...) at ../sycl_32/src/Grid.hpp:164">
+			<value>8</value>
+			<value>9</value>
+			<value>1</value>
+		</item>
+		<item name="Grid::dirichlet_boundaries(...) at ../sycl_32/src/Grid.hpp:182">
+			<value>9</value>
+			<value>13</value>
+			<value>3</value>
+		</item>
+		<item name="Grid::grid_to_csv(...) at ../sycl_32/src/Grid.hpp:208">
+			<value>10</value>
+			<value>21</value>
+			<value>5</value>
+		</item>
+		<item name="set_alpha_regions(...) at ../sycl_32/src/Grid.hpp:250">
+			<value>11</value>
+			<value>64</value>
+			<value>22</value>
+		</item>
+		<average label="NCSS" value="13.0"/>
+		<average label="CCN" value="3.6363636363636362"/>
+		<item name="Heat::run(...) at ../sycl_32/src/Heat.hpp:48">
+			<value>12</value>
+			<value>27</value>
+			<value>2</value>
+		</item>
+		<item name="Heat::rss(...) at ../sycl_32/src/Heat.hpp:104">
+			<value>13</value>
+			<value>9</value>
+			<value>2</value>
+		</item>
+		<item name="Heat::read_input(...) at ../sycl_32/src/Heat.hpp:135">
+			<value>14</value>
+			<value>45</value>
+			<value>8</value>
+		</item>
+		<item name="Heat::heat_grid_sycl(...) at ../sycl_32/src/Heat.hpp:213">
+			<value>15</value>
+			<value>50</value>
+			<value>6</value>
+		</item>
+		<average label="NCSS" value="18.266666666666666"/>
+		<average label="CCN" value="3.8666666666666667"/>
+		<item name="parse_sources(...) at ../sycl_32/src/Source.hpp:80">
+			<value>16</value>
+			<value>82</value>
+			<value>19</value>
+		</item>
+		<item name="is_active(...) at ../sycl_32/src/Source.hpp:190">
+			<value>17</value>
+			<value>4</value>
+			<value>2</value>
+		</item>
+		<item name="is_not_active(...) at ../sycl_32/src/Source.hpp:206">
+			<value>18</value>
+			<value>4</value>
+			<value>2</value>
+		</item>
+		<item name="source_value_at(...) at ../sycl_32/src/Source.hpp:231">
+			<value>19</value>
+			<value>34</value>
+			<value>12</value>
+		</item>
+		<average label="NCSS" value="20.94736842105263"/>
+		<average label="CCN" value="4.894736842105263"/>
+		<item name="source_value_at_device(...) at ../sycl_32/src/SyclEngine.hpp:21">
+			<value>20</value>
+			<value>46</value>
+			<value>16</value>
+		</item>
+		<item name="SyclEngine::SyclEngine(...) at ../sycl_32/src/SyclEngine.hpp:101">
+			<value>21</value>
+			<value>5</value>
+			<value>1</value>
+		</item>
+		<item name="SyclEngine::~SyclEngine(...) at ../sycl_32/src/SyclEngine.hpp:107">
+			<value>22</value>
+			<value>1</value>
+			<value>1</value>
+		</item>
+		<item name="SyclEngine::upload_grid(...) at ../sycl_32/src/SyclEngine.hpp:115">
+			<value>23</value>
+			<value>20</value>
+			<value>1</value>
+		</item>
+		<item name="SyclEngine::download_grid(...) at ../sycl_32/src/SyclEngine.hpp:147">
+			<value>24</value>
+			<value>7</value>
+			<value>1</value>
+		</item>
+		<item name="SyclEngine::dirichlet_boundaries(...) at ../sycl_32/src/SyclEngine.hpp:158">
+			<value>25</value>
+			<value>17</value>
+			<value>1</value>
+		</item>
+		<item name="SyclEngine::heat_step(...) at ../sycl_32/src/SyclEngine.hpp:181">
+			<value>26</value>
+			<value>38</value>
+			<value>11</value>
+		</item>
+		<item name="SyclEngine::swap_buffers(...) at ../sycl_32/src/SyclEngine.hpp:232">
+			<value>27</value>
+			<value>4</value>
+			<value>1</value>
+		</item>
+		<item name="SyclEngine::size(...) at ../sycl_32/src/SyclEngine.hpp:238">
+			<value>28</value>
+			<value>4</value>
+			<value>1</value>
+		</item>
+		<item name="SyclEngine::_make_queue(...) at ../sycl_32/src/SyclEngine.hpp:247">
+			<value>29</value>
+			<value>16</value>
+			<value>3</value>
+		</item>
+		<item name="SyclEngine::_allocate(...) at ../sycl_32/src/SyclEngine.hpp:268">
+			<value>30</value>
+			<value>27</value>
+			<value>17</value>
+		</item>
+		<item name="SyclEngine::_cleanup(...) at ../sycl_32/src/SyclEngine.hpp:306">
+			<value>31</value>
+			<value>6</value>
+			<value>4</value>
+		</item>
+		<item name="SyclEngine::_check_data_dims(...) at ../sycl_32/src/SyclEngine.hpp:314">
+			<value>32</value>
+			<value>12</value>
+			<value>6</value>
+		</item>
+		<item name="SyclEngine::_check_sources_dims(...) at ../sycl_32/src/SyclEngine.hpp:327">
+			<value>33</value>
+			<value>7</value>
+			<value>2</value>
+		</item>
+		<average label="NCSS" value="18.424242424242426"/>
+		<average label="CCN" value="4.818181818181818"/>
+		<item name="Writer::Writer(...) at ../sycl_32/src/Writer.hpp:56">
+			<value>34</value>
+			<value>5</value>
+			<value>1</value>
+		</item>
+		<item name="Writer::enqueue(...) at ../sycl_32/src/Writer.hpp:75">
+			<value>35</value>
+			<value>8</value>
+			<value>1</value>
+		</item>
+		<item name="Writer::enqueue(...) at ../sycl_32/src/Writer.hpp:93">
+			<value>36</value>
+			<value>16</value>
+			<value>1</value>
+		</item>
+		<item name="Writer::stop(...) at ../sycl_32/src/Writer.hpp:118">
+			<value>37</value>
+			<value>12</value>
+			<value>2</value>
+		</item>
+		<item name="Writer::~Writer(...) at ../sycl_32/src/Writer.hpp:136">
+			<value>38</value>
+			<value>4</value>
+			<value>1</value>
+		</item>
+		<item name="Writer::run(...) at ../sycl_32/src/Writer.hpp:145">
+			<value>39</value>
+			<value>31</value>
+			<value>6</value>
+		</item>
+		<item name="Writer::grid_to_csv(...) at ../sycl_32/src/Writer.hpp:193">
+			<value>40</value>
+			<value>12</value>
+			<value>1</value>
+		</item>
+		<item name="Writer::grid_to_csv(...) at ../sycl_32/src/Writer.hpp:216">
+			<value>41</value>
+			<value>30</value>
+			<value>5</value>
+		</item>
+		<average label="NCSS" value="17.70731707317073"/>
+		<average label="CCN" value="4.317073170731708"/>
+		<item name="main(...) at ../sycl_32/src/main.cpp:38">
+			<value>42</value>
+			<value>50</value>
+			<value>8</value>
+		</item>
+		<average label="NCSS" value="18.476190476190474"/>
+		<average label="CCN" value="4.404761904761905"/>
+	</measure>
+	<measure type="File">
+		<labels>
+			<label>Nr.</label>
+			<label>NCSS</label>
+			<label>CCN</label>
+			<label>Functions</label>
+		</labels>
+		<item name="../sycl_32/src/Grid.hpp">
+			<value>1</value>
+			<value>171</value>
+			<value>40</value>
+			<value>11</value>
+		</item>
+		<item name="../sycl_32/src/Heat.hpp">
+			<value>2</value>
+			<value>153</value>
+			<value>18</value>
+			<value>4</value>
+		</item>
+		<item name="../sycl_32/src/Source.hpp">
+			<value>3</value>
+			<value>150</value>
+			<value>35</value>
+			<value>4</value>
+		</item>
+		<item name="../sycl_32/src/SyclEngine.hpp">
+			<value>4</value>
+			<value>245</value>
+			<value>66</value>
+			<value>14</value>
+		</item>
+		<item name="../sycl_32/src/Writer.hpp">
+			<value>5</value>
+			<value>154</value>
+			<value>18</value>
+			<value>8</value>
+		</item>
+		<item name="../sycl_32/src/main.cpp">
+			<value>6</value>
+			<value>58</value>
+			<value>8</value>
+			<value>1</value>
+		</item>
+		<average label="NCSS" value="155.16666666666666"/>
+		<average label="CCN" value="30.833333333333332"/>
+		<average label="Functions" value="7.0"/>
+		<sum label="NCSS" value="931"/>
+		<sum label="CCN" value="185"/>
+		<sum label="Functions" value="42"/>
+		<average label="NCSS" value="18.476190476190474"/>
+		<average label="CCN" value="4.404761904761905"/>
+	</measure>
+</cppncss>
+

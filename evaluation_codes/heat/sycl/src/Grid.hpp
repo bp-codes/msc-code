@@ -184,13 +184,13 @@ struct Grid
         // Zero Dirichlet boundaries
         for (auto i {std::size_t(0)}; i < model_grid.nx; i++)
         {
-            model_grid.at(i, 0) = 0;
-            model_grid.at(i, model_grid.ny - 1) = 0;
+            model_grid.at(i, 0) = 0.0;
+            model_grid.at(i, model_grid.ny - 1) = 0.0;
         }
         for (auto j {std::size_t(0)}; j < model_grid.ny; j++)
         {
-            model_grid.at(0, j) = 0;
-            model_grid.at(model_grid.nx - 1, j) = 0;
+            model_grid.at(0, j) = 0.0;
+            model_grid.at(model_grid.nx - 1, j) = 0.0;
         }
     }
 
@@ -260,7 +260,7 @@ static void set_alpha_regions(Grid& model_grid, const nlohmann::json& jalpha)
     }
 
     const auto base {jalpha["value"].get<double>()};
-    if (!(base > 0.0))
+    if (!(base > 0.0f))
     {
         throw std::runtime_error("alpha.value must be > 0");
     }

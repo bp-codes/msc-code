@@ -65,11 +65,11 @@ struct Grid
             throw std::runtime_error("nx and ny must be >= 3");
         }
 
-        dx = length_x / (nx - 1);
-        dy = length_y / (ny - 1);
+        dx = length_x / (nx - 1.0f);
+        dy = length_y / (ny - 1.0f);
 
-        invdx2 = 1.0 / (dx * dx);
-        invdy2 = 1.0 / (dy * dy);
+        invdx2 = 1.0f / (dx * dx);
+        invdy2 = 1.0f / (dy * dy);
 
         alpha.assign(nx * ny, 0.0f);
         u.assign(nx * ny, 0.0f);
@@ -184,13 +184,13 @@ struct Grid
         // Zero Dirichlet boundaries
         for (auto i {std::size_t(0)}; i < model_grid.nx; i++)
         {
-            model_grid.at(i, 0) = 0;
-            model_grid.at(i, model_grid.ny - 1) = 0;
+            model_grid.at(i, 0) = 0.0f;
+            model_grid.at(i, model_grid.ny - 1) = 0.0f;
         }
         for (auto j {std::size_t(0)}; j < model_grid.ny; j++)
         {
-            model_grid.at(0, j) = 0;
-            model_grid.at(model_grid.nx - 1, j) = 0;
+            model_grid.at(0, j) = 0.0f;
+            model_grid.at(model_grid.nx - 1, j) = 0.0f;
         }
     }
 
