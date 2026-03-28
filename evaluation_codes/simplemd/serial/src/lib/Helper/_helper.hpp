@@ -5,6 +5,7 @@
 #include "StandardClasses.hpp"
 #include "Error.hpp"
 #include "Macros.hpp"
+#include "Helper.hpp"
 
 
 

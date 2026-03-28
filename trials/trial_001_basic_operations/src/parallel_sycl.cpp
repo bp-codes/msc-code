@@ -17,6 +17,9 @@
 #include "helper.hpp"
 #include "json.hpp"
 
+#define FLOAT64
+#include "SyclFunctions.hpp"
+
 using OperationKind = helper::OperationKind;
 
 namespace

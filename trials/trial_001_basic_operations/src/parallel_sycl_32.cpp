@@ -27,6 +27,41 @@ inline constexpr std::uint64_t RNG_SEED {123456789ULL};
 
 
 
+/**
+ * @brief Log function usable on host and SYCL device.
+ *
+ * @param x Input value.
+ * @return Natural logarithm of x.
+ */
+[[nodiscard]]
+static inline float sycl_compatible_log(const float x)
+{
+#ifdef __SYCL_DEVICE_ONLY__
+    return sycl::log(x);
+#else
+    return std::log(x);
+#endif
+}
+
+
+
+/**
+ * @brief Square-root function usable on host and SYCL device.
+ *
+ * @param x Input value.
+ * @return Square root of x.
+ */
+[[nodiscard]]
+static inline float sycl_compatible_sqrt(const float x)
+{
+#ifdef __SYCL_DEVICE_ONLY__
+    return sycl::sqrt(x);
+#else
+    return std::sqrt(x);
+#endif
+}
+
+
 
 // Serial versions
 

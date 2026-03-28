@@ -42,6 +42,18 @@
     }
 
 
+#define FLOAT_SET_GET(attribute)                                            \
+    inline void set_##attribute(float attribute)                            \
+    {                                                                        \
+        _##attribute = attribute;                                            \
+    }                                                                        \
+                                                                             \
+    float get_##attribute() const                                    \
+    {                                                                        \
+        return _##attribute;                                                 \
+    }
+
+
 #define SIZE_T_SET_GET(attribute)                                            \
     inline void set_##attribute(std::size_t attribute)                            \
     {                                                                        \
@@ -88,6 +100,23 @@
     }                                                                        \
                                                                              \
     inline std::array<double, 9>& get_##attribute()                          \
+    {                                                                        \
+        return _##attribute;                                                 \
+    }
+
+    
+#define ARRAY9F_SET_GET(attribute)                                            \
+    inline void set_##attribute(const std::array<float, 9>& attribute)      \
+    {                                                                        \
+        _##attribute = attribute;                                            \
+    }                                                                        \
+                                                                             \
+    inline const std::array<float, 9>& get_##attribute() const              \
+    {                                                                        \
+        return _##attribute;                                                 \
+    }                                                                        \
+                                                                             \
+    inline std::array<float, 9>& get_##attribute()                          \
     {                                                                        \
         return _##attribute;                                                 \
     }

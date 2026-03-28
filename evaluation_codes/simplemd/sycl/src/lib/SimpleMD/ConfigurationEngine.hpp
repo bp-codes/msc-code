@@ -183,8 +183,8 @@ public:
                         atom_pair.atom_i_idx = ni;
                         atom_pair.atom_j_idx = nj;
 
-                        atom_pair.r = std::sqrt(r_sq);
-                        atom_pair.r = std::max(atom_pair.r, 1.0e-9);
+                        atom_pair.r = Maths::sycl_compatible_sqrt(r_sq);
+                        atom_pair.r = Maths::sycl_compatible_max(atom_pair.r, 1.0e-9);
 
                         auto inv_r = 1.0 / atom_pair.r;
                         atom_pair.u_vec = inv_r * r_vec;
@@ -233,7 +233,7 @@ public:
             auto r_sq = r_vec.length_squared();
 
             // Update r and u_vec
-            atom_pair.r = std::sqrt(r_sq);
+            atom_pair.r = Maths::sycl_compatible_sqrt(r_sq);
 
             if (atom_pair.r > 0.0)
             {

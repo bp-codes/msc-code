@@ -50,7 +50,7 @@ public:
             
             VerletEngine::vertlet_step_sycl(configuration);
 
-            if(i%configuration.get_xyz_every() == 0) ConfigurationEngine::record_to_xyz_sycl(i, std::filesystem::path("out.xyz"), configuration);
+            if(i%configuration.get_xyz_every() == 0) ConfigurationEngine::record_to_xyz_sycl(i, std::filesystem::path("results/out.xyz"), configuration);
 
         }
         auto t1 = std::chrono::steady_clock::now();

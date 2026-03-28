@@ -25,6 +25,7 @@ private:
 
 public:
     Timer() = default;
+   
 
     /**
      * @brief Add elapsed time to the overall simulation timer.
@@ -99,6 +100,12 @@ public:
         std::cout << "Update nl:        " << _updating_neighbour_list.count() << "\n";
         std::cout << "Overall time:     " << _overall_time.count() << "\n";
     }
+
+    inline double get_force_calculations_seconds() { return _force_calculations.count(); }
+    inline double get_making_neighbour_list_seconds() { return _making_neighbour_list.count(); }
+    inline double get_updating_neighbour_list_seconds() { return _updating_neighbour_list.count(); }
+    inline double get_overall_time_seconds() { return _overall_time.count(); }
+
 };
 
 // Singleton instance accessor

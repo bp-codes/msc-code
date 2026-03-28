@@ -44,7 +44,7 @@ public:
             if(i%configuration.get_rebuild_every() == 0) ConfigurationEngine::make_neighbour_list(configuration);
             VerletEngine::vertlet_step(configuration);
 
-            if(i%configuration.get_xyz_every() == 0) ConfigurationEngine::record_to_xyz(i, std::filesystem::path("out.xyz"), configuration);
+            if(i%configuration.get_xyz_every() == 0) ConfigurationEngine::record_to_xyz(i, std::filesystem::path("results/out.xyz"), configuration);
 
         }
         auto t1 = std::chrono::steady_clock::now();
