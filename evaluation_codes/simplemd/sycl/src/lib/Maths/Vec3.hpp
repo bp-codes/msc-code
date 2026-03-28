@@ -3,6 +3,7 @@
 
 /*********************************************************************************************************************************/
 #include "../Helper/_helper.hpp"
+#include "SyclFunctions.hpp"
 /*********************************************************************************************************************************/
 namespace Maths
 {
@@ -57,7 +58,7 @@ public:
     // Vector length
     inline double length() const 
     {
-        return std::sqrt(x * x + y * y + z * z);
+        return Maths::sycl_compatible_sqrt(x * x + y * y + z * z);
     }
 
     // Squared length (for performance)
@@ -99,18 +100,18 @@ public:
     inline Vec3 clamp(double minVal = 0.0, double maxVal = 1.0) const 
     {
         return Vec3(
-            std::clamp(x, minVal, maxVal),
-            std::clamp(y, minVal, maxVal),
-            std::clamp(z, minVal, maxVal)
+            Maths::sycl_compatible_clamp(x, minVal, maxVal),
+            Maths::sycl_compatible_clamp(y, minVal, maxVal),
+            Maths::sycl_compatible_clamp(z, minVal, maxVal)
         );
     }
 
     // Enforce periodic boundary condition in a unit cell
     void unit_cell_pbc()
     {
-        x = std::fmod(x, 1.0);
-        y = std::fmod(y, 1.0);
-        z = std::fmod(z, 1.0);
+        x = Maths::sycl_compatible_fmod(x, 1.0);
+        y = Maths::sycl_compatible_fmod(y, 1.0);
+        z = Maths::sycl_compatible_fmod(z, 1.0);
         if (x < 0.0) x += 1.0;
         if (y < 0.0) y += 1.0;
         if (z < 0.0) z += 1.0;
@@ -159,18 +160,18 @@ public:
     inline static Vec3 min(const Vec3& a, const Vec3& b) noexcept
     {
         return Vec3(
-            std::min(a.x, b.x),
-            std::min(a.y, b.y),
-            std::min(a.z, b.z)
+            Maths::sycl_compatible_min(a.x, b.x),
+            Maths::sycl_compatible_min(a.y, b.y),
+            Maths::sycl_compatible_min(a.z, b.z)
         );
     }
 
     inline static Vec3 max(const Vec3& a, const Vec3& b) noexcept
     {
         return Vec3(
-            std::max(a.x, b.x),
-            std::max(a.y, b.y),
-            std::max(a.z, b.z)
+            Maths::sycl_compatible_max(a.x, b.x),
+            Maths::sycl_compatible_max(a.y, b.y),
+            Maths::sycl_compatible_max(a.z, b.z)
         );
     }
 
