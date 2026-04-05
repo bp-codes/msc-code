@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import statistics
 from pathlib import Path
 from collections import defaultdict
 
 
+
 def parse_float(value) -> float:
     return float(value)
+
 
 
 def parse_float_list(values) -> list[float]:
@@ -17,6 +20,7 @@ def parse_float_list(values) -> list[float]:
         raise TypeError("Expected a list of numeric values")
 
     return [parse_float(value) for value in values]
+
 
 
 def load_precise_data(results_dir: Path) -> tuple[float, list[float]]:
@@ -41,6 +45,7 @@ def load_precise_data(results_dir: Path) -> tuple[float, list[float]]:
     precise_values = parse_float_list(data["values"])
 
     return precise_value, precise_values
+
 
 
 def load_results(
@@ -129,6 +134,7 @@ def load_results(
     return grouped
 
 
+
 def summarise(values: list[float]) -> dict[str, float | int | None]:
 
     values_sorted = sorted(values)
@@ -149,6 +155,7 @@ def summarise(values: list[float]) -> dict[str, float | int | None]:
         result["stdev"] = 0.0
 
     return result
+
 
 
 def print_table(title: str, summary: dict[str, dict]) -> None:
@@ -181,6 +188,7 @@ def print_table(title: str, summary: dict[str, dict]) -> None:
         )
 
 
+
 def build_summary(grouped, metric):
 
     summary = {}
@@ -193,13 +201,14 @@ def build_summary(grouped, metric):
     return summary
 
 
+
 def plot_difference_histograms(
     grouped: dict[str, dict[str, list[float]]],
+    analysis_dir: Path,
     bins: int = 50
 ) -> None:
     import matplotlib.pyplot as plt
 
-    analysis_dir = Path("analysis")
     analysis_dir.mkdir(parents=True, exist_ok=True)
 
     for method, metrics in sorted(grouped.items()):
@@ -223,12 +232,76 @@ def plot_difference_histograms(
         plt.close()
 
 
-def main() -> None:
 
-    results_dir = Path("results")
+def plot_performance(
+    grouped: dict[str, dict[str, list[float]]],
+    analysis_dir: Path
+) -> None:
+    import matplotlib.pyplot as plt
+
+    methods = []
+    means = []
+
+    for method, metrics in sorted(grouped.items()):
+        iterations = metrics.get("iterations")
+
+        if not iterations:
+            continue
+
+        methods.append(method)
+        means.append(statistics.mean(iterations))
+
+    if not methods:
+        print("No iteration data available for performance plot.")
+        return
+
+    plt.figure()
+
+    plt.bar(methods, means)
+
+    plt.title("Mean Iterations by Method")
+    plt.xlabel("Method")
+    plt.ylabel("Mean Iterations")
+
+    plt.xticks(rotation=45, ha="right")
+
+    plt.grid(True)
+    plt.tight_layout()
+
+    output_file = analysis_dir / "performance_iterations.png"
+    plt.savefig(output_file)
+    plt.close()
+
+    print(f"Saved performance plot to {output_file}")
+
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Analyse benchmark results")
+
+    parser.add_argument(
+        "--results",
+        type=Path,
+        default=Path("results"),
+        help="Directory containing result JSON files"
+    )
+
+    parser.add_argument(
+        "--analysis",
+        type=Path,
+        default=Path("analysis"),
+        help="Directory to store analysis outputs"
+    )
+
+    args = parser.parse_args()
+
+    results_dir = args.results
+    analysis_dir = args.analysis
 
     if not results_dir.exists():
         raise FileNotFoundError(f"Directory not found: {results_dir}")
+
+    analysis_dir.mkdir(parents=True, exist_ok=True)
 
     precise_value, precise_values = load_precise_data(results_dir)
     grouped = load_results(results_dir, precise_value, precise_values)
@@ -264,7 +337,8 @@ def main() -> None:
         abs_values_difference_summary
     )
 
-    plot_difference_histograms(grouped)
+    plot_difference_histograms(grouped, analysis_dir)
+    plot_performance(grouped, analysis_dir)
 
 
 if __name__ == "__main__":

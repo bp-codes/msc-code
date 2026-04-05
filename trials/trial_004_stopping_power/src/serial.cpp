@@ -263,6 +263,7 @@ int main(int argc, char** argv)
         j["operation"] = "Bethe-Bloch Stopping Power";
         j["comments"] = comments;
         j["threads"] = 1;
+        j["precision"] = "64";
         j["device"] = "CPU";
 
         // Iteration/timing            
