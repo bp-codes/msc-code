@@ -1,17 +1,32 @@
 #!/bin/bash
 
-g++  -O2 \
-  -fno-fast-math -fno-unsafe-math-optimizations \
-  -ffp-contract=off -fexcess-precision=standard \
-  -std=c++17 serial.cpp \
-  -o serial.x
+mkdir -p bin
 
-g++  -O2 \
-  -fopenmp \
-  -fno-fast-math -fno-unsafe-math-optimizations \
-  -ffp-contract=off -fexcess-precision=standard \
-  -std=c++17 openmp.cpp \
-  -o openmp.x
-  
+g++ -std=c++23 -O3 -march=native -ffast-math \
+   src/serial_naive.cpp \
+  -o bin/serial_naive.x -lopenblas
+
+g++ -std=c++23 -O3 -ffast-math  \
+  -mavx2 -mfma \
+   src/serial_optimized.cpp \
+  -o bin/serial_optimized.x -lopenblas -fopenmp
+
+
+
+
+
+g++ -std=c++23 -O3 -ffp-contract=fast -ffast-math \
+  -mavx2 -mfma \
+   src/parallel_blas.cpp \
+  -o bin/parallel_blas.x -lopenblas
+
+g++ -std=c++23 -O3 -ffp-contract=fast -ffast-math \
+  -mavx2 -mfma \
+   src/parallel_openmp.cpp \
+  -o bin/parallel_openmp.x -lopenblas -fopenmp
+
+
+
+
 
 

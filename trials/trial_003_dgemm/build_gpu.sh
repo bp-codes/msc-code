@@ -1,19 +1,17 @@
 #!/bin/bash
-source /opt/intel/oneapi/setvars.sh
 export SYCL_DEVICE_FILTER=cuda
 
-icpx -std=c++17 \
-    -fsycl -O2 \
-    -fsycl-targets=nvptx64-nvidia-cuda \
-    sycl.cpp \
-    -o sycl.x
-         
-        
 
-nvcc -std=c++17 -arch=sm_86 \
-        -O2 -Xcompiler "-fno-fast-math -fno-unsafe-math-optimizations -ffp-contract=off" \
-        cuda.cu \
-        -o cuda.x
+nvcc -std=c++20 -O3 \
+    -arch=sm_86 -Xcompiler "-ffp-contract=fast -ffast-math" \
+     src/cuda.cu \
+    -o bin/cuda.x
 
 
+
+nvcc -std=c++20 -O3 \
+    -arch=sm_86 -Xcompiler "-ffp-contract=fast -ffast-math" \
+     src/cuda_cublas.cu \
+    -lcublas \
+    -o bin/cuda_cublas.x
 

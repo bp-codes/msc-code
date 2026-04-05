@@ -20,24 +20,22 @@
 
 
 // Serial task - sum numbers in the vector
-double serial_task_stl_reduce(const std::vector<double>& numbers)
+float serial_task_stl_reduce(const std::vector<float>& numbers)
 {
-    const auto result = std::transform_reduce(
+    const auto result = std::reduce(
         std::execution::par,
-        numbers.begin(),
-        numbers.end(),
-        0.0,
-        std::plus<>(),
-        [](double v) { return v; }
+        numbers.begin(), 
+        numbers.end(), 
+        0.0f
     );
     return result;
 }
 
 
 
-double serial_naive_task(const std::vector<double>& numbers)
+float serial_naive_task(const std::vector<float>& numbers)
 {
-    auto sum {0.0};
+    auto sum {0.0f};
     for(const auto val : numbers)
     {
         sum += val;
@@ -67,13 +65,13 @@ int main(int argc, char** argv)
     std::uniform_real_distribution<double> dist(0.0, 1.0);  // [0.0, 1.0)
 
     // Vector of numbers
-    std::vector<double> numbers;
+    std::vector<float> numbers;
     numbers.reserve(N);
 
     // Populate vector
     for (int i = 0; i < N; ++i) 
     {
-        numbers.emplace_back(dist(rng));
+        numbers.emplace_back(static_cast<float>(dist(rng)));
     }
 
     auto expected_value = serial_naive_task(numbers);
@@ -89,7 +87,7 @@ int main(int argc, char** argv)
     auto deadline = t1 + std::chrono::duration<double>(test_time_seconds);
     std::uint64_t iters = 0;
 
-    double calculated_value {};
+    float calculated_value {};
 
     // Do as many times as possible before time runs out
     do 
@@ -118,11 +116,11 @@ int main(int argc, char** argv)
 
     // Output
     {
-        const auto method {std::string("Parallel STL Transform Reduce")};
+        const auto method {std::string("Parallel STL Reduce")};
         const auto operation_string = std::string("sum");
         const auto comments {std::string("operation:") + std::string(operation_string)};
 
-        const std::string base_file_name = "results/parallel_stl_transform_reduce_" + operation_string;
+        const std::string base_file_name = "results/parallel_stl_reduce_" + operation_string;
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
 
         nlohmann::json j;
@@ -133,7 +131,7 @@ int main(int argc, char** argv)
         j["operation"] = operation_string;
         j["comments"] = comments;
         j["threads"] = helper::get_num_threads();
-        j["precision"] = "64";
+        j["precision"] = "32";
         j["device"] = "CPU";
 
         // Iteration/timing            

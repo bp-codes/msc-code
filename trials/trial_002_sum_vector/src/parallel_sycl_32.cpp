@@ -57,12 +57,12 @@ inline std::size_t largest_power_of_two_leq(std::size_t n) noexcept
 }
 
 
-double sycl_task(const double* d_numbers, std::size_t numbers_size, sycl::queue& q,
+float sycl_task(const float* d_numbers, std::size_t numbers_size, sycl::queue& q,
                     const std::size_t work_group_size_limit)
 {
-    if (numbers_size == 0) return 0.0;
+    if (numbers_size == 0) return 0.0f;
 
-    auto result {0.0};
+    auto result {0.0f};
 
     // local_size - multiple of 32 for Nvidia, 64 for AMD - work items per work group
     const auto max_work_group  = q.get_device().get_info<sycl::info::device::max_work_group_size>();
@@ -74,7 +74,7 @@ double sycl_task(const double* d_numbers, std::size_t numbers_size, sycl::queue&
 
     {
         // Alias result and out_buf (a 1 element buffer)
-        sycl::buffer<double> out_buf(&result, sycl::range<1>(1));
+        sycl::buffer<float> out_buf(&result, sycl::range<1>(1));
 
 
         q.submit([&](sycl::handler& h) 
@@ -83,7 +83,7 @@ double sycl_task(const double* d_numbers, std::size_t numbers_size, sycl::queue&
             // Set up reduction to pass to kernel
             auto reduction_argument = sycl::reduction(
                 out_buf, h,
-                sycl::plus<double>{},
+                sycl::plus<float>{},
                 sycl::property::reduction::initialize_to_identity{}
             );
 
@@ -100,7 +100,7 @@ double sycl_task(const double* d_numbers, std::size_t numbers_size, sycl::queue&
                 const auto grid_id = std::size_t(it.get_global_linear_id());
 
                 // Thread-local partial sum.
-                auto thread_partial_sum {0.0};
+                auto thread_partial_sum {0.0f};
 
                 // Add to thread_partial_sum in strides of grid_work_items
                 for (std::size_t i = grid_id; i < numbers_size; i += grid_work_items)
@@ -121,9 +121,9 @@ double sycl_task(const double* d_numbers, std::size_t numbers_size, sycl::queue&
 
 
 // Serial task - sum numbers in the vector
-double serial_naive_task(const std::vector<double>& numbers)
+float serial_naive_task(const std::vector<float>& numbers)
 {
-    auto sum {0.0};
+    auto sum {0.0f};
     for(const auto val : numbers)
     {
         sum += val;
@@ -163,13 +163,13 @@ int main(int argc, char** argv)
     std::uniform_real_distribution<double> dist(0.0, 1.0);  // [0.0, 1.0)
 
     // Vector of numbers
-    std::vector<double> numbers;
+    std::vector<float> numbers;
     numbers.reserve(N);
 
     // Populate vector
     for (int i = 0; i < N; ++i) 
     {
-        numbers.emplace_back(dist(rng));
+        numbers.emplace_back(static_cast<float>(dist(rng)));
     }
 
     // Calculate expected value using the serial version
@@ -222,17 +222,17 @@ int main(int argc, char** argv)
     std::cerr << "Using device: " << q.get_device().get_info<sycl::info::device::name>() << std::endl;
 
     // Allocate device memory once
-    double* d_numbers = sycl::malloc_device<double>(N, q);
+    float* d_numbers = sycl::malloc_device<float>(N, q);
 
     // Copy once
-    q.memcpy(d_numbers, numbers.data(), N * sizeof(double)).wait();
+    q.memcpy(d_numbers, numbers.data(), N * sizeof(float)).wait();
 
     auto t1 = std::chrono::steady_clock::now();
     auto deadline = t1 + std::chrono::duration<double>(test_time_seconds);
     std::uint64_t iters = 0;
 
     // Reuse d_numbers on every iteration
-    auto calculated_value {0.0};
+    auto calculated_value {0.0f};
 
     do 
     {
@@ -276,7 +276,7 @@ int main(int argc, char** argv)
         j["operation"] = operation_string;
         j["comments"] = comments;
         j["threads"] = 1;
-        j["precision"] = "64";
+        j["precision"] = "32";
         j["device"] = device_selection;
 
         // Iteration/timing            

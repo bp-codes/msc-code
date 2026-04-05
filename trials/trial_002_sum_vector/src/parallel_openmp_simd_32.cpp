@@ -16,28 +16,39 @@
 #include "helper.hpp"
 #include "json.hpp"
 
-#include <execution>
+#include <omp.h>
 
 
-// Serial task - sum numbers in the vector
-double serial_task_stl_reduce(const std::vector<double>& numbers)
+// Parallel task - sum numbers in the vector
+float task(const std::vector<float>& numbers)
 {
-    const auto result = std::transform_reduce(
-        std::execution::par,
-        numbers.begin(),
-        numbers.end(),
-        0.0,
-        std::plus<>(),
-        [](double v) { return v; }
-    );
-    return result;
+    const float* p = numbers.data();
+    const std::size_t n = numbers.size();
+
+    auto sum {0.0f};
+
+    #pragma omp parallel
+    {
+        auto local {0.0f};
+
+        #pragma omp for simd schedule(static) nowait
+        for (std::size_t i = 0; i < n; ++i)
+        {
+            local += p[i];
+        }
+
+        #pragma omp atomic
+        sum += local;
+    }
+
+    return sum;
 }
 
 
-
-double serial_naive_task(const std::vector<double>& numbers)
+// Serial task - sum numbers in the vector
+float serial_naive_task(const std::vector<float>& numbers)
 {
-    auto sum {0.0};
+    auto sum {0.0f};
     for(const auto val : numbers)
     {
         sum += val;
@@ -45,10 +56,11 @@ double serial_naive_task(const std::vector<double>& numbers)
     return sum;
 }
 
-    
 
 int main(int argc, char** argv) 
 {
+    // Set threads
+    omp_set_num_threads(helper::get_num_threads());
 
     // Must have 3 arguments
     if (argc < 3) 
@@ -56,29 +68,35 @@ int main(int argc, char** argv)
         std::cerr << "Usage: " << argv[0] << " time_limit  vec_size\n";
         return 1;
     }
-
+    
     // Read in test_time and size of vector
     const double test_time_seconds = std::atof(argv[1]);
     const int N = std::atoi(argv[2]);
     const std::string operation = "Sum vector elements.";
 
+    if(N <= 0)
+    {
+        std::cerr << "Usage: " << argv[0] << " time_limit  vec_size\n";
+        return 1;
+    }
+    
     // Random number generator
     std::mt19937_64 rng(123456789ULL);
     std::uniform_real_distribution<double> dist(0.0, 1.0);  // [0.0, 1.0)
 
     // Vector of numbers
-    std::vector<double> numbers;
+    std::vector<float> numbers;
     numbers.reserve(N);
 
     // Populate vector
     for (int i = 0; i < N; ++i) 
     {
-        numbers.emplace_back(dist(rng));
+        numbers.emplace_back(static_cast<float>(dist(rng)));
     }
 
     auto expected_value = serial_naive_task(numbers);
+    
 
-  
     // ======= Calculation Starts ========
 
     // Setup
@@ -89,12 +107,12 @@ int main(int argc, char** argv)
     auto deadline = t1 + std::chrono::duration<double>(test_time_seconds);
     std::uint64_t iters = 0;
 
-    double calculated_value {};
+    float calculated_value {};
 
     // Do as many times as possible before time runs out
     do 
     {
-        calculated_value = serial_task_stl_reduce(numbers);
+        calculated_value = task(numbers);
         iters++;
     } 
     while (std::chrono::steady_clock::now() < deadline);
@@ -113,16 +131,15 @@ int main(int argc, char** argv)
     auto time_total = std::chrono::duration<double>(t3 - t0).count();
     auto time_per_iteration = time_calc / iters;
 
-    
     bool passed_check = std::abs(calculated_value - expected_value) < 1.0e-9;
 
     // Output
     {
-        const auto method {std::string("Parallel STL Transform Reduce")};
+        const auto method {std::string("Parallel OpenMP SIMD")};
         const auto operation_string = std::string("sum");
         const auto comments {std::string("operation:") + std::string(operation_string)};
 
-        const std::string base_file_name = "results/parallel_stl_transform_reduce_" + operation_string;
+        const std::string base_file_name = "results/parallel_openmp_simd_" + operation_string;
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
 
         nlohmann::json j;
@@ -132,8 +149,8 @@ int main(int argc, char** argv)
         j["method"] = method;
         j["operation"] = operation_string;
         j["comments"] = comments;
-        j["threads"] = helper::get_num_threads();
-        j["precision"] = "64";
+        j["threads"] = 1;
+        j["precision"] = "32";
         j["device"] = "CPU";
 
         // Iteration/timing            
@@ -166,4 +183,5 @@ int main(int argc, char** argv)
     }
 
     return 0;
+
 }

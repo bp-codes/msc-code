@@ -20,10 +20,10 @@
 
 // Built-in reduction using a 1-element buffer, with an in-order queue.
 // No events / depends_on needed.
-inline void sycl_task_submit(const double* data,
+inline void sycl_task_submit(const float* data,
                             std::size_t N,
                             sycl::queue& q,
-                            double* sum)
+                            float* sum)
 {
   q.parallel_for(
       sycl::range<1>(N),
@@ -37,9 +37,9 @@ inline void sycl_task_submit(const double* data,
 
 
 // Serial task - sum numbers in the vector
-double serial_naive_task(const std::vector<double>& numbers)
+float serial_naive_task(const std::vector<float>& numbers)
 {
-    auto sum {0.0};
+    auto sum {0.0f};
     for(const auto val : numbers)
     {
         sum += val;
@@ -77,14 +77,14 @@ int main(int argc, char** argv)
     std::mt19937_64 rng(123456789ULL);
     std::uniform_real_distribution<double> dist(0.0, 1.0);
 
-    std::vector<double> numbers;
+    std::vector<float> numbers;
     numbers.reserve(N);
     for (int i = 0; i < N; ++i)
     {
-        numbers.emplace_back(dist(rng));
+        numbers.emplace_back(static_cast<float>(dist(rng)));
     }
 
-    const double expected_value = serial_naive_task(numbers);
+    const float expected_value = serial_naive_task(numbers);
 
     // ======= Calculation Starts ========
     auto t0 = std::chrono::steady_clock::now();
@@ -127,14 +127,14 @@ int main(int argc, char** argv)
               << q.get_device().get_info<sycl::info::device::name>() << "\n";
 
     // Keep output buffer once
-    double* data = sycl::malloc_shared<double>(N, q);
-    double* sum  = sycl::malloc_shared<double>(1, q);
+    float* data = sycl::malloc_shared<float>(N, q);
+    float* sum  = sycl::malloc_shared<float>(1, q);
 
     auto t1 = std::chrono::steady_clock::now();
     auto deadline = t1 + std::chrono::duration<double>(test_time_seconds);
 
     std::uint64_t iters = 0;
-    double calculated_value = 0.0;
+    float calculated_value = 0.0;
 
 
     for (size_t i = 0; i < N; ++i) 
@@ -188,7 +188,7 @@ int main(int argc, char** argv)
         j["operation"] = operation_string;
         j["comments"] = comments;
         j["threads"] = 1;
-        j["precision"] = "64";
+        j["precision"] = "32";
         j["device"] = device_selection;
 
         // Iteration/timing            

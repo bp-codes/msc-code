@@ -115,6 +115,8 @@ int main(int argc, char** argv)
         j["operation"] = operation_string;
         j["comments"] = comments;
         j["threads"] = 1;
+        j["precision"] = "128";
+        j["device"] = "CPU";
 
         // Iteration/timing            
         j["test_time_seconds"] = test_time_seconds;

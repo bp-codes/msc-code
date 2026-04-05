@@ -31,7 +31,7 @@ float task(const std::vector<float>& numbers)
 
 
 // Serial task - sum numbers in the vector
-double serial_naive_task(const std::vector<float>& numbers)
+float serial_naive_task(const std::vector<float>& numbers)
 {
     auto sum {0.0};
     for(const auto val : numbers)
@@ -130,6 +130,8 @@ int main(int argc, char** argv)
         j["operation"] = operation_string;
         j["comments"] = comments;
         j["threads"] = 1;
+        j["precision"] = "32";
+        j["device"] = "CPU";
 
         // Iteration/timing            
         j["test_time_seconds"] = test_time_seconds;

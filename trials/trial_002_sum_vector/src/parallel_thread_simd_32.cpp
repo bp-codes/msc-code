@@ -16,28 +16,92 @@
 #include "helper.hpp"
 #include "json.hpp"
 
-#include <execution>
+#include <thread>
+#include <immintrin.h>
 
 
-// Serial task - sum numbers in the vector
-double serial_task_stl_reduce(const std::vector<double>& numbers)
+// Parallel task - sum numbers in the vector
+[[nodiscard]]
+float task(const std::vector<float>& numbers)
 {
-    const auto result = std::transform_reduce(
-        std::execution::par,
-        numbers.begin(),
-        numbers.end(),
-        0.0,
-        std::plus<>(),
-        [](double v) { return v; }
-    );
-    return result;
+    const auto n {std::size_t(numbers.size())};
+
+    if (n == 0)
+    {
+        return 0.0f;
+    }
+
+    const std::size_t num_threads {std::min(helper::get_num_threads(), n)};
+    const std::size_t chunk {(n + num_threads - 1) / num_threads};
+
+    struct alignas(64) PaddedSum
+    {
+        float value {0.0f};
+    };
+
+    std::vector<std::thread> threads;
+    std::vector<PaddedSum> reduction_sum(num_threads);
+    threads.reserve(num_threads);
+
+    for (std::size_t t = 0; t < num_threads; ++t)
+    {
+        const std::size_t begin {t * chunk};
+        const std::size_t end {std::min(begin + chunk, n)};
+
+        if (begin >= n)
+        {
+            break;
+        }
+
+        threads.emplace_back(
+            [&, t, begin, end]()
+            {
+                constexpr std::size_t simd_width {4};
+
+                __m256d vsum {_mm256_setzero_pd()};
+                std::size_t i {begin};
+
+                for (; i + simd_width <= end; i += simd_width)
+                {
+                    const __m256d v {_mm256_loadu_pd(&numbers[i])};
+                    vsum = _mm256_add_pd(vsum, v);
+                }
+
+                alignas(32) float temp[4];
+                _mm256_store_pd(temp, vsum);
+
+                float local_sum {temp[0] + temp[1] + temp[2] + temp[3]};
+
+                for (; i < end; ++i)
+                {
+                    local_sum += numbers[i];
+                }
+
+                reduction_sum[t].value = local_sum;
+            }
+        );
+    }
+
+    for (auto& thread : threads)
+    {
+        thread.join();
+    }
+
+    float sum {0.0f};
+    for (std::size_t t = 0; t < threads.size(); ++t)
+    {
+        sum += reduction_sum[t].value;
+    }
+
+    return sum;
 }
 
 
 
-double serial_naive_task(const std::vector<double>& numbers)
+// Serial task - sum numbers in the vector
+float serial_naive_task(const std::vector<float>& numbers)
 {
-    auto sum {0.0};
+    auto sum {0.0f};
     for(const auto val : numbers)
     {
         sum += val;
@@ -45,7 +109,7 @@ double serial_naive_task(const std::vector<double>& numbers)
     return sum;
 }
 
-    
+
 
 int main(int argc, char** argv) 
 {
@@ -56,29 +120,35 @@ int main(int argc, char** argv)
         std::cerr << "Usage: " << argv[0] << " time_limit  vec_size\n";
         return 1;
     }
-
+    
     // Read in test_time and size of vector
     const double test_time_seconds = std::atof(argv[1]);
     const int N = std::atoi(argv[2]);
     const std::string operation = "Sum vector elements.";
 
+    if(N <= 0)
+    {
+        std::cerr << "Usage: " << argv[0] << " time_limit  vec_size\n";
+        return 1;
+    }
+    
     // Random number generator
     std::mt19937_64 rng(123456789ULL);
     std::uniform_real_distribution<double> dist(0.0, 1.0);  // [0.0, 1.0)
 
     // Vector of numbers
-    std::vector<double> numbers;
+    std::vector<float> numbers;
     numbers.reserve(N);
 
     // Populate vector
     for (int i = 0; i < N; ++i) 
     {
-        numbers.emplace_back(dist(rng));
+        numbers.emplace_back(static_cast<float>(dist(rng)));
     }
 
     auto expected_value = serial_naive_task(numbers);
+    
 
-  
     // ======= Calculation Starts ========
 
     // Setup
@@ -89,12 +159,12 @@ int main(int argc, char** argv)
     auto deadline = t1 + std::chrono::duration<double>(test_time_seconds);
     std::uint64_t iters = 0;
 
-    double calculated_value {};
+    float calculated_value {};
 
     // Do as many times as possible before time runs out
     do 
     {
-        calculated_value = serial_task_stl_reduce(numbers);
+        calculated_value = task(numbers);
         iters++;
     } 
     while (std::chrono::steady_clock::now() < deadline);
@@ -113,16 +183,15 @@ int main(int argc, char** argv)
     auto time_total = std::chrono::duration<double>(t3 - t0).count();
     auto time_per_iteration = time_calc / iters;
 
-    
     bool passed_check = std::abs(calculated_value - expected_value) < 1.0e-9;
 
     // Output
     {
-        const auto method {std::string("Parallel STL Transform Reduce")};
+        const auto method {std::string("Parallel Thread SIMD")};
         const auto operation_string = std::string("sum");
         const auto comments {std::string("operation:") + std::string(operation_string)};
 
-        const std::string base_file_name = "results/parallel_stl_transform_reduce_" + operation_string;
+        const std::string base_file_name = "results/parallel_thread_simd_" + operation_string;
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
 
         nlohmann::json j;
@@ -133,7 +202,7 @@ int main(int argc, char** argv)
         j["operation"] = operation_string;
         j["comments"] = comments;
         j["threads"] = helper::get_num_threads();
-        j["precision"] = "64";
+        j["precision"] = "32";
         j["device"] = "CPU";
 
         // Iteration/timing            
@@ -166,4 +235,5 @@ int main(int argc, char** argv)
     }
 
     return 0;
+
 }

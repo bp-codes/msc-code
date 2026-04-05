@@ -20,24 +20,24 @@
 
 
 // Serial task - sum numbers in the vector
-double serial_task_stl_reduce(const std::vector<double>& numbers)
+float serial_task_stl_reduce(const std::vector<float>& numbers)
 {
     const auto result = std::transform_reduce(
         std::execution::par,
         numbers.begin(),
         numbers.end(),
-        0.0,
+        0.0f,
         std::plus<>(),
-        [](double v) { return v; }
+        [](float v) { return v; }
     );
     return result;
 }
 
 
 
-double serial_naive_task(const std::vector<double>& numbers)
+float serial_naive_task(const std::vector<float>& numbers)
 {
-    auto sum {0.0};
+    auto sum {0.0f};
     for(const auto val : numbers)
     {
         sum += val;
@@ -67,7 +67,7 @@ int main(int argc, char** argv)
     std::uniform_real_distribution<double> dist(0.0, 1.0);  // [0.0, 1.0)
 
     // Vector of numbers
-    std::vector<double> numbers;
+    std::vector<float> numbers;
     numbers.reserve(N);
 
     // Populate vector
@@ -89,7 +89,7 @@ int main(int argc, char** argv)
     auto deadline = t1 + std::chrono::duration<double>(test_time_seconds);
     std::uint64_t iters = 0;
 
-    double calculated_value {};
+    float calculated_value {};
 
     // Do as many times as possible before time runs out
     do 
@@ -133,7 +133,7 @@ int main(int argc, char** argv)
         j["operation"] = operation_string;
         j["comments"] = comments;
         j["threads"] = helper::get_num_threads();
-        j["precision"] = "64";
+        j["precision"] = "32";
         j["device"] = "CPU";
 
         // Iteration/timing            
