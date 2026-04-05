@@ -21,20 +21,40 @@ def load_json(path: Path) -> dict[str, Any] | None:
         return None
 
 
+def plot_chart(run_types, time_keys, stats, title, ylabel, output_path, log_scale=False):
+    x_positions = list(range(len(run_types)))
+    n_metrics = len(time_keys)
+
+    bar_width = 0.8 / n_metrics
+
+    plt.figure(figsize=(12, 6))
+
+    for i, time_key in enumerate(time_keys):
+        offsets = [x + (i - (n_metrics - 1) / 2) * bar_width for x in x_positions]
+        heights = [stats[run_type].get(time_key, 0.0) for run_type in run_types]
+        plt.bar(offsets, heights, width=bar_width, label=time_key)
+
+    plt.xticks(x_positions, run_types)
+    plt.title(title)
+    plt.xlabel("Type")
+    plt.ylabel(ylabel)
+    plt.legend(title="Time metric")
+
+    if log_scale:
+        plt.yscale("log")
+
+    plt.tight_layout()
+    plt.savefig(output_path)
+    print(f"Saved plot -> {output_path}")
+    plt.close()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Group JSON timing results by type, compute min/mean/max, and save bar charts."
+        description="Group JSON timing results and save bar charts (linear + log)."
     )
-    parser.add_argument(
-        "path",
-        type=Path,
-        help="Directory containing JSON files",
-    )
-    parser.add_argument(
-        "--recursive",
-        action="store_true",
-        help="Search recursively for JSON files",
-    )
+    parser.add_argument("path", type=Path, help="Directory containing JSON files")
+    parser.add_argument("--recursive", action="store_true", help="Search recursively")
     args = parser.parse_args()
 
     directory = args.path
@@ -69,8 +89,6 @@ def main() -> None:
         for time_key, value in time_block.items():
             if isinstance(value, (int, float)):
                 grouped_times[run_type][time_key].append(float(value))
-            else:
-                print(f"Warning: {path} has non-numeric time value for '{time_key}'")
 
     if not grouped_times:
         print("No valid timing data found.")
@@ -116,52 +134,47 @@ def main() -> None:
     output_dir = Path("run_time")
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    x_positions = list(range(len(run_types)))
-    n_metrics = len(time_keys)
+    # Linear plots
+    plot_chart(
+        run_types,
+        time_keys,
+        mean_stats,
+        "Mean Times by Type",
+        "Time",
+        output_dir / "mean_times.png",
+        log_scale=False,
+    )
 
-    if n_metrics == 0:
-        print("No timing metrics found.")
-        return
+    plot_chart(
+        run_types,
+        time_keys,
+        max_stats,
+        "Max Times by Type",
+        "Time",
+        output_dir / "max_times.png",
+        log_scale=False,
+    )
 
-    bar_width = 0.8 / n_metrics
+    # Log plots
+    plot_chart(
+        run_types,
+        time_keys,
+        mean_stats,
+        "Mean Times by Type (Log Scale)",
+        "Time (log)",
+        output_dir / "mean_times_log.png",
+        log_scale=True,
+    )
 
-    # Mean chart
-    plt.figure(figsize=(12, 6))
-    for i, time_key in enumerate(time_keys):
-        offsets = [x + (i - (n_metrics - 1) / 2) * bar_width for x in x_positions]
-        heights = [mean_stats[run_type].get(time_key, 0.0) for run_type in run_types]
-        plt.bar(offsets, heights, width=bar_width, label=time_key)
-
-    plt.xticks(x_positions, run_types)
-    plt.title("Mean Times by Type")
-    plt.xlabel("Type")
-    plt.ylabel("Time")
-    plt.legend(title="Time metric")
-    plt.tight_layout()
-
-    mean_path = output_dir / "mean_times.png"
-    plt.savefig(mean_path)
-    print(f"Saved mean plot -> {mean_path}")
-    plt.close()
-
-    # Max chart
-    plt.figure(figsize=(12, 6))
-    for i, time_key in enumerate(time_keys):
-        offsets = [x + (i - (n_metrics - 1) / 2) * bar_width for x in x_positions]
-        heights = [max_stats[run_type].get(time_key, 0.0) for run_type in run_types]
-        plt.bar(offsets, heights, width=bar_width, label=time_key)
-
-    plt.xticks(x_positions, run_types)
-    plt.title("Max Times by Type")
-    plt.xlabel("Type")
-    plt.ylabel("Time")
-    plt.legend(title="Time metric")
-    plt.tight_layout()
-
-    max_path = output_dir / "max_times.png"
-    plt.savefig(max_path)
-    print(f"Saved max plot -> {max_path}")
-    plt.close()
+    plot_chart(
+        run_types,
+        time_keys,
+        max_stats,
+        "Max Times by Type (Log Scale)",
+        "Time (log)",
+        output_dir / "max_times_log.png",
+        log_scale=True,
+    )
 
 
 if __name__ == "__main__":

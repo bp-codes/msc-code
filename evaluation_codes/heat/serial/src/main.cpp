@@ -58,14 +58,24 @@ int main(int argc, char** argv)
         const auto t1 {std::chrono::steady_clock::now()};
         std::filesystem::create_directory("../results");
 
+        // Read input file
+        nlohmann::json input{};
+        std::ifstream in(input_file);
+        if (!in)
+            throw std::runtime_error("Failed to open input json");
+        in >> input;
+
+
         const std::string base_file_name = "../results/serial_heat";
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
         const auto time_total {std::chrono::duration<double>(t1 - t0).count()};
-        nlohmann::json j;
-        j["time_total"] = time_total;
+        nlohmann::json output;
+        output["type"] = "serial";
+        output["time_total"] = time_total;
+        output["input"] = input;
         std::ofstream out(json_file);
         if (!out) throw std::runtime_error("Failed to open output JSON file.");
-        out << std::setw(2) << j << '\n';
+        out << output.dump(4);
 
 
         return 0;
