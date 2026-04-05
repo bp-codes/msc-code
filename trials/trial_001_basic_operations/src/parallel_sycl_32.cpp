@@ -13,9 +13,12 @@
 #include <vector>
 #include <sycl/sycl.hpp>
 #include <system_error>
+
 #include "Error.hpp"
 #include "helper.hpp"
 #include "json.hpp"
+
+#include "SyclFunctions.hpp"
 
 using OperationKind = helper::OperationKind;
 
@@ -25,41 +28,6 @@ namespace
 inline constexpr float MIN_DENOMINATOR {1.0e-9};
 inline constexpr std::uint64_t RNG_SEED {123456789ULL};
 
-
-
-/**
- * @brief Log function usable on host and SYCL device.
- *
- * @param x Input value.
- * @return Natural logarithm of x.
- */
-[[nodiscard]]
-static inline float sycl_compatible_log(const float x)
-{
-#ifdef __SYCL_DEVICE_ONLY__
-    return sycl::log(x);
-#else
-    return std::log(x);
-#endif
-}
-
-
-
-/**
- * @brief Square-root function usable on host and SYCL device.
- *
- * @param x Input value.
- * @return Square root of x.
- */
-[[nodiscard]]
-static inline float sycl_compatible_sqrt(const float x)
-{
-#ifdef __SYCL_DEVICE_ONLY__
-    return sycl::sqrt(x);
-#else
-    return std::sqrt(x);
-#endif
-}
 
 
 
@@ -112,7 +80,7 @@ void serial_divide(
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
     {
-        numbers_c[i] = numbers_a[i] / std::max(numbers_b[i], MIN_DENOMINATOR);
+        numbers_c[i] = numbers_a[i] / std::fmax(numbers_b[i], MIN_DENOMINATOR);
     }
 }
 
@@ -129,7 +97,7 @@ void serial_power(
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
     {
-        numbers_c[i] = sycl::pow(numbers_a[i], numbers_b[i]);
+        numbers_c[i] = std::pow(numbers_a[i], numbers_b[i]);
     }
 }
 
@@ -146,7 +114,7 @@ void serial_exp(
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
     {
-        numbers_c[i] = sycl::exp(numbers_a[i]) + std::exp(numbers_b[i]);
+        numbers_c[i] = std::exp(numbers_a[i]) + std::exp(numbers_b[i]);
     }
 }
 
@@ -164,7 +132,7 @@ void serial_log(
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
     {
-        numbers_c[i] = sycl::log(numbers_a[i]) + std::log(numbers_b[i]);
+        numbers_c[i] = std::log(numbers_a[i]) + std::log(numbers_b[i]);
     }
 }
 
@@ -182,7 +150,7 @@ void serial_sqrt(
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
     {
-        numbers_c[i] = sycl::sqrt(numbers_a[i]) + std::sqrt(numbers_b[i]);
+        numbers_c[i] = std::sqrt(numbers_a[i]) + std::sqrt(numbers_b[i]);
     }
 }
 
@@ -308,7 +276,7 @@ sycl::event parallel_divide(
         [=](sycl::id<1> i)
         {
             const auto idx {std::size_t(i[0])};
-            const auto denom {sycl::fmax(sycldev_numbers_b[idx], MIN_DENOMINATOR)};
+            const auto denom {SyclFunctions::fmax(sycldev_numbers_b[idx], MIN_DENOMINATOR)};
             sycldev_numbers_c[idx] = sycldev_numbers_a[idx] / denom;
         }
     );
@@ -331,7 +299,7 @@ sycl::event parallel_power(
         [=](sycl::id<1> i)
         {
             const auto idx {std::size_t(i[0])};
-            sycldev_numbers_c[idx] = sycl::pow(sycldev_numbers_a[idx], sycldev_numbers_b[idx]);
+            sycldev_numbers_c[idx] = SyclFunctions::pow(sycldev_numbers_a[idx], sycldev_numbers_b[idx]);
         }
     );
 }
@@ -353,7 +321,7 @@ sycl::event parallel_exp(
         [=](sycl::id<1> i)
         {
             const auto idx {std::size_t(i[0])};
-            sycldev_numbers_c[idx] = sycl::exp(sycldev_numbers_a[idx]) + sycl::exp(sycldev_numbers_b[idx]);
+            sycldev_numbers_c[idx] = SyclFunctions::exp(sycldev_numbers_a[idx]) + SyclFunctions::exp(sycldev_numbers_b[idx]);
         }
     );
 }
@@ -376,7 +344,7 @@ sycl::event parallel_log(
         [=](sycl::id<1> i)
         {
             const auto idx {std::size_t(i[0])};
-            sycldev_numbers_c[idx] = sycl::log(sycldev_numbers_a[idx]) + sycl::log(sycldev_numbers_b[idx]);
+            sycldev_numbers_c[idx] = SyclFunctions::log(sycldev_numbers_a[idx]) + SyclFunctions::log(sycldev_numbers_b[idx]);
         }
     );
 }
@@ -399,7 +367,7 @@ sycl::event parallel_sqrt(
         [=](sycl::id<1> i)
         {
             const auto idx {std::size_t(i[0])};
-            sycldev_numbers_c[idx] = sycl::sqrt(sycldev_numbers_a[idx]) + sycl::sqrt(sycldev_numbers_b[idx]);
+            sycldev_numbers_c[idx] = SyclFunctions::sqrt(sycldev_numbers_a[idx]) + SyclFunctions::sqrt(sycldev_numbers_b[idx]);
         }
     );
 }
@@ -614,6 +582,7 @@ int main(int argc, char** argv)
             j["operation"] = operation_string;
             j["comments"] = comments;
             j["threads"] = 1;
+            j["precision"] = "32";
             j["device"] = device_string;
 
             // Iteration/timing            

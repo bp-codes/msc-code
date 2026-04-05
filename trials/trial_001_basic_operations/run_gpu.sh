@@ -5,7 +5,9 @@
 #  ./bin/cuda.x 5.0 1000000 add
 #  ./bin/opencl.x 5.0 1000000 add
 
-apt update && apt install time
+apt update
+apt install time
+apt install pocl-opencl-icd ocl-icd-libopencl1 clinfo
 set -euo pipefail
 
 RUNS=5
@@ -48,12 +50,19 @@ do
 
             if [[ "$app" == *opencl* ]]; then
                 echo "    CPU"
-                "$app" 5.0 1000000 "$op" CPU
+                CMD="$app 5.0 1000000 $op CPU"
+                echo $CMD
+                eval $CMD
+
 
                 echo "    GPU"
-                "$app" 5.0 1000000 "$op" GPU
+                CMD="$app 5.0 1000000 $op GPU"
+                echo $CMD
+                eval $CMD
             else
-                "$app" 5.0 1000000 "$op"
+                CMD="$app 5.0 1000000 $op"
+                echo $CMD
+                eval $CMD
             fi
         done
 

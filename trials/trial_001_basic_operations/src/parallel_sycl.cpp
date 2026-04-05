@@ -17,7 +17,6 @@
 #include "helper.hpp"
 #include "json.hpp"
 
-#define FLOAT64
 #include "SyclFunctions.hpp"
 
 using OperationKind = helper::OperationKind;
@@ -80,7 +79,7 @@ void serial_divide(
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
     {
-        numbers_c[i] = numbers_a[i] / std::max(numbers_b[i], MIN_DENOMINATOR);
+        numbers_c[i] = numbers_a[i] / std::fmax(numbers_b[i], MIN_DENOMINATOR);
     }
 }
 
@@ -97,7 +96,7 @@ void serial_power(
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
     {
-        numbers_c[i] = sycl::pow(numbers_a[i], numbers_b[i]);
+        numbers_c[i] = std::pow(numbers_a[i], numbers_b[i]);
     }
 }
 
@@ -114,7 +113,7 @@ void serial_exp(
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
     {
-        numbers_c[i] = sycl::exp(numbers_a[i]) + std::exp(numbers_b[i]);
+        numbers_c[i] = std::exp(numbers_a[i]) + std::exp(numbers_b[i]);
     }
 }
 
@@ -132,7 +131,7 @@ void serial_log(
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
     {
-        numbers_c[i] = sycl::log(numbers_a[i]) + std::log(numbers_b[i]);
+        numbers_c[i] = std::log(numbers_a[i]) + std::log(numbers_b[i]);
     }
 }
 
@@ -150,7 +149,7 @@ void serial_sqrt(
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
     {
-        numbers_c[i] = sycl::sqrt(numbers_a[i]) + std::sqrt(numbers_b[i]);
+        numbers_c[i] = std::sqrt(numbers_a[i]) + std::sqrt(numbers_b[i]);
     }
 }
 
@@ -299,7 +298,7 @@ sycl::event parallel_power(
         [=](sycl::id<1> i)
         {
             const auto idx {std::size_t(i[0])};
-            sycldev_numbers_c[idx] = sycl::pow(sycldev_numbers_a[idx], sycldev_numbers_b[idx]);
+            sycldev_numbers_c[idx] = SyclFunctions::pow(sycldev_numbers_a[idx], sycldev_numbers_b[idx]);
         }
     );
 }
@@ -321,7 +320,7 @@ sycl::event parallel_exp(
         [=](sycl::id<1> i)
         {
             const auto idx {std::size_t(i[0])};
-            sycldev_numbers_c[idx] = sycl::exp(sycldev_numbers_a[idx]) + sycl::exp(sycldev_numbers_b[idx]);
+            sycldev_numbers_c[idx] = SyclFunctions::exp(sycldev_numbers_a[idx]) + SyclFunctions::exp(sycldev_numbers_b[idx]);
         }
     );
 }
@@ -344,7 +343,7 @@ sycl::event parallel_log(
         [=](sycl::id<1> i)
         {
             const auto idx {std::size_t(i[0])};
-            sycldev_numbers_c[idx] = sycl::log(sycldev_numbers_a[idx]) + sycl::log(sycldev_numbers_b[idx]);
+            sycldev_numbers_c[idx] = SyclFunctions::log(sycldev_numbers_a[idx]) + SyclFunctions::log(sycldev_numbers_b[idx]);
         }
     );
 }
@@ -367,7 +366,7 @@ sycl::event parallel_sqrt(
         [=](sycl::id<1> i)
         {
             const auto idx {std::size_t(i[0])};
-            sycldev_numbers_c[idx] = sycl::sqrt(sycldev_numbers_a[idx]) + sycl::sqrt(sycldev_numbers_b[idx]);
+            sycldev_numbers_c[idx] = SyclFunctions::sqrt(sycldev_numbers_a[idx]) + SyclFunctions::sqrt(sycldev_numbers_b[idx]);
         }
     );
 }
@@ -582,6 +581,7 @@ int main(int argc, char** argv)
             j["operation"] = operation_string;
             j["comments"] = comments;
             j["threads"] = 1;
+            j["precision"] = "64";
             j["device"] = device_string;
 
             // Iteration/timing            

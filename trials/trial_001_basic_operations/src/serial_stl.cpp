@@ -81,7 +81,7 @@ void serial_divide(
         numbers_c.begin(),
         [](double x, double y)
         {
-            return x / std::max(y, MIN_DENOMINATOR);
+            return x / std::fmax(y, MIN_DENOMINATOR);
         }
     );
 }
@@ -334,6 +334,8 @@ int main(int argc, char** argv)
             j["operation"] = operation_string;
             j["comments"] = comments;
             j["threads"] = 1;
+            j["precision"] = "64";
+            j["device"] = "CPU";
 
             // Iteration/timing            
             j["test_time_seconds"] = test_time_seconds;

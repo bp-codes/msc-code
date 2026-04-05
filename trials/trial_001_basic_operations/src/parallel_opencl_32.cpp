@@ -86,7 +86,7 @@ void serial_divide(
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
     {
-        numbers_c[i] = numbers_a[i] / std::max(numbers_b[i], MIN_DENOMINATOR);
+        numbers_c[i] = numbers_a[i] / std::fmax(numbers_b[i], MIN_DENOMINATOR);
     }
 }
 
@@ -716,6 +716,8 @@ int main(int argc, char** argv)
             j["comments"] = comments;
             j["threads"] = 1;
             j["device"] = std::string(device_string);
+            j["precision"] = "32";
+            j["device"] = device_string;
 
             // Iteration/timing            
             j["test_time_seconds"] = test_time_seconds;
