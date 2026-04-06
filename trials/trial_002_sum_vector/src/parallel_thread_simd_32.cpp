@@ -56,21 +56,24 @@ float task(const std::vector<float>& numbers)
         threads.emplace_back(
             [&, t, begin, end]()
             {
-                constexpr std::size_t simd_width {4};
+                constexpr std::size_t simd_width {8}; // 8 floats in AVX
 
-                __m256d vsum {_mm256_setzero_pd()};
+                __m256 vsum {_mm256_setzero_ps()};
                 std::size_t i {begin};
 
                 for (; i + simd_width <= end; i += simd_width)
                 {
-                    const __m256d v {_mm256_loadu_pd(&numbers[i])};
-                    vsum = _mm256_add_pd(vsum, v);
+                    const __m256 v {_mm256_loadu_ps(&numbers[i])};
+                    vsum = _mm256_add_ps(vsum, v);
                 }
 
-                alignas(32) float temp[4];
-                _mm256_store_pd(temp, vsum);
+                alignas(32) float temp[8];
+                _mm256_store_ps(temp, vsum);
 
-                float local_sum {temp[0] + temp[1] + temp[2] + temp[3]};
+                float local_sum {
+                    temp[0] + temp[1] + temp[2] + temp[3] +
+                    temp[4] + temp[5] + temp[6] + temp[7]
+                };
 
                 for (; i < end; ++i)
                 {
