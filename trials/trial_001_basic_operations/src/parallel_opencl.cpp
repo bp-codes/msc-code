@@ -615,6 +615,11 @@ int main(int argc, char** argv)
         opencl_check(clEnqueueWriteBuffer(queue, dev_a, CL_TRUE, 0, n * sizeof(double), numbers_a.data(), 0, nullptr, nullptr), "clEnqueueWriteBuffer(dev_a) failed.");
         opencl_check(clEnqueueWriteBuffer(queue, dev_b, CL_TRUE, 0, n * sizeof(double), numbers_b.data(), 0, nullptr, nullptr), "clEnqueueWriteBuffer(dev_b) failed.");
 
+        // Set arguments for the kernels
+        //    const ulong n,
+        //    __global const double* a,
+        //    __global const double* b,
+        //    __global double* c)
         const auto n_opencl {static_cast<cl_ulong>(n)};
         opencl_check(clSetKernelArg(kernel, 0, sizeof(cl_ulong), &n_opencl), "clSetKernelArg(0) failed.");
         opencl_check(clSetKernelArg(kernel, 1, sizeof(cl_mem), &dev_a), "clSetKernelArg(1) failed.");

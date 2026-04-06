@@ -17,6 +17,7 @@ trap 'echo "Error on line $LINENO (exit code $?)" >&2' ERR
          src/serial_naive.cpp \
         -o bin/serial_naive.x 
     g++ -std=c++23 -O3 -march=native -ffast-math \
+        -mavx2 -mfma \
          src/serial_simd.cpp \
         -o bin/serial_simd.x 
     g++ -std=c++23 -O3 -march=native -ffast-math \
@@ -75,6 +76,7 @@ trap 'echo "Error on line $LINENO (exit code $?)" >&2' ERR
          src/serial_naive_32.cpp \
         -o bin/serial_naive_32.x 
     g++ -std=c++23 -O3 -march=native -ffast-math \
+        -mavx2 -mfma \
          src/serial_simd_32.cpp \
         -o bin/serial_simd_32.x 
     g++ -std=c++23 -O3 -march=native -ffast-math \

@@ -532,6 +532,7 @@ int main(int argc, char** argv)
                     sycldev_numbers_a, 
                     sycldev_numbers_b, 
                     sycldev_numbers_c );
+            last.wait();
             iters++;
         } 
         while (std::chrono::steady_clock::now() < deadline);

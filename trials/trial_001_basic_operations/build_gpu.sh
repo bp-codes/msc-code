@@ -3,15 +3,16 @@ source /opt/intel/oneapi/setvars.sh
 export SYCL_DEVICE_FILTER=cuda
 
 # Install headers for opencl
-apt update
-apt install -y pocl-opencl-icd ocl-icd-libopencl1 clinfo
-mkdir -p /etc/OpenCL/vendors         
-echo "libnvidia-opencl.so.1" > /etc/OpenCL/vendors/nvidia.icd
+#apt update
+#apt install -y pocl-opencl-icd ocl-icd-libopencl1 clinfo
+#mkdir -p /etc/OpenCL/vendors         
+#echo "libnvidia-opencl.so.1" > /etc/OpenCL/vendors/nvidia.icd
 
 
 # SYCL, CUDA, OpenCL 
 
 acpp -std=c++23 -O3 -march=native -ffast-math \
+     -fopenmp \
      --acpp-targets=cuda:sm_86 \
      src/parallel_sycl.cpp \
      -o bin/parallel_sycl.x
@@ -33,6 +34,7 @@ g++ -std=c++23 -O3 -march=native -ffast-math \
 # SYCL, CUDA, OpenCL     32 bit
 
 acpp -std=c++23 -O3 -march=native -ffast-math \
+     -fopenmp \
      --acpp-targets=cuda:sm_86 \
      src/parallel_sycl_32.cpp \
      -o bin/parallel_sycl_32.x
