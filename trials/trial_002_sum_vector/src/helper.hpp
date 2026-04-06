@@ -232,12 +232,11 @@ std::string to_string_precise(const T& value)
 
 
 
-template<typename Range>
-requires std::ranges::input_range<Range> &&
-         std::floating_point<std::ranges::range_value_t<Range>>
+template<typename R>
+requires std::ranges::input_range<R> &&
+         std::floating_point<std::ranges::range_value_t<R>>
 [[nodiscard]]
-nlohmann::json
-to_string_precise_vector(const Range& values_in)
+nlohmann::json to_string_precise_vector(const R& values_in)
 {
     auto values = nlohmann::json::array();
 
@@ -260,7 +259,7 @@ template<typename T>
 [[nodiscard]]
 T check_sum(const std::vector<T>& numbers)
 {
-    return std::accumulate(numbers.begin(), numbers.end(), 0.0);
+    return std::accumulate(numbers.begin(), numbers.end(), T{});
 }
 
 

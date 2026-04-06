@@ -78,7 +78,7 @@ void serial_divide(
     const auto n {std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++)
     {
-        numbers_c[i] = numbers_a[i] / std::max(numbers_b[i], MIN_DENOMINATOR);
+        numbers_c[i] = numbers_a[i] / std::fmax(numbers_b[i], MIN_DENOMINATOR);
     }
 }
 
@@ -263,7 +263,7 @@ void parallel_divide(
     #pragma omp parallel for simd schedule(static)
     for (auto i = std::size_t(0); i < n; i++)
     {
-        numbers_c[i] = numbers_a[i] / std::max(numbers_b[i], MIN_DENOMINATOR);
+        numbers_c[i] = numbers_a[i] / std::fmax(numbers_b[i], MIN_DENOMINATOR);
     }
 }
 
@@ -505,6 +505,8 @@ int main(int argc, char** argv)
             j["operation"] = operation_string;
             j["comments"] = comments;
             j["threads"] = helper::get_num_threads();
+            j["precision"] = "64";
+            j["device"] = "CPU";
 
             // Iteration/timing            
             j["test_time_seconds"] = test_time_seconds;

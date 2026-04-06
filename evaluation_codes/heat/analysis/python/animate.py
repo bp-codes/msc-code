@@ -24,6 +24,7 @@ import glob
 import os
 import re
 from typing import List, Tuple, Optional
+from pathlib import Path
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -32,6 +33,12 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 HEADER_RE = re.compile(
     r"#\s*t\s*=\s*([0-9eE\.\+\-]+).*?nx\s*=\s*(\d+).*?ny\s*=\s*(\d+).*?Lx\s*=\s*([0-9eE\.\+\-]+).*?Ly\s*=\s*([0-9eE\.\+\-]+)"
 )
+
+def ensure_parent_dir(file_path: str | Path) -> None:
+    p = Path(file_path)
+    if p.parent and not p.parent.exists():
+        p.parent.mkdir(parents=True, exist_ok=True)
+
 
 def read_snapshot(path: str) -> Tuple[np.ndarray, Optional[float], Optional[Tuple[int,int,float,float]]]:
     """Read one CSV snapshot. Returns (array ny×nx, time, (nx,ny,Lx,Ly)).
@@ -95,6 +102,9 @@ def main():
     ap.add_argument("--cmap", type=str, default="inferno", help="Matplotlib colormap.")
     ap.add_argument("--skip", type=int, default=1, help="Use every Nth frame.")
     args = ap.parse_args()
+
+    if args.save is not None:
+        ensure_parent_dir(args.save)
 
     fields, times, meta = load_sequence(args.pattern, skip=args.skip)
     if not fields:

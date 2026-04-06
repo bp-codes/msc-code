@@ -182,6 +182,8 @@ int main(int argc, char** argv)
         j["operation"] = operation_string;
         j["comments"] = comments;
         j["threads"] = helper::get_num_threads();
+        j["precision"] = "64";
+        j["device"] = "CPU";
 
         // Iteration/timing            
         j["test_time_seconds"] = test_time_seconds;

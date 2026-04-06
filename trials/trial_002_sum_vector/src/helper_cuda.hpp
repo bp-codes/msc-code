@@ -254,7 +254,7 @@ nlohmann::json to_string_precise_vector(const Range& values_in)
 template<typename T>
 T check_sum(const std::vector<T>& numbers)
 {
-    return std::accumulate(numbers.begin(), numbers.end(), 0.0);
+    return std::accumulate(numbers.begin(), numbers.end(), T{});
 }
 
 

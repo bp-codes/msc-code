@@ -260,7 +260,7 @@ template<typename T>
 [[nodiscard]]
 T check_sum(const std::vector<T>& numbers)
 {
-    return std::accumulate(numbers.begin(), numbers.end(), 0.0);
+    return std::accumulate(numbers.begin(), numbers.end(), T{});
 }
 
 
