@@ -1,0 +1,17 @@
+{
+  "calculated_value": 692979.6557407528,
+  "comments": "operation:power",
+  "difference": 0.0,
+  "expected_value": 692979.6557407528,
+  "file": "results/parallel_sycl_power_vmsw2p6u2n3x.json",
+  "iterations": 4622,
+  "method": "Parallel SYCL",
+  "operation": "power",
+  "passed_check": true,
+  "test_time_seconds": 5.0,
+  "time_calc": 6.411920863000001,
+  "time_cleanup": 0.0008421310000000001,
+  "time_per_iteration": 0.0013872611127217656,
+  "time_setup": 0.19607080300000002,
+  "time_total": 6.608833797000001
+}

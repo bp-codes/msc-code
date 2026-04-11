@@ -1,0 +1,18 @@
+{
+  "calculated_value": 1333611.4712381663,
+  "comments": "operation:sqrt",
+  "difference": 0.0,
+  "expected_value": 1333611.4712381663,
+  "file": "results/serial_stl_sqrt_xtsj1mmg0lt2.json",
+  "iterations": 3580,
+  "max_rss_kb": 27300,
+  "method": "Serial STL",
+  "operation": "sqrt",
+  "passed_check": true,
+  "test_time_seconds": 5.0,
+  "time_calc": 5.000644456000001,
+  "time_cleanup": 2e-08,
+  "time_per_iteration": 0.0013968280603351957,
+  "time_setup": 1.0000000000000001e-07,
+  "time_total": 5.000644576
+}

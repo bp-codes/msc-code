@@ -1,0 +1,18 @@
+{
+  "calculated_value": 3437336.0,
+  "comments": "operation:exp",
+  "difference": 0.0,
+  "expected_value": 3437336.0,
+  "file": "results/serial32_exp_da5tclzr6g86.json",
+  "iterations": 5860,
+  "max_rss_kb": 15604,
+  "method": "Serial32",
+  "operation": "exp",
+  "passed_check": true,
+  "test_time_seconds": 5.0,
+  "time_calc": 5.000562923,
+  "time_cleanup": 2e-08,
+  "time_per_iteration": 0.0008533383827645051,
+  "time_setup": 9.000000000000001e-08,
+  "time_total": 5.000563033000001
+}

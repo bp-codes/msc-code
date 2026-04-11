@@ -1,0 +1,18 @@
+{
+  "calculated_value": -1999335.875,
+  "comments": "operation:log",
+  "difference": 0.0,
+  "expected_value": -1999335.875,
+  "file": "results/serial32_log_91ifz4hfoisl.json",
+  "iterations": 4918,
+  "max_rss_kb": 15624,
+  "method": "Serial32",
+  "operation": "log",
+  "passed_check": true,
+  "test_time_seconds": 5.0,
+  "time_calc": 5.000662389,
+  "time_cleanup": 3.0000000000000004e-08,
+  "time_per_iteration": 0.0010168081311508744,
+  "time_setup": 8e-08,
+  "time_total": 5.000662499000001
+}

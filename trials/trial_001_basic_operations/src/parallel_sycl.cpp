@@ -11,11 +11,13 @@
 #include <string>
 #include <string_view>
 #include <vector>
-#include <sycl/sycl.hpp>
-#include <system_error>
+
 #include "Error.hpp"
 #include "helper.hpp"
 #include "json.hpp"
+
+#include <sycl/sycl.hpp>
+#include <system_error>
 
 #include "SyclFunctions.hpp"
 

@@ -1,0 +1,18 @@
+{
+  "calculated_value": 3437332.339760656,
+  "comments": "operation:exp",
+  "difference": 0.0,
+  "expected_value": 3437332.339760656,
+  "file": "results/parallel_openmp_exp_69r7y5ihrezt.json",
+  "iterations": 5257,
+  "max_rss_kb": 27700,
+  "method": "Parallel OpenMP",
+  "operation": "exp",
+  "passed_check": true,
+  "test_time_seconds": 5.0,
+  "time_calc": 5.000274216,
+  "time_cleanup": 3.0000000000000004e-08,
+  "time_per_iteration": 0.0009511649640479361,
+  "time_setup": 9.000000000000001e-08,
+  "time_total": 5.000274336
+}

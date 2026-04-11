@@ -1,0 +1,18 @@
+{
+  "calculated_value": 1000431.0,
+  "comments": "operation:add",
+  "difference": 0.0,
+  "expected_value": 1000431.0,
+  "file": "results/serial_add_tvqj34a6su3f.json",
+  "iterations": 25498,
+  "max_rss_kb": 15512,
+  "method": "Serial32",
+  "operation": "add",
+  "passed_check": true,
+  "test_time_seconds": 5.0,
+  "time_calc": 5.0000703380000004,
+  "time_cleanup": 2e-08,
+  "time_per_iteration": 0.0001960965698486156,
+  "time_setup": 7e-08,
+  "time_total": 5.000070428
+}

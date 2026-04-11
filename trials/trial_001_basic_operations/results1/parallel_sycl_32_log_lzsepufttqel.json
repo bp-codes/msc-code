@@ -1,0 +1,17 @@
+{
+  "calculated_value": -1999335.75,
+  "comments": "operation:log",
+  "difference": 0.0,
+  "expected_value": -1999335.75,
+  "file": "results/parallel_sycl_32_log_lzsepufttqel.json",
+  "iterations": 55633,
+  "method": "Parallel SYCL 32",
+  "operation": "log",
+  "passed_check": true,
+  "test_time_seconds": 5.0,
+  "time_calc": 5.0921389050000005,
+  "time_cleanup": 0.00044165500000000005,
+  "time_per_iteration": 9.15309062067478e-05,
+  "time_setup": 0.19419354000000003,
+  "time_total": 5.286774100000001
+}

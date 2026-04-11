@@ -1,0 +1,18 @@
+{
+  "calculated_value": 1000430.199573953,
+  "comments": "operation:add",
+  "difference": 0.0,
+  "expected_value": 1000430.199573953,
+  "file": "results/serial_stl_add_prnlsqwr65gf.json",
+  "iterations": 3680,
+  "max_rss_kb": 27292,
+  "method": "Serial STL",
+  "operation": "add",
+  "passed_check": true,
+  "test_time_seconds": 5.0,
+  "time_calc": 5.00019343,
+  "time_cleanup": 3.0000000000000004e-08,
+  "time_per_iteration": 0.001358748214673913,
+  "time_setup": 8e-08,
+  "time_total": 5.000193540000001
+}

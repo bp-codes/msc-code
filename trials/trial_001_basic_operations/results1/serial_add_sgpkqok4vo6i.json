@@ -1,0 +1,17 @@
+{
+  "calculated_value": 1000430.199573953,
+  "comments": "operation:add",
+  "difference": 0.0,
+  "expected_value": 1000430.199573953,
+  "file": "results/serial_add_sgpkqok4vo6i.json",
+  "iterations": 3674,
+  "max_rss_kb": 27252,
+  "method": "Serial",
+  "passed_check": true,
+  "test_time_seconds": 5.0,
+  "time_calc": 5.001056758000001,
+  "time_cleanup": 3.0000000000000004e-08,
+  "time_per_iteration": 0.0013612021660315734,
+  "time_setup": 9.000000000000001e-08,
+  "time_total": 5.001056878
+}

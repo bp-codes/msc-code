@@ -1,0 +1,18 @@
+{
+  "calculated_value": 1000430.199573953,
+  "comments": "operation:add",
+  "difference": 0.0,
+  "expected_value": 1000430.199573953,
+  "file": "results/serial_simd_add_ug7dwtj1mjxp.json",
+  "iterations": 3362,
+  "max_rss_kb": 27300,
+  "method": "Serial SIMD",
+  "operation": "add",
+  "passed_check": true,
+  "test_time_seconds": 5.0,
+  "time_calc": 5.001269967000001,
+  "time_cleanup": 2e-08,
+  "time_per_iteration": 0.0014875877355740633,
+  "time_setup": 1.0000000000000001e-07,
+  "time_total": 5.001270087
+}

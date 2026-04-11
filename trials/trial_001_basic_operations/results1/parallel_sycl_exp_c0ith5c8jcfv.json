@@ -1,0 +1,17 @@
+{
+  "calculated_value": 3437332.339760656,
+  "comments": "operation:exp",
+  "difference": 0.0,
+  "expected_value": 3437332.339760656,
+  "file": "results/parallel_sycl_exp_c0ith5c8jcfv.json",
+  "iterations": 9209,
+  "method": "Parallel SYCL",
+  "operation": "exp",
+  "passed_check": true,
+  "test_time_seconds": 5.0,
+  "time_calc": 5.637459891000001,
+  "time_cleanup": 0.0006608180000000001,
+  "time_per_iteration": 0.0006121685189488544,
+  "time_setup": 0.19982185000000002,
+  "time_total": 5.837942559
+}

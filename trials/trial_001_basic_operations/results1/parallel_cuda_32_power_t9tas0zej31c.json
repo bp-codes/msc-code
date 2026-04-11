@@ -1,0 +1,17 @@
+{
+  "calculated_value": 693261.375,
+  "comments": "operation:power",
+  "difference": 0.0,
+  "expected_value": 693261.375,
+  "file": "results/parallel_cuda_32_power_t9tas0zej31c.json",
+  "iterations": 56452,
+  "method": "Parallel CUDA 32",
+  "operation": "power",
+  "passed_check": true,
+  "test_time_seconds": 5.0,
+  "time_calc": 5.097184251,
+  "time_cleanup": 0.000464976,
+  "time_per_iteration": 9.029235901296677e-05,
+  "time_setup": 0.172965988,
+  "time_total": 5.270615215
+}

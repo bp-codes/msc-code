@@ -1,0 +1,17 @@
+{
+  "calculated_value": 6840409.972369488,
+  "comments": "operation:divide",
+  "difference": 0.0,
+  "expected_value": 6840409.972369488,
+  "file": "results/parallel_sycl_divide_a5j9cqsxv3vu.json",
+  "iterations": 27781,
+  "method": "Parallel SYCL",
+  "operation": "divide",
+  "passed_check": true,
+  "test_time_seconds": 5.0,
+  "time_calc": 5.195318961,
+  "time_cleanup": 0.0007031390000000001,
+  "time_per_iteration": 0.0001870097894604226,
+  "time_setup": 0.21390367400000002,
+  "time_total": 5.409925774
+}
