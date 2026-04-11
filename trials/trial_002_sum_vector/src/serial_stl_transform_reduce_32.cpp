@@ -114,11 +114,11 @@ int main(int argc, char** argv)
 
     // Output
     {
-        const auto method {std::string("Serial STL Transform Reduce")};
+        const auto method {std::string("Serial STL Transform Reduce 32")};
         const auto operation_string = std::string("sum");
         const auto comments {std::string("operation:") + std::string(operation_string)};
 
-        const std::string base_file_name = "results/serial_stl_transform_reduce_" + operation_string;
+        const std::string base_file_name = "results/serial_stl_transform_reduce_32_" + operation_string;
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
 
         nlohmann::json j;

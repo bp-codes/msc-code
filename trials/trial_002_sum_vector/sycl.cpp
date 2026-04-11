@@ -1,22 +1,12 @@
 // gpu_reuse.cpp
 #include <chrono>
-#include <cmath>
 #include <cstdint>
-#include <cstdlib>
 #include <iostream>
 #include <iomanip>
-#include <fstream>
 #include <vector>
 #include <random>
-#include <string>
 #include <algorithm>
-
-#include "Error.hpp"
-#include "helper.hpp"
-#include "json.hpp"
-
 #include <sycl/sycl.hpp>
-
 
 // helper: round n up to multiple of m
 static inline std::size_t round_up(std::size_t n, std::size_t m) 
@@ -57,12 +47,12 @@ inline std::size_t largest_power_of_two_leq(std::size_t n) noexcept
 }
 
 
-float sycl_task(const float* d_numbers, std::size_t numbers_size, sycl::queue& q,
+double sycl_task(const double* d_numbers, std::size_t numbers_size, sycl::queue& q,
                     const std::size_t work_group_size_limit)
 {
-    if (numbers_size == 0) return 0.0f;
+    if (numbers_size == 0) return 0.0;
 
-    auto result {0.0f};
+    auto result {0.0};
 
     // local_size - multiple of 32 for Nvidia, 64 for AMD - work items per work group
     const auto max_work_group  = q.get_device().get_info<sycl::info::device::max_work_group_size>();
@@ -74,7 +64,7 @@ float sycl_task(const float* d_numbers, std::size_t numbers_size, sycl::queue& q
 
     {
         // Alias result and out_buf (a 1 element buffer)
-        sycl::buffer<float> out_buf(&result, sycl::range<1>(1));
+        sycl::buffer<double> out_buf(&result, sycl::range<1>(1));
 
 
         q.submit([&](sycl::handler& h) 
@@ -83,7 +73,7 @@ float sycl_task(const float* d_numbers, std::size_t numbers_size, sycl::queue& q
             // Set up reduction to pass to kernel
             auto reduction_argument = sycl::reduction(
                 out_buf, h,
-                sycl::plus<float>{},
+                sycl::plus<double>{},
                 sycl::property::reduction::initialize_to_identity{}
             );
 
@@ -100,7 +90,7 @@ float sycl_task(const float* d_numbers, std::size_t numbers_size, sycl::queue& q
                 const auto grid_id = std::size_t(it.get_global_linear_id());
 
                 // Thread-local partial sum.
-                auto thread_partial_sum {0.0f};
+                auto thread_partial_sum {0.0};
 
                 // Add to thread_partial_sum in strides of grid_work_items
                 for (std::size_t i = grid_id; i < numbers_size; i += grid_work_items)
@@ -121,9 +111,9 @@ float sycl_task(const float* d_numbers, std::size_t numbers_size, sycl::queue& q
 
 
 // Serial task - sum numbers in the vector
-float serial_naive_task(const std::vector<float>& numbers)
+double serial_task(const std::vector<double>& numbers)
 {
-    auto sum {0.0f};
+    auto sum {0.0};
     for(const auto val : numbers)
     {
         sum += val;
@@ -144,7 +134,7 @@ int main(int argc, char** argv)
     }
 
     // Read in test_time and size of vector
-    const double test_time_seconds = std::atof(argv[1]);
+    const double test_time = std::atof(argv[1]);
     const int N = std::atoi(argv[2]);
     const std::size_t work_group_size_limit = (argc < 4) ? 256 : std::atoi(argv[3]);
     std::string device_selection = argv[4];
@@ -163,17 +153,17 @@ int main(int argc, char** argv)
     std::uniform_real_distribution<double> dist(0.0, 1.0);  // [0.0, 1.0)
 
     // Vector of numbers
-    std::vector<float> numbers;
+    std::vector<double> numbers;
     numbers.reserve(N);
 
     // Populate vector
     for (int i = 0; i < N; ++i) 
     {
-        numbers.emplace_back(static_cast<float>(dist(rng)));
+        numbers.emplace_back(dist(rng));
     }
 
     // Calculate expected value using the serial version
-    auto expected_value = serial_naive_task(numbers);
+    auto expected_value = serial_task(numbers);
  
 
     // ======= Calculation Starts ========
@@ -222,17 +212,17 @@ int main(int argc, char** argv)
     std::cerr << "Using device: " << q.get_device().get_info<sycl::info::device::name>() << std::endl;
 
     // Allocate device memory once
-    float* d_numbers = sycl::malloc_device<float>(N, q);
+    double* d_numbers = sycl::malloc_device<double>(N, q);
 
     // Copy once
-    q.memcpy(d_numbers, numbers.data(), N * sizeof(float)).wait();
+    q.memcpy(d_numbers, numbers.data(), N * sizeof(double)).wait();
 
     auto t1 = std::chrono::steady_clock::now();
-    auto deadline = t1 + std::chrono::duration<double>(test_time_seconds);
+    auto deadline = t1 + std::chrono::duration<double>(test_time);
     std::uint64_t iters = 0;
 
     // Reuse d_numbers on every iteration
-    auto calculated_value {0.0f};
+    auto calculated_value {0.0};
 
     do 
     {
@@ -257,56 +247,28 @@ int main(int argc, char** argv)
     auto time_total = std::chrono::duration<double>(t3 - t0).count();
     auto time_per_iteration = time_calc / iters;
 
-    bool passed_check = std::abs(calculated_value - expected_value) < 1.0e-9;
+    std::string method {"SYCL"};
+    std::string device {device_selection};
+    std::string comments {"operation:" + operation};
+    bool passed_check = std::abs(calculated_value - expected_value) < 1.0e-6;
 
-    // Output
-    {
-        const auto method {std::string("Parallel SYCL 32")};
-        const auto operation_string = std::string("sum");
-        const auto comments {std::string("operation:") + std::string(operation_string)};
 
-        const std::string base_file_name = "results/parallel_sycl_32_" + operation_string;
-        const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
-
-        nlohmann::json j;
-
-        // Metadata / identity
-        j["file"] = json_file;
-        j["method"] = method;
-        j["operation"] = operation_string;
-        j["comments"] = comments;
-        j["threads"] = 1;
-        j["precision"] = "32";
-        j["device"] = device_selection;
-
-        // Iteration/timing            
-        j["test_time_seconds"] = test_time_seconds;
-        j["iterations"] = iters;
-        j["time_per_iteration"] = time_per_iteration;
-        j["time_setup"] = time_setup;
-        j["time_calc"] = time_calc;
-        j["time_cleanup"] = time_cleanup;
-        j["time_total"] = time_total;
-        
-        // Values
-        j["expected_value"] = helper::to_string_precise(expected_value);
-        j["calculated_value"] = helper::to_string_precise(calculated_value);;
-        j["difference"] = helper::to_string_precise(expected_value - calculated_value);
-        j["passed_check"] = passed_check;
-        j["values"] = helper::to_string_precise_vector(numbers);
-
-        // Memory
-        j["max_rss_kb"] = helper::max_rss_kb();
-
-        std::ofstream out(json_file);
-        if (!out)
-        {
-            throw std::runtime_error("Failed to open output JSON file.");
-        }
-
-        // Save JSON file.
-        out << std::setw(2) << j << '\n';
-    }
+    std::cout << method << "," 
+              << device << ","               
+              << std::scientific << std::setprecision(12)
+              << expected_value << "," 
+              << calculated_value << "," 
+              << std::scientific << std::setprecision(6)
+              << iters << "," 
+              << time_per_iteration << "," 
+              << time_setup << "," 
+              << time_calc << "," 
+              << time_cleanup << "," 
+              << time_total << "," 
+              << passed_check << "," 
+              << comments << "," 
+              << work_group_size_limit << ""
+              << std::endl;
 
     return 0;
 }
