@@ -1,0 +1,17 @@
+{
+  "calculated_value": 250334.96875,
+  "comments": "operation:multiply",
+  "difference": 0.0,
+  "expected_value": 250334.96875,
+  "file": "results/parallel_sycl_32_multiply_9br0q5l245j2.json",
+  "iterations": 55390,
+  "method": "Parallel SYCL 32",
+  "operation": "multiply",
+  "passed_check": true,
+  "test_time_seconds": 5.0,
+  "time_calc": 5.0955417270000005,
+  "time_cleanup": 0.00045564600000000003,
+  "time_per_iteration": 9.199389288680269e-05,
+  "time_setup": 0.19607633700000002,
+  "time_total": 5.29207371
+}

@@ -137,11 +137,11 @@ int main(int argc, char** argv)
 
     // Output
     {
-        const auto method {std::string("Parallel OpenMP")};
+        const auto method {std::string("Parallel OpenMP 32")};
         const auto operation_string = std::string("sum");
         const auto comments {std::string("operation:") + std::string(operation_string)};
 
-        const std::string base_file_name = "results/parallel_openmp_" + operation_string;
+        const std::string base_file_name = "results/parallel_openmp_32_" + operation_string;
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
 
         nlohmann::json j;

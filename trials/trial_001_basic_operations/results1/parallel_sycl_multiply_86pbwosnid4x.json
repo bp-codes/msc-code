@@ -1,0 +1,17 @@
+{
+  "calculated_value": 250335.35912955867,
+  "comments": "operation:multiply",
+  "difference": 0.0,
+  "expected_value": 250335.35912955867,
+  "file": "results/parallel_sycl_multiply_86pbwosnid4x.json",
+  "iterations": 27770,
+  "method": "Parallel SYCL",
+  "operation": "multiply",
+  "passed_check": true,
+  "test_time_seconds": 5.0,
+  "time_calc": 5.193346315,
+  "time_cleanup": 0.0007414090000000001,
+  "time_per_iteration": 0.00018701283093266116,
+  "time_setup": 0.20237343700000002,
+  "time_total": 5.396461161
+}

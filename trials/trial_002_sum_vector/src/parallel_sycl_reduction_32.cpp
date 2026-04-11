@@ -146,13 +146,13 @@ int main(int argc, char** argv)
     do
     {
         sycl_task_submit(data, static_cast<std::size_t>(N), q, sum);
+        q.wait();
         calculated_value = *sum;
         ++iters;
     }
     while (std::chrono::steady_clock::now() < deadline);
 
-    // In-order queue still needs a wait before host read
-    q.wait();
+    //q.wait();
 
 
     auto t2 = std::chrono::steady_clock::now();
@@ -173,11 +173,11 @@ int main(int argc, char** argv)
 
     // Output
     {
-        const auto method {std::string("Parallel SYCL Reduction")};
+        const auto method {std::string("Parallel SYCL Reduction 32")};
         const auto operation_string = std::string("sum");
         const auto comments {std::string("operation:") + std::string(operation_string)};
 
-        const std::string base_file_name = "results/parallel_sycl_reduction_" + operation_string;
+        const std::string base_file_name = "results/parallel_sycl_reduction_32_" + operation_string;
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
 
         nlohmann::json j;

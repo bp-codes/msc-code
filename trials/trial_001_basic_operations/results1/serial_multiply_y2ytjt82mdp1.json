@@ -1,0 +1,18 @@
+{
+  "calculated_value": 250335.35912955867,
+  "comments": "operation:multiply",
+  "difference": 0.0,
+  "expected_value": 250335.35912955867,
+  "file": "results/serial_multiply_y2ytjt82mdp1.json",
+  "iterations": 3737,
+  "max_rss_kb": 27284,
+  "method": "Serial",
+  "operation": "multiply",
+  "passed_check": true,
+  "test_time_seconds": 5.0,
+  "time_calc": 5.000861293000001,
+  "time_cleanup": 2e-08,
+  "time_per_iteration": 0.0013382021121220232,
+  "time_setup": 9.000000000000001e-08,
+  "time_total": 5.000861403
+}

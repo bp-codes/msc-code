@@ -22,6 +22,11 @@ g++ -std=c++23 -O3 -ffp-contract=fast -ffast-math \
 
 g++ -std=c++23 -O3 -ffp-contract=fast -ffast-math \
   -mavx2 -mfma \
+   src/parallel_blas_32.cpp \
+  -o bin/parallel_blas_32.x -lopenblas
+
+g++ -std=c++23 -O3 -ffp-contract=fast -ffast-math \
+  -mavx2 -mfma \
    src/parallel_openmp.cpp \
   -o bin/parallel_openmp.x -lopenblas -fopenmp
 

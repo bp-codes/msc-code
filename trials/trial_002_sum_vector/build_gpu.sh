@@ -1,8 +1,63 @@
 #!/bin/bash
 
-source /opt/intel/oneapi/setvars.sh
+#source /opt/intel/oneapi/setvars.sh
 export SYCL_DEVICE_FILTER=cuda
 
+
+# SYCL, CUDA, OpenCL 
+
+acpp -std=c++23 -O3 -march=native -ffast-math \
+     -fopenmp \
+     --acpp-targets=cuda:sm_86 \
+     src/parallel_sycl.cpp \
+     -o bin/parallel_sycl.x
+
+acpp -std=c++23 -O3 -march=native -ffast-math \
+     -fopenmp \
+     --acpp-targets=cuda:sm_86 \
+     src/parallel_sycl_reduction.cpp \
+     -o bin/parallel_sycl_reduction.x
+
+
+nvcc -std=c++20 -O3  \
+    -Xcompiler "-march=native -ffast-math" \
+    src/parallel_cuda.cu \
+    -o bin/parallel_cuda.x
+
+
+nvcc -std=c++20 -O3  \
+    -Xcompiler "-march=native -ffast-math" \
+    src/parallel_cuda_thrust.cu \
+    -o bin/parallel_cuda_thrust.x
+
+
+g++ -std=c++23 -O3 -march=native -ffast-math \
+    src/parallel_opencl.cpp \
+    -o bin/parallel_opencl.x \
+    -lOpenCL
+
+
+
+
+# SYCL, CUDA, OpenCL     32 bit 
+
+acpp -std=c++23 -O3 -march=native -ffast-math \
+     -fopenmp \
+     --acpp-targets=cuda:sm_86 \
+     src/parallel_sycl_32.cpp \
+     -o bin/parallel_sycl_32.x
+
+acpp -std=c++23 -O3 -march=native -ffast-math \
+     -fopenmp \
+     --acpp-targets=cuda:sm_86 \
+     src/parallel_sycl_reduction_32.cpp \
+     -o bin/parallel_sycl_reduction_32.x
+
+
+
+
+
+exit 0
 
 acpp -O3 -ffast-math -std=c++23 \
      -v \

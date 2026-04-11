@@ -1,0 +1,18 @@
+{
+  "calculated_value": 1000430.199573953,
+  "comments": "operation:add",
+  "difference": 0.0,
+  "expected_value": 1000430.199573953,
+  "file": "results/serial_add_q1nus95mj09m.json",
+  "iterations": 4049,
+  "max_rss_kb": 27280,
+  "method": "Serial STL",
+  "operation": "add",
+  "passed_check": true,
+  "test_time_seconds": 5.0,
+  "time_calc": 5.00107877,
+  "time_cleanup": 2e-08,
+  "time_per_iteration": 0.0012351392368486046,
+  "time_setup": 1.0000000000000001e-07,
+  "time_total": 5.0010788900000005
+}

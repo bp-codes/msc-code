@@ -1,0 +1,18 @@
+{
+  "calculated_value": 6840365.0,
+  "comments": "operation:divide",
+  "difference": 0.0,
+  "expected_value": 6840365.0,
+  "file": "results/serial32_divide_woum06ohazi8.json",
+  "iterations": 23598,
+  "max_rss_kb": 15420,
+  "method": "Serial32",
+  "operation": "divide",
+  "passed_check": true,
+  "test_time_seconds": 5.0,
+  "time_calc": 5.000193602,
+  "time_cleanup": 3.0000000000000004e-08,
+  "time_per_iteration": 0.0002118905670819561,
+  "time_setup": 1.0000000000000001e-07,
+  "time_total": 5.0001937320000005
+}

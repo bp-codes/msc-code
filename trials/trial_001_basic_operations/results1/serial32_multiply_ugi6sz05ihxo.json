@@ -1,0 +1,18 @@
+{
+  "calculated_value": 250334.96875,
+  "comments": "operation:multiply",
+  "difference": 0.0,
+  "expected_value": 250334.96875,
+  "file": "results/serial32_multiply_ugi6sz05ihxo.json",
+  "iterations": 23078,
+  "max_rss_kb": 15488,
+  "method": "Serial32",
+  "operation": "multiply",
+  "passed_check": true,
+  "test_time_seconds": 5.0,
+  "time_calc": 5.000048756,
+  "time_cleanup": 3.0000000000000004e-08,
+  "time_per_iteration": 0.00021665866868879452,
+  "time_setup": 9.000000000000001e-08,
+  "time_total": 5.000048876
+}

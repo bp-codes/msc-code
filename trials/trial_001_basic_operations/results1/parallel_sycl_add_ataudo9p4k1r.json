@@ -1,0 +1,17 @@
+{
+  "calculated_value": 1000430.199573953,
+  "comments": "operation:add",
+  "difference": 0.0,
+  "expected_value": 1000430.199573953,
+  "file": "results/parallel_sycl_add_ataudo9p4k1r.json",
+  "iterations": 27489,
+  "method": "Parallel SYCL",
+  "operation": "add",
+  "passed_check": true,
+  "test_time_seconds": 5.0,
+  "time_calc": 5.194334212,
+  "time_cleanup": 0.0007643900000000001,
+  "time_per_iteration": 0.00018896046462221254,
+  "time_setup": 0.19941620100000002,
+  "time_total": 5.394514803000001
+}

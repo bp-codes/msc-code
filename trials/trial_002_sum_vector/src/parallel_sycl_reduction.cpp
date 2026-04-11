@@ -146,14 +146,11 @@ int main(int argc, char** argv)
     do
     {
         sycl_task_submit(data, static_cast<std::size_t>(N), q, sum);
+        q.wait();
         calculated_value = *sum;
         ++iters;
     }
     while (std::chrono::steady_clock::now() < deadline);
-
-    // In-order queue still needs a wait before host read
-    q.wait();
-
 
     auto t2 = std::chrono::steady_clock::now();
 

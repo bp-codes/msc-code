@@ -1,0 +1,15 @@
+{
+  "calculated_value": 1000430.199573953,
+  "comments": "operation:add",
+  "difference": 0.0,
+  "expected_value": 1000430.199573953,
+  "iterations": 4116,
+  "max_rss_kb": 27236,
+  "method": "Serial",
+  "passed_check": true,
+  "time_calc": 5.001451361,
+  "time_cleanup": 2e-08,
+  "time_per_iteration": 0.0012151242373663752,
+  "time_setup": 9.000000000000001e-08,
+  "time_total": 5.001451471
+}

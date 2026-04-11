@@ -160,11 +160,11 @@ int main(int argc, char** argv)
 
     // Output
     {
-        const auto method {std::string("Parallel OpenMP Tree")};
+        const auto method {std::string("Parallel OpenMP Tree 32")};
         const auto operation_string = std::string("sum");
         const auto comments {std::string("operation:") + std::string(operation_string)};
 
-        const std::string base_file_name = "results/parallel_openmp_tree_" + operation_string;
+        const std::string base_file_name = "results/parallel_openmp_tree_32_" + operation_string;
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
 
         nlohmann::json j;
@@ -175,7 +175,7 @@ int main(int argc, char** argv)
         j["operation"] = operation_string;
         j["comments"] = comments;
         j["threads"] = 1;
-        j["precision"] = "64";
+        j["precision"] = "32";
         j["device"] = "CPU";
 
         // Iteration/timing            

@@ -1,0 +1,17 @@
+{
+  "calculated_value": 1333611.4712381663,
+  "comments": "operation:sqrt",
+  "difference": 0.0,
+  "expected_value": 1333611.4712381663,
+  "file": "results/parallel_sycl_sqrt_6ypau334o4r1.json",
+  "iterations": 16693,
+  "method": "Parallel SYCL",
+  "operation": "sqrt",
+  "passed_check": true,
+  "test_time_seconds": 5.0,
+  "time_calc": 5.3229693440000005,
+  "time_cleanup": 0.000618278,
+  "time_per_iteration": 0.00031887433918408915,
+  "time_setup": 0.20277334500000002,
+  "time_total": 5.5263609670000005
+}

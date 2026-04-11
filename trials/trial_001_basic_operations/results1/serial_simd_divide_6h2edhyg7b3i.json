@@ -1,0 +1,18 @@
+{
+  "calculated_value": 6840409.972369488,
+  "comments": "operation:divide",
+  "difference": 0.0,
+  "expected_value": 6840409.972369488,
+  "file": "results/serial_simd_divide_6h2edhyg7b3i.json",
+  "iterations": 3693,
+  "max_rss_kb": 27288,
+  "method": "Serial SIMD",
+  "operation": "divide",
+  "passed_check": true,
+  "test_time_seconds": 5.0,
+  "time_calc": 5.0008751700000005,
+  "time_cleanup": 2e-08,
+  "time_per_iteration": 0.001354149788789602,
+  "time_setup": 9.000000000000001e-08,
+  "time_total": 5.000875280000001
+}

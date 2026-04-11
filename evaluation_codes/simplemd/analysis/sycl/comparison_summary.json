@@ -1,0 +1,126 @@
+{
+  "reference_xyz_path": "../serial/results/out.xyz",
+  "test_xyz_path": "../sycl/results/out.xyz",
+  "outdir": "sycl",
+  "histogram_mode": "count",
+  "bins": 50,
+  "top_n": 10,
+  "n_frames": 500,
+  "n_atoms": 2916,
+  "reference_last_comment": "Lattice=\"36.360000 0.000000 0.000000  0.000000 36.360000 0.000000  0.000000 0.000000 36.360000\" Properties=species:S:1:pos:R:3 timestep=9980 alat=36.360000",
+  "test_last_comment": "Lattice=\"36.360000 0.000000 0.000000  0.000000 36.360000 0.000000  0.000000 0.000000 36.360000\" Properties=species:S:1:pos:R:3 timestep=9980 alat=36.360000",
+  "last_frame_summary_angstrom": {
+    "mean_displacement": 1.0288066694859784e-13,
+    "rms_displacement": 3.2075017612251544e-12,
+    "std_displacement": 3.2058513871716946e-12,
+    "max_displacement": 1.000017846308765e-10,
+    "mean_dx": -3.429233729779091e-14,
+    "mean_dy": 0.0,
+    "mean_dz": 0.0,
+    "std_dx": 3.2073184412940852e-12,
+    "std_dy": 0.0,
+    "std_dz": 0.0,
+    "mean_abs_dx": 1.0288066694859784e-13,
+    "mean_abs_dy": 0.0,
+    "mean_abs_dz": 0.0,
+    "std_abs_dx": 3.2058513871716946e-12,
+    "std_abs_dy": 0.0,
+    "std_abs_dz": 0.0,
+    "max_abs_dx": 1.000017846308765e-10,
+    "max_abs_dy": 0.0,
+    "max_abs_dz": 0.0
+  },
+  "top_worst_atoms_final_frame_angstrom": [
+    {
+      "index": 1529,
+      "element": "X",
+      "dx": 1.000017846308765e-10,
+      "dy": 0.0,
+      "dz": 0.0,
+      "dr": 1.000017846308765e-10
+    },
+    {
+      "index": 109,
+      "element": "X",
+      "dx": -1.000000082740371e-10,
+      "dy": 0.0,
+      "dz": 0.0,
+      "dr": 1.000000082740371e-10
+    },
+    {
+      "index": 1914,
+      "element": "X",
+      "dx": -9.99982319171977e-11,
+      "dy": 0.0,
+      "dz": 0.0,
+      "dr": 9.99982319171977e-11
+    },
+    {
+      "index": 1,
+      "element": "X",
+      "dx": 0.0,
+      "dy": 0.0,
+      "dz": 0.0,
+      "dr": 0.0
+    },
+    {
+      "index": 2,
+      "element": "X",
+      "dx": 0.0,
+      "dy": 0.0,
+      "dz": 0.0,
+      "dr": 0.0
+    },
+    {
+      "index": 3,
+      "element": "X",
+      "dx": 0.0,
+      "dy": 0.0,
+      "dz": 0.0,
+      "dr": 0.0
+    },
+    {
+      "index": 4,
+      "element": "X",
+      "dx": 0.0,
+      "dy": 0.0,
+      "dz": 0.0,
+      "dr": 0.0
+    },
+    {
+      "index": 5,
+      "element": "X",
+      "dx": 0.0,
+      "dy": 0.0,
+      "dz": 0.0,
+      "dr": 0.0
+    },
+    {
+      "index": 6,
+      "element": "X",
+      "dx": 0.0,
+      "dy": 0.0,
+      "dz": 0.0,
+      "dr": 0.0
+    },
+    {
+      "index": 7,
+      "element": "X",
+      "dx": 0.0,
+      "dy": 0.0,
+      "dz": 0.0,
+      "dr": 0.0
+    }
+  ],
+  "output_files": {
+    "hist_dx_angstrom_png": "sycl/hist_dx_angstrom.png",
+    "hist_dy_angstrom_png": "sycl/hist_dy_angstrom.png",
+    "hist_dz_angstrom_png": "sycl/hist_dz_angstrom.png",
+    "hist_dr_angstrom_png": "sycl/hist_dr_angstrom.png",
+    "top_atoms_dr_over_time_png": "sycl/top_atoms_dr_over_time.png",
+    "top_atoms_dx_over_time_png": "sycl/top_atoms_dx_over_time.png",
+    "top_atoms_dy_over_time_png": "sycl/top_atoms_dy_over_time.png",
+    "top_atoms_dz_over_time_png": "sycl/top_atoms_dz_over_time.png",
+    "comparison_summary_json": "sycl/comparison_summary.json"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "calculated_value": -1999333.3442951138,
+  "comments": "operation:log",
+  "difference": 0.0,
+  "expected_value": -1999333.3442951138,
+  "file": "results/parallel_openmp_log_o3vnay87d4xy.json",
+  "iterations": 4281,
+  "max_rss_kb": 27672,
+  "method": "Parallel OpenMP",
+  "operation": "log",
+  "passed_check": true,
+  "test_time_seconds": 5.0,
+  "time_calc": 5.0007467100000005,
+  "time_cleanup": 2e-08,
+  "time_per_iteration": 0.0011681258374211633,
+  "time_setup": 9.000000000000001e-08,
+  "time_total": 5.000746820000001
+}

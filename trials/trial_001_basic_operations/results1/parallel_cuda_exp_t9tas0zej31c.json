@@ -1,0 +1,17 @@
+{
+  "calculated_value": 3437332.33976067,
+  "comments": "operation:exp",
+  "difference": 0.0,
+  "expected_value": 3437332.33976067,
+  "file": "results/parallel_cuda_exp_t9tas0zej31c.json",
+  "iterations": 10539,
+  "method": "Parallel CUDA",
+  "operation": "exp",
+  "passed_check": true,
+  "test_time_seconds": 5.0,
+  "time_calc": 5.534985961,
+  "time_cleanup": 0.000627758,
+  "time_per_iteration": 0.0005251908113673025,
+  "time_setup": 0.159693859,
+  "time_total": 5.695307578
+}

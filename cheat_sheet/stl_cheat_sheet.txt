@@ -1,0 +1,53 @@
+
+
+Find nearest element
+################################
+
+
+#include <vector>
+#include <algorithm>
+#include <cstddef>
+
+std::size_t nearest_index(double x, const std::vector<double>& xvec)
+{
+    if (xvec.empty()) return 0; // or throw, depending on your policy
+
+    auto it = std::lower_bound(xvec.begin(), xvec.end(), x);
+
+    // Case 1: x <= first element
+    if (it == xvec.begin()) return 0;
+
+    // Case 2: x > last element
+    if (it == xvec.end()) return xvec.size() - 1;
+
+    // Case 3: compare neighbours
+    auto idx = static_cast<std::size_t>(std::distance(xvec.begin(), it));
+
+    const double right = xvec[idx];
+    const double left  = xvec[idx - 1];
+
+    if ((x - left) <= (right - x))
+    {
+        return idx - 1;
+    }
+    else
+    {
+        return idx;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
