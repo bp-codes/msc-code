@@ -1,0 +1,357 @@
+{
+  "meta": {
+    "runs_per_app": 5
+  },
+  "results": [
+    {
+      "app": "serial.x",
+      "run": 1,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.03,
+        "max_rss_kb": 27468
+      },
+      "program_metrics": {"method":"Serial","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":4055,"time_per_iteration":1.233099447e-03,"time_setup":0.000000,"time_calc":5.000218,"time_cleanup":0.000000,"time_total":5.000218,"passed_check":true,"comments":"operation:add"}
+    },
+    {
+      "app": "serial.x",
+      "run": 2,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.03,
+        "max_rss_kb": 27488
+      },
+      "program_metrics": {"method":"Serial","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":4166,"time_per_iteration":1.200433750e-03,"time_setup":0.000000,"time_calc":5.001007,"time_cleanup":0.000000,"time_total":5.001007,"passed_check":true,"comments":"operation:add"}
+    },
+    {
+      "app": "serial.x",
+      "run": 3,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.03,
+        "max_rss_kb": 27300
+      },
+      "program_metrics": {"method":"Serial","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":4119,"time_per_iteration":1.214139942e-03,"time_setup":0.000000,"time_calc":5.001042,"time_cleanup":0.000000,"time_total":5.001043,"passed_check":true,"comments":"operation:add"}
+    },
+    {
+      "app": "serial.x",
+      "run": 4,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.03,
+        "max_rss_kb": 27508
+      },
+      "program_metrics": {"method":"Serial","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":4201,"time_per_iteration":1.190306535e-03,"time_setup":0.000000,"time_calc":5.000478,"time_cleanup":0.000000,"time_total":5.000478,"passed_check":true,"comments":"operation:add"}
+    },
+    {
+      "app": "serial.x",
+      "run": 5,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.03,
+        "max_rss_kb": 27484
+      },
+      "program_metrics": {"method":"Serial","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":4053,"time_per_iteration":1.233842249e-03,"time_setup":0.000000,"time_calc":5.000763,"time_cleanup":0.000000,"time_total":5.000763,"passed_check":true,"comments":"operation:add"}
+    },
+    {
+      "app": "serial_simd.x",
+      "run": 1,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.03,
+        "max_rss_kb": 27532
+      },
+      "program_metrics": {"method":"Serial SIMD","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":4062,"time_per_iteration":1.231433653e-03,"time_setup":0.000000,"time_calc":5.002083,"time_cleanup":0.000000,"time_total":5.002084,"passed_check":true,"comments":"operation:add"}
+    },
+    {
+      "app": "serial_simd.x",
+      "run": 2,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.03,
+        "max_rss_kb": 27528
+      },
+      "program_metrics": {"method":"Serial SIMD","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":4152,"time_per_iteration":1.204341772e-03,"time_setup":0.000000,"time_calc":5.000427,"time_cleanup":0.000000,"time_total":5.000427,"passed_check":true,"comments":"operation:add"}
+    },
+    {
+      "app": "serial_simd.x",
+      "run": 3,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.03,
+        "max_rss_kb": 27496
+      },
+      "program_metrics": {"method":"Serial SIMD","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":4141,"time_per_iteration":1.207742631e-03,"time_setup":0.000000,"time_calc":5.001262,"time_cleanup":0.000000,"time_total":5.001262,"passed_check":true,"comments":"operation:add"}
+    },
+    {
+      "app": "serial_simd.x",
+      "run": 4,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.03,
+        "max_rss_kb": 27472
+      },
+      "program_metrics": {"method":"Serial SIMD","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":4043,"time_per_iteration":1.236851873e-03,"time_setup":0.000000,"time_calc":5.000592,"time_cleanup":0.000000,"time_total":5.000592,"passed_check":true,"comments":"operation:add"}
+    },
+    {
+      "app": "serial_simd.x",
+      "run": 5,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.03,
+        "max_rss_kb": 27476
+      },
+      "program_metrics": {"method":"Serial SIMD","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":4097,"time_per_iteration":1.220618053e-03,"time_setup":0.000000,"time_calc":5.000872,"time_cleanup":0.000000,"time_total":5.000872,"passed_check":true,"comments":"operation:add"}
+    },
+    {
+      "app": "serial_stl.x",
+      "run": 1,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.03,
+        "max_rss_kb": 27468
+      },
+      "program_metrics": {"method":"Serial STL","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":4109,"time_per_iteration":1.217022422e-03,"time_setup":0.000000,"time_calc":5.000745,"time_cleanup":0.000000,"time_total":5.000745,"passed_check":true,"comments":"operation:add"}
+    },
+    {
+      "app": "serial_stl.x",
+      "run": 2,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.03,
+        "max_rss_kb": 27504
+      },
+      "program_metrics": {"method":"Serial STL","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":4166,"time_per_iteration":1.200241383e-03,"time_setup":0.000000,"time_calc":5.000206,"time_cleanup":0.000000,"time_total":5.000206,"passed_check":true,"comments":"operation:add"}
+    },
+    {
+      "app": "serial_stl.x",
+      "run": 3,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.03,
+        "max_rss_kb": 27516
+      },
+      "program_metrics": {"method":"Serial STL","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":4212,"time_per_iteration":1.187256138e-03,"time_setup":0.000000,"time_calc":5.000723,"time_cleanup":0.000000,"time_total":5.000723,"passed_check":true,"comments":"operation:add"}
+    },
+    {
+      "app": "serial_stl.x",
+      "run": 4,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.03,
+        "max_rss_kb": 27468
+      },
+      "program_metrics": {"method":"Serial STL","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":4245,"time_per_iteration":1.177862641e-03,"time_setup":0.000000,"time_calc":5.000027,"time_cleanup":0.000000,"time_total":5.000027,"passed_check":true,"comments":"operation:add"}
+    },
+    {
+      "app": "serial_stl.x",
+      "run": 5,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.03,
+        "max_rss_kb": 27524
+      },
+      "program_metrics": {"method":"Serial STL","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":3935,"time_per_iteration":1.270741139e-03,"time_setup":0.000000,"time_calc":5.000366,"time_cleanup":0.000000,"time_total":5.000366,"passed_check":true,"comments":"operation:add"}
+    },
+    {
+      "app": "openmp.x",
+      "run": 1,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.03,
+        "max_rss_kb": 27828
+      },
+      "program_metrics": {"method":"Parallel OpenMP","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":35680,"time_per_iteration":1.401370705e-04,"time_setup":0.000000,"time_calc":5.000091,"time_cleanup":0.000000,"time_total":5.000091,"passed_check":true,"comments":"operation:add"}
+    },
+    {
+      "app": "openmp.x",
+      "run": 2,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.03,
+        "max_rss_kb": 27832
+      },
+      "program_metrics": {"method":"Parallel OpenMP","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":38844,"time_per_iteration":1.287209812e-04,"time_setup":0.000000,"time_calc":5.000038,"time_cleanup":0.000000,"time_total":5.000038,"passed_check":true,"comments":"operation:add"}
+    },
+    {
+      "app": "openmp.x",
+      "run": 3,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.03,
+        "max_rss_kb": 27784
+      },
+      "program_metrics": {"method":"Parallel OpenMP","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":41245,"time_per_iteration":1.212283712e-04,"time_setup":0.000000,"time_calc":5.000064,"time_cleanup":0.000000,"time_total":5.000064,"passed_check":true,"comments":"operation:add"}
+    },
+    {
+      "app": "openmp.x",
+      "run": 4,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.03,
+        "max_rss_kb": 27784
+      },
+      "program_metrics": {"method":"Parallel OpenMP","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":41940,"time_per_iteration":1.192204095e-04,"time_setup":0.000000,"time_calc":5.000104,"time_cleanup":0.000000,"time_total":5.000104,"passed_check":true,"comments":"operation:add"}
+    },
+    {
+      "app": "openmp.x",
+      "run": 5,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.03,
+        "max_rss_kb": 27848
+      },
+      "program_metrics": {"method":"Parallel OpenMP","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":41088,"time_per_iteration":1.216907321e-04,"time_setup":0.000000,"time_calc":5.000029,"time_cleanup":0.000000,"time_total":5.000029,"passed_check":true,"comments":"operation:add"}
+    },
+    {
+      "app": "openmp_simd.x",
+      "run": 1,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.03,
+        "max_rss_kb": 27776
+      },
+      "program_metrics": {"method":"Parallel OpenMP SIMD","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":44400,"time_per_iteration":1.126143310e-04,"time_setup":0.000000,"time_calc":5.000076,"time_cleanup":0.000000,"time_total":5.000076,"passed_check":true,"comments":"operation:add"}
+    },
+    {
+      "app": "openmp_simd.x",
+      "run": 2,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.03,
+        "max_rss_kb": 27828
+      },
+      "program_metrics": {"method":"Parallel OpenMP SIMD","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":33828,"time_per_iteration":1.478094692e-04,"time_setup":0.000000,"time_calc":5.000099,"time_cleanup":0.000000,"time_total":5.000099,"passed_check":true,"comments":"operation:add"}
+    },
+    {
+      "app": "openmp_simd.x",
+      "run": 3,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.03,
+        "max_rss_kb": 27808
+      },
+      "program_metrics": {"method":"Parallel OpenMP SIMD","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":42149,"time_per_iteration":1.186269963e-04,"time_setup":0.000000,"time_calc":5.000009,"time_cleanup":0.000000,"time_total":5.000009,"passed_check":true,"comments":"operation:add"}
+    },
+    {
+      "app": "openmp_simd.x",
+      "run": 4,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.03,
+        "max_rss_kb": 27776
+      },
+      "program_metrics": {"method":"Parallel OpenMP SIMD","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":35006,"time_per_iteration":1.428343642e-04,"time_setup":0.000000,"time_calc":5.000060,"time_cleanup":0.000000,"time_total":5.000060,"passed_check":true,"comments":"operation:add"}
+    },
+    {
+      "app": "openmp_simd.x",
+      "run": 5,
+      "parameters": {
+        "wall_time": 5.0,
+        "array_size": 1000000,
+        "operation": "add"
+      },
+      "system": {
+        "elapsed_seconds": 5.03,
+        "max_rss_kb": 27776
+      },
+      "program_metrics": {"method":"Parallel OpenMP SIMD","expected_value":1000430.1995739531,"calculated_value":1000430.1995739531,"iterations":43437,"time_per_iteration":1.151116905e-04,"time_setup":0.000000,"time_calc":5.000106,"time_cleanup":0.000000,"time_total":5.000107,"passed_check":true,"comments":"operation:add"}
+    }
+  ]
+}

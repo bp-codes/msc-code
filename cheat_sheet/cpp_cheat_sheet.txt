@@ -1,0 +1,50 @@
+ 
+
+if
+################################################
+
+if(a && b)
+if(a || b)
+if(!a)
+
+Left to right evaluation.
+
+if(x < 0 || expensive_check())
+
+
+Ternary
+################################################
+
+condition ? value_if_true : value_if_false;
+
+
+# Casting
+
+auto x {5};
+auto y = static_cast<std::size_t>(x);
+
+
+
+std::to_string(1);
+
+
+
+# FileSystem
+
+#include <filesystem>
+
+if(std::filesystem::exists(path))
+if(std::filesystem::is_regular_file(path))
+
+
+
+
+
+
+
+
+
+
+
+
+
