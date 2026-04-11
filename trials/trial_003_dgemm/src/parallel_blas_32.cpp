@@ -21,6 +21,49 @@
 
 
 
+Matrix<float> sgemm_cblas( 
+                    const float alpha,
+                    const Matrix<float>& A,
+                    const Matrix<float>& B,
+                    const float beta,
+                    const Matrix<float>& C)
+{
+
+    const std::size_t M = A.rows();
+    const std::size_t K = A.cols();
+    const std::size_t N = B.cols();
+
+    if (B.rows() != K)
+    {
+        throw std::invalid_argument("dgemm_cblas: A.cols() must equal B.rows().");
+    }
+
+    if (C.rows() != M || C.cols() != N)
+    {
+        throw std::invalid_argument("dgemm_cblas: C must have shape M x N.");
+    }
+
+    Matrix<float> X{M, N};
+    X = C;  // so beta * C has the right starting values
+
+    cblas_sgemm(
+        CblasRowMajor,
+        CblasNoTrans,
+        CblasNoTrans,
+        static_cast<int>(M),
+        static_cast<int>(N),
+        static_cast<int>(K),
+        alpha,
+        A.data(), static_cast<int>(K),
+        B.data(), static_cast<int>(N),
+        beta,
+        X.data(), static_cast<int>(N));
+
+    return X;
+}
+
+
+
 Matrix<double> dgemm_cblas( 
                     const double alpha,
                     const Matrix<double>& A,
@@ -64,50 +107,6 @@ Matrix<double> dgemm_cblas(
 
 
 
-Matrix<double> dgemm_serial(double alpha,
-                            const Matrix<double>& A,
-                            const Matrix<double>& B,
-                            double beta,
-                            const Matrix<double>& C)
-{
-    const std::size_t M = A.rows();
-    const std::size_t K = A.cols();
-    const std::size_t N = B.cols();
-
-    // ---- dimension checks ----
-    if (B.rows() != K)
-        throw std::invalid_argument("B.rows() must equal A.cols()");
-    if (C.rows() != M || C.cols() != N)
-        throw std::invalid_argument("C must be M x N");
-
-    Matrix<double> X(M, N);
-
-    // ---- X = beta * C ----
-    for (std::size_t i = 0; i < M; ++i)
-    {
-        for (std::size_t j = 0; j < N; ++j)
-        {
-            X(i, j) = beta * C(i, j);
-        }
-    }
-
-    // ---- X += alpha * A * B ----
-    for (std::size_t i = 0; i < M; ++i)
-    {
-        for (std::size_t k = 0; k < K; ++k)
-        {
-            const double a_ik = alpha * A(i, k);
-
-            for (std::size_t j = 0; j < N; ++j)
-            {
-                X(i, j) += a_ik * B(k, j);
-            }
-        }
-    }
-
-    return X;
-}
-
 
 
 
@@ -132,19 +131,19 @@ int main(int argc, char** argv)
     std::uniform_real_distribution<double> dist(0.0, 1.0);  // [0.0, 1.0)
 
     // Set up Matrices
-    Matrix<double>A {M, K};
-    Matrix<double>B {K, N};
-    Matrix<double>C {M, N};
+    Matrix<float>A {M, K};
+    Matrix<float>B {K, N};
+    Matrix<float>C {M, N};
 
     // Fill with random data
-    double k = dist(rng);
-    double l = dist(rng);
+    float k = dist(rng);
+    float l = dist(rng);
     A.random_fill(rng, dist);
     B.random_fill(rng, dist);
     C.random_fill(rng, dist);
 
-    Matrix<double>X_expected = dgemm_cblas(k, A, B, l, C);
-    double expected_value = helper::check_sum(X_expected.vector());
+    Matrix<float>X_expected = sgemm_cblas(k, A, B, l, C);
+    const auto expected_value = helper::check_sum(X_expected.vector());
     std::cout << expected_value << std::endl;
 
     
@@ -161,12 +160,12 @@ int main(int argc, char** argv)
     auto deadline = t1 + std::chrono::duration<double>(test_time_seconds);
     std::uint64_t iters = 0;
 
-    Matrix<double>X {M, N};
+    Matrix<float>X {M, N};
 
     // Test starts
     do 
     {
-        X = dgemm_cblas(k, A, B, l, C);
+        X = sgemm_cblas(k, A, B, l, C);
         iters++;
     } 
     while (std::chrono::steady_clock::now() < deadline);
@@ -182,26 +181,26 @@ int main(int argc, char** argv)
 
     // ======= Calculation Ends ========
 
-    double calculated_value = helper::check_sum(X.vector());
+    const auto calculated_value = helper::check_sum(X.vector());
 
 
-    double time_setup = std::chrono::duration<double>(t1 - t0).count();
-    double time_calc = std::chrono::duration<double>(t2 - t1).count();
-    double time_cleanup = std::chrono::duration<double>(t3 - t2).count();
-    double time_total = std::chrono::duration<double>(t3 - t0).count();
-    double time_per_iteration = time_calc / iters;
+    const auto time_setup = std::chrono::duration<double>(t1 - t0).count();
+    const auto time_calc = std::chrono::duration<double>(t2 - t1).count();
+    const auto time_cleanup = std::chrono::duration<double>(t3 - t2).count();
+    const auto time_total = std::chrono::duration<double>(t3 - t0).count();
+    const auto time_per_iteration = time_calc / iters;
 
     const auto passed_check {std::abs(calculated_value - expected_value) < 1.0e-9};
     const std::string operation_string = "DGEMM"; 
 
     const auto matrix_size {std::to_string(M) + "x" + std::to_string(K) + "_by_" + std::to_string(K) + "x" + std::to_string(N)};
-    const auto method {std::string("Parallel BLAS " + matrix_size)};
+    const auto method {std::string("Parallel BLAS 32 " + matrix_size)};
     const auto comments {std::string("operation:") + std::string(operation_string)};
 
     // Output
     {
 
-        const std::string base_file_name = "results/parallel_blas_" + std::string(operation_string);
+        const std::string base_file_name = "results/parallel_blas_32_" + std::string(operation_string);
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
 
         nlohmann::json j;
@@ -212,7 +211,7 @@ int main(int argc, char** argv)
         j["operation"] = operation_string;
         j["comments"] = comments;
         j["threads"] = 1;
-        j["precision"] = "64";
+        j["precision"] = "32";
         j["device"] = "CPU";
         j["M"] = M;
         j["N"] = N;

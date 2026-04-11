@@ -1,0 +1,126 @@
+{
+  "reference_xyz_path": "../serial/results/out.xyz",
+  "test_xyz_path": "../sycl_32/results/out.xyz",
+  "outdir": "sycl_32",
+  "histogram_mode": "count",
+  "bins": 50,
+  "top_n": 10,
+  "n_frames": 500,
+  "n_atoms": 2916,
+  "reference_last_comment": "Lattice=\"36.360000 0.000000 0.000000  0.000000 36.360000 0.000000  0.000000 0.000000 36.360000\" Properties=species:S:1:pos:R:3 timestep=9980 alat=36.360000",
+  "test_last_comment": "Lattice=\"36.360001 0.000000 0.000000  0.000000 36.360001 0.000000  0.000000 0.000000 36.360001\" Properties=species:S:1:pos:R:3 timestep=9980 alat=36.360001",
+  "last_frame_summary_angstrom": {
+    "mean_displacement": 6.811990576074541e-05,
+    "rms_displacement": 7.394412174847215e-05,
+    "std_displacement": 2.876476282363609e-05,
+    "max_displacement": 0.00016440331578531083,
+    "mean_dx": 7.099913580056416e-07,
+    "mean_dy": 1.4893423868312012e-06,
+    "mean_dz": 3.243815740729438e-06,
+    "std_dx": 4.297606468586299e-05,
+    "std_dy": 4.3286476619950076e-05,
+    "std_dz": 4.1639252851923866e-05,
+    "mean_abs_dx": 3.414273772290913e-05,
+    "mean_abs_dy": 3.4304030932781654e-05,
+    "mean_abs_dz": 3.342498947189328e-05,
+    "std_abs_dx": 2.610976224320246e-05,
+    "std_abs_dy": 2.6441835425655612e-05,
+    "std_abs_dz": 2.504236006110601e-05,
+    "max_abs_dx": 0.0001474517000001896,
+    "max_abs_dy": 0.00014585160000279984,
+    "max_abs_dz": 0.00016137629999946057
+  },
+  "top_worst_atoms_final_frame_angstrom": [
+    {
+      "index": 125,
+      "element": "X",
+      "dx": -2.7734499999931828e-05,
+      "dy": -1.4728800000085585e-05,
+      "dz": 0.00016137629999946057,
+      "dr": 0.00016440331578531083
+    },
+    {
+      "index": 580,
+      "element": "X",
+      "dx": -8.095360000037743e-05,
+      "dy": -0.00014213869999935014,
+      "dz": 4.090699999848013e-06,
+      "dr": 0.0001636264930169168
+    },
+    {
+      "index": 2040,
+      "element": "X",
+      "dx": -4.880929999728778e-05,
+      "dy": 0.00014311179999992873,
+      "dz": -5.970680000189077e-05,
+      "dr": 0.0001625676383291294
+    },
+    {
+      "index": 2690,
+      "element": "X",
+      "dx": 8.71255000021165e-05,
+      "dy": 0.0001172322999991593,
+      "dz": 6.792719999992869e-05,
+      "dr": 0.0001610849757536127
+    },
+    {
+      "index": 1967,
+      "element": "X",
+      "dx": 6.583160000062094e-05,
+      "dy": -0.00014529800000007143,
+      "dz": -2.0750299999150457e-05,
+      "dr": 0.0001608598250425421
+    },
+    {
+      "index": 1297,
+      "element": "X",
+      "dx": -6.110000001058324e-06,
+      "dy": -8.693920000002464e-05,
+      "dz": -0.00013380499999993134,
+      "dr": 0.00015968573706389322
+    },
+    {
+      "index": 909,
+      "element": "X",
+      "dx": 7.75863999997739e-05,
+      "dy": -7.016410000204587e-05,
+      "dz": -0.00012040179999850409,
+      "dr": 0.00015949684585251769
+    },
+    {
+      "index": 1730,
+      "element": "X",
+      "dx": 6.139139999916665e-05,
+      "dy": -0.00012026090000105683,
+      "dz": 8.469399999988525e-05,
+      "dr": 0.00015938839888430536
+    },
+    {
+      "index": 2800,
+      "element": "X",
+      "dx": 0.00012573050000241892,
+      "dy": 8.258140000094727e-05,
+      "dz": -4.8365199997846275e-05,
+      "dr": 0.0001580096162510573
+    },
+    {
+      "index": 2869,
+      "element": "X",
+      "dx": -0.00013769510000116725,
+      "dy": -2.193090000091047e-05,
+      "dz": -7.387109999967834e-05,
+      "dr": 0.00015779050780811836
+    }
+  ],
+  "output_files": {
+    "hist_dx_angstrom_png": "sycl_32/hist_dx_angstrom.png",
+    "hist_dy_angstrom_png": "sycl_32/hist_dy_angstrom.png",
+    "hist_dz_angstrom_png": "sycl_32/hist_dz_angstrom.png",
+    "hist_dr_angstrom_png": "sycl_32/hist_dr_angstrom.png",
+    "top_atoms_dr_over_time_png": "sycl_32/top_atoms_dr_over_time.png",
+    "top_atoms_dx_over_time_png": "sycl_32/top_atoms_dx_over_time.png",
+    "top_atoms_dy_over_time_png": "sycl_32/top_atoms_dy_over_time.png",
+    "top_atoms_dz_over_time_png": "sycl_32/top_atoms_dz_over_time.png",
+    "comparison_summary_json": "sycl_32/comparison_summary.json"
+  }
+}

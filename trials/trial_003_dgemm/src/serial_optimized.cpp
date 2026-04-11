@@ -241,6 +241,8 @@ int main(int argc, char** argv)
         j["operation"] = operation_string;
         j["comments"] = comments;
         j["threads"] = 1;
+        j["precision"] = "64";
+        j["device"] = "CPU";
         j["M"] = M;
         j["N"] = N;
         j["K"] = K;

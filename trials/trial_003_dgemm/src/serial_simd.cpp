@@ -5,7 +5,6 @@
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
-#include <fstream>
 #include <vector>
 #include <cmath>
 #include <random>
@@ -16,6 +15,7 @@
 #include "json.hpp"
 
 #include <cblas.h>
+#include <omp.h>
 
 
 
@@ -117,11 +117,11 @@ Matrix<double> dgemm_serial(double alpha,
 int main(int argc, char** argv) 
 {
     if (argc < 5) {
-        std::cerr << "Usage: " << argv[0] << " test_time_seconds rows cols\n";
+        std::cerr << "Usage: " << argv[0] << " test_time rows cols\n";
         return 1;
     }
     
-    double test_time_seconds = std::atof(argv[1]);
+    double test_time = std::atof(argv[1]);
 
     const std::size_t M = std::atoi(argv[2]);  // rows of A and C
     const std::size_t N = std::atoi(argv[3]);  // cols of B and C
@@ -143,7 +143,7 @@ int main(int argc, char** argv)
     B.random_fill(rng, dist);
     C.random_fill(rng, dist);
 
-    Matrix<double>X_expected = dgemm_cblas(k, A, B, l, C);
+    Matrix X_expected = dgemm_cblas(k, A, B, l, C);
     double expected_value = helper::check_sum(X_expected.vector());
     std::cout << expected_value << std::endl;
 
@@ -158,7 +158,7 @@ int main(int argc, char** argv)
 
     // Do calculation
     auto t1 = std::chrono::steady_clock::now();
-    auto deadline = t1 + std::chrono::duration<double>(test_time_seconds);
+    auto deadline = t1 + std::chrono::duration<double>(test_time);
     std::uint64_t iters = 0;
 
     Matrix<double>X {M, N};
@@ -166,7 +166,7 @@ int main(int argc, char** argv)
     // Test starts
     do 
     {
-        X = dgemm_cblas(k, A, B, l, C);
+        X = dgemm_serial(k, A, B, l, C);
         iters++;
     } 
     while (std::chrono::steady_clock::now() < deadline);
@@ -191,61 +191,24 @@ int main(int argc, char** argv)
     double time_total = std::chrono::duration<double>(t3 - t0).count();
     double time_per_iteration = time_calc / iters;
 
-    const auto passed_check {std::abs(calculated_value - expected_value) < 1.0e-9};
-    const std::string operation_string = "DGEMM"; 
 
-    const auto matrix_size {std::to_string(M) + "x" + std::to_string(K) + "_by_" + std::to_string(K) + "x" + std::to_string(N)};
-    const auto method {std::string("Parallel BLAS " + matrix_size)};
-    const auto comments {std::string("operation:") + std::string(operation_string)};
+    std::string method {"Serial"};
+    std::string comments {"operation:DGEMM"};
+    bool passed_check = std::abs(calculated_value - expected_value) < 1.0e-9;
 
-    // Output
-    {
-
-        const std::string base_file_name = "results/parallel_blas_" + std::string(operation_string);
-        const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
-
-        nlohmann::json j;
-
-        // Metadata / identity
-        j["file"] = json_file;
-        j["method"] = method;
-        j["operation"] = operation_string;
-        j["comments"] = comments;
-        j["threads"] = 1;
-        j["precision"] = "64";
-        j["device"] = "CPU";
-        j["M"] = M;
-        j["N"] = N;
-        j["K"] = K;
-
-        // Iteration/timing            
-        j["test_time_seconds"] = test_time_seconds;
-        j["iterations"] = iters;
-        j["time_per_iteration"] = time_per_iteration;
-        j["time_setup"] = time_setup;
-        j["time_calc"] = time_calc;
-        j["time_cleanup"] = time_cleanup;
-        j["time_total"] = time_total;
-        
-        // Values
-        j["expected_value"] = helper::to_string_precise(expected_value);
-        j["calculated_value"] = helper::to_string_precise(calculated_value);;
-        j["difference"] = helper::to_string_precise(expected_value - calculated_value);
-        j["passed_check"] = passed_check;
-        j["values"] = helper::to_string_precise_vector(X.vector());
-
-        // Memory
-        j["max_rss_kb"] = helper::max_rss_kb();
-
-        std::ofstream out(json_file);
-        if (!out)
-        {
-            throw std::runtime_error("Failed to open output JSON file.");
-        }
-
-        // Save JSON file.
-        out << std::setw(2) << j << '\n';
-    }
+    std::cout << method << "," 
+              << expected_value << "," 
+              << calculated_value << "," 
+              << iters << "," 
+              << time_per_iteration << "," 
+              << time_setup << "," 
+              << time_calc << "," 
+              << time_cleanup << "," 
+              << time_total << "," 
+              << passed_check << "," 
+              << comments << "" 
+              << std::endl;
+    
 
     return 0;
 }

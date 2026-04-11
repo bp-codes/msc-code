@@ -1,0 +1,126 @@
+{
+  "reference_xyz_path": "../serial/results/out.xyz",
+  "test_xyz_path": "../openmp/results/out.xyz",
+  "outdir": "openmp",
+  "histogram_mode": "count",
+  "bins": 50,
+  "top_n": 10,
+  "n_frames": 500,
+  "n_atoms": 2916,
+  "reference_last_comment": "Lattice=\"36.360000 0.000000 0.000000  0.000000 36.360000 0.000000  0.000000 0.000000 36.360000\" Properties=species:S:1:pos:R:3 timestep=9980 alat=36.360000",
+  "test_last_comment": "Lattice=\"36.360000 0.000000 0.000000  0.000000 36.360000 0.000000  0.000000 0.000000 36.360000\" Properties=species:S:1:pos:R:3 timestep=9980 alat=36.360000",
+  "last_frame_summary_angstrom": {
+    "mean_displacement": 2.4005610789847e-13,
+    "rms_displacement": 4.8995647375820105e-12,
+    "std_displacement": 4.893680382168181e-12,
+    "max_displacement": 1.000017846308765e-10,
+    "mean_dx": 1.218351741701132e-18,
+    "mean_dy": 3.4294164825403466e-14,
+    "mean_dz": -6.858650212319438e-14,
+    "std_dx": 2.6189142214974453e-12,
+    "std_dy": 3.2073754013455084e-12,
+    "std_dz": 2.6179926957543624e-12,
+    "mean_abs_dx": 6.858711129906523e-14,
+    "mean_abs_dy": 1.0288249447621039e-13,
+    "mean_abs_dz": 6.858650212319438e-14,
+    "std_abs_dx": 2.618015948715115e-12,
+    "std_abs_dy": 3.20590833418981e-12,
+    "std_abs_dz": 2.6179926957543624e-12,
+    "max_abs_dx": 1.000017846308765e-10,
+    "max_abs_dy": 1.000017846308765e-10,
+    "max_abs_dz": 1.000000082740371e-10
+  },
+  "top_worst_atoms_final_frame_angstrom": [
+    {
+      "index": 2801,
+      "element": "X",
+      "dx": 0.0,
+      "dy": 1.000017846308765e-10,
+      "dz": 0.0,
+      "dr": 1.000017846308765e-10
+    },
+    {
+      "index": 2803,
+      "element": "X",
+      "dx": 0.0,
+      "dy": -1.000017846308765e-10,
+      "dz": 0.0,
+      "dr": 1.000017846308765e-10
+    },
+    {
+      "index": 2815,
+      "element": "X",
+      "dx": 1.000017846308765e-10,
+      "dy": 0.0,
+      "dz": 0.0,
+      "dr": 1.000017846308765e-10
+    },
+    {
+      "index": 2890,
+      "element": "X",
+      "dx": 0.0,
+      "dy": 1.000017846308765e-10,
+      "dz": 0.0,
+      "dr": 1.000017846308765e-10
+    },
+    {
+      "index": 2236,
+      "element": "X",
+      "dx": 0.0,
+      "dy": 0.0,
+      "dz": -1.000000082740371e-10,
+      "dr": 1.000000082740371e-10
+    },
+    {
+      "index": 1105,
+      "element": "X",
+      "dx": 0.0,
+      "dy": 0.0,
+      "dz": -9.99982319171977e-11,
+      "dr": 9.99982319171977e-11
+    },
+    {
+      "index": 1914,
+      "element": "X",
+      "dx": -9.99982319171977e-11,
+      "dy": 0.0,
+      "dz": 0.0,
+      "dr": 9.99982319171977e-11
+    },
+    {
+      "index": 1,
+      "element": "X",
+      "dx": 0.0,
+      "dy": 0.0,
+      "dz": 0.0,
+      "dr": 0.0
+    },
+    {
+      "index": 2,
+      "element": "X",
+      "dx": 0.0,
+      "dy": 0.0,
+      "dz": 0.0,
+      "dr": 0.0
+    },
+    {
+      "index": 3,
+      "element": "X",
+      "dx": 0.0,
+      "dy": 0.0,
+      "dz": 0.0,
+      "dr": 0.0
+    }
+  ],
+  "output_files": {
+    "hist_dx_angstrom_png": "openmp/hist_dx_angstrom.png",
+    "hist_dy_angstrom_png": "openmp/hist_dy_angstrom.png",
+    "hist_dz_angstrom_png": "openmp/hist_dz_angstrom.png",
+    "hist_dr_angstrom_png": "openmp/hist_dr_angstrom.png",
+    "top_atoms_dr_over_time_png": "openmp/top_atoms_dr_over_time.png",
+    "top_atoms_dx_over_time_png": "openmp/top_atoms_dx_over_time.png",
+    "top_atoms_dy_over_time_png": "openmp/top_atoms_dy_over_time.png",
+    "top_atoms_dz_over_time_png": "openmp/top_atoms_dz_over_time.png",
+    "comparison_summary_json": "openmp/comparison_summary.json"
+  }
+}
