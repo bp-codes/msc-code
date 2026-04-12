@@ -39,16 +39,6 @@ float serial_naive_task(const std::vector<float>& numbers)
 
 
 
-void opencl_check(cl_int status, const char* message)
-{
-    if (status != CL_SUCCESS)
-    {
-        std::ostringstream oss;
-        oss << message << " (OpenCL error " << status << ")";
-        THROW_RUNTIME_ERROR(oss.str());
-    }
-}
-
 // ======================================================
 // OpenCL kernel
 // ======================================================
@@ -85,6 +75,22 @@ __kernel void reduce_sum(__global const float* input,
 )CLC";
 
 
+
+// OpenCL check
+// ======================================================
+
+void opencl_check(cl_int status, const char* message)
+{
+    if (status != CL_SUCCESS)
+    {
+        std::ostringstream oss;
+        oss << message << " (OpenCL error " << status << ")";
+        THROW_RUNTIME_ERROR(oss.str());
+    }
+}
+
+
+
 // OpenCL context
 //======================================================
 
@@ -101,9 +107,8 @@ struct OpenCLContext
     cl_mem buffer_a{};
     cl_mem buffer_b{};
 
-    size_t local_size{256};
+    std::size_t local_size{256};
 };
-
 
 
 
@@ -192,7 +197,7 @@ void opencl_setup(OpenCLContext& ctx,
     if (err != CL_SUCCESS)
     {
         // Optional: print build log (VERY useful)
-        size_t log_size = 0;
+        std::size_t log_size = 0;
         clGetProgramBuildInfo(ctx.program, ctx.device, CL_PROGRAM_BUILD_LOG, 0, nullptr, &log_size);
 
         std::vector<char> log(log_size);
@@ -241,14 +246,14 @@ float parallel_task(OpenCLContext& ctx, int N)
     cl_mem out = ctx.buffer_a;
 
     int current_N = N;
-    size_t local_size = ctx.local_size;
+    std::size_t local_size = ctx.local_size;
 
     while (current_N > 1)
     {
-        size_t global_size =
+        std::size_t global_size =
             ((current_N + local_size - 1) / local_size) * local_size;
 
-        size_t num_groups = global_size / local_size;
+        std::size_t num_groups = global_size / local_size;
 
         clSetKernelArg(ctx.kernel, 0, sizeof(cl_mem), &in);
         clSetKernelArg(ctx.kernel, 1, sizeof(cl_mem), &out);
