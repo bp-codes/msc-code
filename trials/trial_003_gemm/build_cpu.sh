@@ -39,6 +39,10 @@ trap 'echo "Error on line $LINENO (exit code $?)" >&2' ERR
     g++ -std=c++23 -O3 -march=native -ffast-math \
       src/serial_naive_32.cpp \
       -o bin/serial_naive_32.x -lopenblas
+    g++ -std=c++23 -O3 -ffast-math  \
+      -mavx2 -mfma \
+      src/serial_optimized_32.cpp \
+      -o bin/serial_optimized_32.x -lopenblas -fopenmp
 
 
     # CPU Parallel 32 bit

@@ -21,12 +21,12 @@
 
 
 
-Matrix<double> dgemm_cblas( 
-                    const double alpha,
-                    const Matrix<double>& A,
-                    const Matrix<double>& B,
-                    const double beta,
-                    const Matrix<double>& C)
+Matrix<float> gemm_cblas( 
+                    const float alpha,
+                    const Matrix<float>& A,
+                    const Matrix<float>& B,
+                    const float beta,
+                    const Matrix<float>& C)
 {
 
     const std::size_t M = A.rows();
@@ -43,10 +43,10 @@ Matrix<double> dgemm_cblas(
         throw std::invalid_argument("dgemm_cblas: C must have shape M x N.");
     }
 
-    Matrix<double> X{M, N};
+    Matrix<float> X{M, N};
     X = C;  // so beta * C has the right starting values
 
-    cblas_dgemm(
+    cblas_sgemm(
         CblasRowMajor,
         CblasNoTrans,
         CblasNoTrans,
@@ -64,11 +64,11 @@ Matrix<double> dgemm_cblas(
 
 
 
-Matrix<double> dgemm_serial(double alpha,
-                            const Matrix<double>& A,
-                            const Matrix<double>& B,
-                            double beta,
-                            const Matrix<double>& C)
+Matrix<float> gemm_serial(float alpha,
+                            const Matrix<float>& A,
+                            const Matrix<float>& B,
+                            float beta,
+                            const Matrix<float>& C)
 {
     const std::size_t M = A.rows();
     const std::size_t K = A.cols();
@@ -80,7 +80,7 @@ Matrix<double> dgemm_serial(double alpha,
     if (C.rows() != M || C.cols() != N)
         throw std::invalid_argument("C must be M x N");
 
-    Matrix<double> X(M, N);
+    Matrix<float> X(M, N);
 
     // ---- X = beta * C ----
     for (std::size_t i = 0; i < M; ++i)
@@ -96,7 +96,7 @@ Matrix<double> dgemm_serial(double alpha,
     {
         for (std::size_t k = 0; k < K; ++k)
         {
-            const double a_ik = alpha * A(i, k);
+            const auto a_ik = alpha * A(i, k);
 
             for (std::size_t j = 0; j < N; ++j)
             {
@@ -132,18 +132,18 @@ int main(int argc, char** argv)
     std::uniform_real_distribution<double> dist(0.0, 1.0);  // [0.0, 1.0)
 
     // Set up Matrices
-    Matrix<double>A {M, K};
-    Matrix<double>B {K, N};
-    Matrix<double>C {M, N};
+    Matrix<float>A {M, K};
+    Matrix<float>B {K, N};
+    Matrix<float>C {M, N};
 
     // Fill with random data
-    const double k = dist(rng);
-    const double l = dist(rng);
+    const float k = static_cast<double>(dist(rng));
+    const float l = static_cast<double>(dist(rng));
     A.random_fill(rng, dist);
     B.random_fill(rng, dist);
     C.random_fill(rng, dist);
 
-    Matrix<double>X_expected = dgemm_cblas(k, A, B, l, C);
+    Matrix<float>X_expected = gemm_cblas(k, A, B, l, C);
     const auto expected_value = helper::check_sum(X_expected.vector());
     std::cout << expected_value << std::endl;
 
@@ -161,12 +161,12 @@ int main(int argc, char** argv)
     const auto deadline = t1 + std::chrono::duration<double>(test_time_seconds);
     std::uint64_t iters = 0;
 
-    Matrix<double>X {M, N};
+    Matrix<float>X {M, N};
 
     // Test starts
     do 
     {
-        X = dgemm_serial(k, A, B, l, C);
+        X = gemm_serial(k, A, B, l, C);
         iters++;
     } 
     while (std::chrono::steady_clock::now() < deadline);
@@ -195,13 +195,13 @@ int main(int argc, char** argv)
     const std::string operation_string = "gemm"; 
 
     const auto matrix_size {std::to_string(M) + "x" + std::to_string(K) + "_by_" + std::to_string(K) + "x" + std::to_string(N)};
-    const auto method {std::string("Serial Naive " + matrix_size)};
+    const auto method {std::string("Serial Naive 32 " + matrix_size)};
     const auto comments {std::string("operation:") + std::string(operation_string)};
 
     // Output
     {
 
-        const std::string base_file_name = "results/serial_naive_" + matrix_size + "_" + std::string(operation_string);
+        const std::string base_file_name = "results/serial_naive_32_" + matrix_size + "_" + std::string(operation_string);
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
 
         nlohmann::json j;

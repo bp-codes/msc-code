@@ -65,7 +65,7 @@ Matrix<float> dgemm_cblas(
 
 
 
-Matrix<float> dgemm_serial(float alpha,
+Matrix<float> gemm_parallel(float alpha,
                             const Matrix<float>& A,
                             const Matrix<float>& B,
                             float beta,
@@ -182,7 +182,7 @@ int main(int argc, char** argv)
     // Test starts
     do 
     {
-        X = dgemm_serial(k, A, B, l, C);
+        X = gemm_parallel(k, A, B, l, C);
         iters++;
     } 
     while (std::chrono::steady_clock::now() < deadline);
@@ -211,13 +211,13 @@ int main(int argc, char** argv)
     const std::string operation_string = "gemm"; 
 
     const auto matrix_size {std::to_string(M) + "x" + std::to_string(K) + "_by_" + std::to_string(K) + "x" + std::to_string(N)};
-    const auto method {std::string("Parallel OpenMP " + matrix_size)};
+    const auto method {std::string("Parallel OpenMP 32 " + matrix_size)};
     const auto comments {std::string("operation:") + std::string(operation_string)};
 
     // Output
     {
 
-        const std::string base_file_name = "results/parallel_openmp_" + std::string(operation_string);
+        const std::string base_file_name = "results/parallel_openmp_32_" + matrix_size + "_" + std::string(operation_string);
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
 
         nlohmann::json j;
