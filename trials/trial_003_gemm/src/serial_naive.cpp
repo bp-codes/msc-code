@@ -110,9 +110,6 @@ Matrix<double> dgemm_serial(double alpha,
 
 
 
-
-
-
 // X = k A * B + l C
 int main(int argc, char** argv) 
 {

@@ -17,6 +17,7 @@
 #include "json.hpp"
 
 #include <cuda_runtime.h>
+#include <cublas_v2.h>
 
 
 
@@ -32,91 +33,57 @@
 
 
 
-// RTX3050 100KB per SM, Warp size 32.
-constexpr int TILE = 16;
+#define CUBLAS_CHECK(call)                                      \
+do {                                                            \
+    cublasStatus_t status = (call);                             \
+    if (status != CUBLAS_STATUS_SUCCESS) {                      \
+        std::cerr << "cuBLAS error at " << __FILE__ << ":"       \
+                  << __LINE__ << std::endl;                     \
+        std::abort();                                           \
+    }                                                           \
+} while (0)
 
-__global__ void dgemm_kernel_tiled(const double* __restrict__ A,
-                                   const double* __restrict__ B,
-                                   const double* __restrict__ C,
-                                   double* __restrict__ X,
-                                   double k, double l,
-                                   int M, int N, int K)
+
+
+inline void gemm_cublas(const float* d_A,
+                         const float* d_B,
+                         const float* d_C,
+                         float* d_X,
+                         const float k,
+                         const float l,
+                         const int M,
+                         const int N,
+                         const int K,
+                         cublasHandle_t handle)
 {
-    __shared__ double As[TILE][TILE];
-    __shared__ double Bs[TILE][TILE];
+    // X = C
+    CUBLAS_CHECK(cublasScopy(handle,
+                             M * N,
+                             d_C, 1,
+                             d_X, 1));
 
-    int row = blockIdx.y * TILE + threadIdx.y;
-    int col = blockIdx.x * TILE + threadIdx.x;
-
-    double sum = 0.0;
-
-    // Loop over tiles in K dimension
-    for (int t = 0; t < (K + TILE - 1) / TILE; ++t)
-    {
-        int kA = t * TILE + threadIdx.x;
-        int kB = t * TILE + threadIdx.y;
-
-        // Load A tile (row-major)
-        As[threadIdx.y][threadIdx.x] =
-            (row < M && kA < K)
-                ? A[row * K + kA]
-                : 0.0;
-
-        // Load B tile (row-major)
-        Bs[threadIdx.y][threadIdx.x] =
-            (kB < K && col < N)
-                ? B[kB * N + col]
-                : 0.0;
-
-        __syncthreads();
-
-        #pragma unroll
-        for (int i = 0; i < TILE; ++i)
-        {
-            sum += As[threadIdx.y][i] * Bs[i][threadIdx.x];
-        }
-
-        __syncthreads();
-    }
-
-    if (row < M && col < N)
-    {
-        X[row * N + col] = k * sum + l * C[row * N + col];
-    }
+    // X = k*A*B + l*X
+    CUBLAS_CHECK(cublasSgemm(
+        handle,
+        CUBLAS_OP_N, CUBLAS_OP_N,
+        M,    // rows
+        N,    // cols
+        K,
+        &k,
+        d_A, M,
+        d_B, K,
+        &l,
+        d_X, M
+    ));
 }
 
 
 
-inline void dgemm_cuda(const double* d_A,
-                       const double* d_B,
-                       const double* d_C,
-                       double* d_X,
-                       const double k, 
-                       const double l,
-                       const int M, 
-                       const int N,
-                       const int K,
-                       cudaStream_t stream = 0)
-{
-    constexpr int TILE = 16;
-
-    dim3 block(TILE, TILE);
-    dim3 grid((N + TILE - 1) / TILE,
-              (M + TILE - 1) / TILE);
-
-    dgemm_kernel_tiled<<<grid, block, 0, stream>>>(
-        d_A, d_B, d_C, d_X, k, l, M, N, K);
-
-    CUDA_CHECK(cudaGetLastError());
-}
-
-
-
-Matrix<double> dgemm_serial(double alpha,
-                            const Matrix<double>& A,
-                            const Matrix<double>& B,
-                            double beta,
-                            const Matrix<double>& C)
+Matrix<float> gemm_serial(float alpha,
+                            const Matrix<float>& A,
+                            const Matrix<float>& B,
+                            float beta,
+                            const Matrix<float>& C)
 {
     const std::size_t M = A.rows();
     const std::size_t K = A.cols();
@@ -128,7 +95,7 @@ Matrix<double> dgemm_serial(double alpha,
     if (C.rows() != M || C.cols() != N)
         throw std::invalid_argument("C must be M x N");
 
-    Matrix<double> X(M, N);
+    Matrix<float> X(M, N);
 
     // X = beta * C
     for (std::size_t i = 0; i < M; ++i)
@@ -144,7 +111,7 @@ Matrix<double> dgemm_serial(double alpha,
     {
         for (std::size_t k = 0; k < K; ++k)
         {
-            const double a_ik = alpha * A(i, k);
+            const auto a_ik = alpha * A(i, k);
 
             for (std::size_t j = 0; j < N; ++j)
             {
@@ -180,9 +147,9 @@ int main(int argc, char** argv)
     std::uniform_real_distribution<double> dist(0.0, 1.0);  // [0.0, 1.0)
 
     // Set up Matrices
-    Matrix<double>A {M, K};
-    Matrix<double>B {K, N};
-    Matrix<double>C {M, N};
+    Matrix<float>A {M, K};
+    Matrix<float>B {K, N};
+    Matrix<float>C {M, N};
 
     // Check matrix sizes
     if (A.rows() != M || A.cols() != K)
@@ -195,13 +162,13 @@ int main(int argc, char** argv)
         throw std::invalid_argument("C must be M x N");
 
     // Fill with random data
-    const auto k = dist(rng);
-    const auto l = dist(rng);
+    const auto k = static_cast<float>(dist(rng));
+    const auto l = static_cast<float>(dist(rng));
     A.random_fill(rng, dist);
     B.random_fill(rng, dist);
     C.random_fill(rng, dist);
 
-    Matrix<double>X_expected = dgemm_serial(k, A, B, l, C);
+    Matrix<float>X_expected = gemm_serial(k, A, B, l, C);
     const auto expected_value = helper::check_sum(X_expected.vector());
     std::cout << expected_value << std::endl;
 
@@ -211,25 +178,32 @@ int main(int argc, char** argv)
     auto t0 = std::chrono::steady_clock::now();
 
     // Allocate device memory once
-    double* d_A = nullptr;
-    double* d_B = nullptr;
-    double* d_C = nullptr;
-    double* d_X = nullptr;
+    float* d_A = nullptr;
+    float* d_B = nullptr;
+    float* d_C = nullptr;
+    float* d_X = nullptr;
 
-    CUDA_CHECK(cudaMalloc(&d_A, A.vector().size() * sizeof(double)));          // rows*cols
-    CUDA_CHECK(cudaMalloc(&d_B, B.vector().size() * sizeof(double)));          // cols*rows
-    CUDA_CHECK(cudaMalloc(&d_C, C.vector().size() * sizeof(double)));          // rows*rows
-    CUDA_CHECK(cudaMalloc(&d_X, M * N * sizeof(double)));
+    CUDA_CHECK(cudaMalloc(&d_A, A.vector().size() * sizeof(float)));          // rows*cols
+    CUDA_CHECK(cudaMalloc(&d_B, B.vector().size() * sizeof(float)));          // cols*rows
+    CUDA_CHECK(cudaMalloc(&d_C, C.vector().size() * sizeof(float)));          // rows*rows
+    CUDA_CHECK(cudaMalloc(&d_X, M * N * sizeof(float)));
+
+    cublasHandle_t handle;
+    CUBLAS_CHECK(cublasCreate(&handle));
 
     // Copy once (async copies are fine; sync before timing loop if needed)
-    CUDA_CHECK(cudaMemcpy(d_A, A.vector().data(),
-                        A.vector().size() * sizeof(double),
+    auto A_col = A.vector_column_major();
+    auto B_col = B.vector_column_major();
+    auto C_col = C.vector_column_major();
+
+    CUDA_CHECK(cudaMemcpy(d_A, A_col.data(),
+                        A_col.size() * sizeof(float),
                         cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(d_B, B.vector().data(),
-                        B.vector().size() * sizeof(double),
+    CUDA_CHECK(cudaMemcpy(d_B, B_col.data(),
+                        B_col.size() * sizeof(float),
                         cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(d_C, C.vector().data(),
-                        C.vector().size() * sizeof(double),
+    CUDA_CHECK(cudaMemcpy(d_C, C_col.data(),
+                        C_col.size() * sizeof(float),
                         cudaMemcpyHostToDevice));
 
 
@@ -239,14 +213,13 @@ int main(int argc, char** argv)
     const auto deadline = t1 + std::chrono::duration<double>(test_time_seconds);
     std::uint64_t iters = 0;
 
-    Matrix<double>X {M, N};
+    Matrix<float>X {M, N};
 
     // Test starts
     do 
     {
-        //X = dgemm_serial(k, A, B, l, C);
-        dgemm_cuda(d_A, d_B, d_C, d_X, k, l, M, N, K);
-        // Ensure the iteration completed before counting it
+        // X = C
+        gemm_cublas(d_A, d_B, d_C, d_X, k, l, M, N, K, handle);
         CUDA_CHECK(cudaDeviceSynchronize());
         iters++;
     } 
@@ -257,11 +230,14 @@ int main(int argc, char** argv)
     // Clean up
     const auto t2 = std::chrono::steady_clock::now();
 
-    CUDA_CHECK(cudaMemcpy(X.vector().data(), d_X,
-                        X.vector().size() * sizeof(double),
+    std::vector<float> X_col(M * N);
+    CUDA_CHECK(cudaMemcpy(X_col.data(), d_X,
+                        X_col.size() * sizeof(float),
                         cudaMemcpyDeviceToHost));
+    X.load_from_column_major(X_col);
 
     // Clean up
+    CUBLAS_CHECK(cublasDestroy(handle));
     CUDA_CHECK(cudaFree(d_A));
     CUDA_CHECK(cudaFree(d_B));
     CUDA_CHECK(cudaFree(d_C));
@@ -286,13 +262,13 @@ int main(int argc, char** argv)
     const std::string operation_string = "gemm"; 
 
     const auto matrix_size {std::to_string(M) + "x" + std::to_string(K) + "_by_" + std::to_string(K) + "x" + std::to_string(N)};
-    const auto method {std::string("Parallel CUDA " + matrix_size)};
+    const auto method {std::string("Parallel CUDA cuBLAS 32 " + matrix_size)};
     const auto comments {std::string("operation:") + std::string(operation_string)};
 
     // Output
     {
 
-        const std::string base_file_name = "results/parallel_cuda_" + matrix_size + "_" + std::string(operation_string);
+        const std::string base_file_name = "results/parallel_cuda_cublas_32_" + matrix_size + "_" + std::string(operation_string);
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
 
         nlohmann::json j;
@@ -303,7 +279,7 @@ int main(int argc, char** argv)
         j["operation"] = operation_string;
         j["comments"] = comments;
         j["threads"] = 1;
-        j["precision"] = "64";
+        j["precision"] = "32";
         j["device"] = "GPU";
         j["M"] = M;
         j["N"] = N;

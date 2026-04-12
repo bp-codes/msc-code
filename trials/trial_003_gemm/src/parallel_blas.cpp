@@ -201,7 +201,7 @@ int main(int argc, char** argv)
     // Output
     {
 
-        const std::string base_file_name = "results/parallel_blas_" + std::string(operation_string);
+        const std::string base_file_name = "results/parallel_blas_" + matrix_size + "_" + std::string(operation_string);
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
 
         nlohmann::json j;

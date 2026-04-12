@@ -47,7 +47,7 @@ Matrix<float> dgemm_cblas(
     Matrix<float> X{M, N};
     X = C;  // so beta * C has the right starting values
 
-    cblas_dgemm(
+    cblas_sgemm(
         CblasRowMajor,
         CblasNoTrans,
         CblasNoTrans,
@@ -118,10 +118,10 @@ Matrix<float> dgemm_serial(float alpha,
                     for (std::size_t k = kb; k < k_max; ++k)
                     {
                         const auto kN = k * N;
-                        const float a_ik = alpha * A_data[i * K + k];
+                        const auto a_ik = alpha * A_data[i * K + k];
 
-                        const float* Bk = &B_data[kN];
-                        float* Xi = &X_data[iN];
+                        const auto* Bk = &B_data[kN];
+                        auto* Xi = &X_data[iN];
 
                         #pragma omp simd
                         for (std::size_t j = jb; j < j_max; ++j)
@@ -224,13 +224,13 @@ int main(int argc, char** argv)
     const std::string operation_string = "gemm"; 
 
     const auto matrix_size {std::to_string(M) + "x" + std::to_string(K) + "_by_" + std::to_string(K) + "x" + std::to_string(N)};
-    const auto method {std::string("Serial Optimized " + matrix_size)};
+    const auto method {std::string("Serial Optimized 32 " + matrix_size)};
     const auto comments {std::string("operation:") + std::string(operation_string)};
 
     // Output
     {
 
-        const std::string base_file_name = "results/serial_optimized_" + matrix_size + "_" + std::string(operation_string);
+        const std::string base_file_name = "results/serial_optimized_32_" + matrix_size + "_" + std::string(operation_string);
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
 
         nlohmann::json j;
