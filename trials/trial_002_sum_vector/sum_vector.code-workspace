@@ -5,6 +5,35 @@
 		}
 	],
 	"settings": {
+		// ---- C++ formatting ----
+		"[cpp]": {
+		"editor.defaultFormatter": "xaver.clang-format",
+		"editor.formatOnSave": true,
+		"editor.formatOnPaste": true
+		},
+
+		// Use clang-format (not MS formatter)
+		"C_Cpp.formatting": "clangFormat",
+
+		// Always use project .clang-format
+		"clang-format.style": "file",
+
+		// ---- Whitespace (cpplint critical) ----
+		"files.trimTrailingWhitespace": true,
+		"files.insertFinalNewline": true,
+		"files.trimFinalNewlines": true,
+
+		// ---- Line length guidance ----
+		"editor.rulers": [120],
+
+		// ---- Includes ----
+		"editor.codeActionsOnSave": {
+			"source.organizeImports": "explicit"
+		},
+
+		// ---- Indentation ----
+		"editor.tabSize": 4,
+		"editor.insertSpaces": true,
 		"files.associations": {
 			"ostream": "cpp",
 			"cctype": "cpp",

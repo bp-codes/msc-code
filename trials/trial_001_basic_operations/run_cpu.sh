@@ -1,24 +1,21 @@
 #!/bin/bash
 
-#  ./bin/precise.x 5.0 1000000 add
-#  ./bin/serial.x 5.0 1000000 add
-
 set -euo pipefail
-
-
-./bin/precise.x 5.0 1000000 add
-./bin/precise.x 5.0 1000000 multiply
-./bin/precise.x 5.0 1000000 divide
-./bin/precise.x 5.0 1000000 power
-./bin/precise.x 5.0 1000000 exp
-./bin/precise.x 5.0 1000000 log
-./bin/precise.x 5.0 1000000 sqrt
-
-
-RUNS=1
 export NUM_THREADS=6
-
 mkdir -p results
+
+RUNS=3
+RUN_TIME=10.0
+VECTOR_SIZE=1000000
+
+# Precise
+./bin/precise.x "$RUN_TIME" "$VECTOR_SIZE" add
+./bin/precise.x "$RUN_TIME" "$VECTOR_SIZE" multiply
+./bin/precise.x "$RUN_TIME" "$VECTOR_SIZE" divide
+./bin/precise.x "$RUN_TIME" "$VECTOR_SIZE" power
+./bin/precise.x "$RUN_TIME" "$VECTOR_SIZE" exp
+./bin/precise.x "$RUN_TIME" "$VECTOR_SIZE" log
+./bin/precise.x "$RUN_TIME" "$VECTOR_SIZE" sqrt
 
 # Each entry: "executable arguments"
 apps=(
@@ -60,8 +57,10 @@ do
         for ((i=1; i<=RUNS; i++))
         do
             echo "  Run $i"
-            "$app" 5.0 1000000 "$op"
+            "$app" "$RUN_TIME" "$VECTOR_SIZE" "$op"
         done
+
+        sleep 10
 
     done
 done

@@ -47,6 +47,7 @@ trap 'echo "Error on line $LINENO (exit code $?)" >&2' ERR
          src/parallel_thread_simd.cpp \
         -o bin/parallel_thread_simd.x \
         -ltbb
+
     g++ -std=c++23 -O3 -march=native -ffast-math \
          -fopenmp \
          src/parallel_openmp.cpp \
@@ -107,6 +108,7 @@ trap 'echo "Error on line $LINENO (exit code $?)" >&2' ERR
          src/parallel_thread_simd_32.cpp \
         -o bin/parallel_thread_simd_32.x \
         -ltbb
+        
     g++ -std=c++23 -O3 -march=native -ffast-math \
          -fopenmp \
          src/parallel_openmp_32.cpp \

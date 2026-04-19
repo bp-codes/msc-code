@@ -298,14 +298,14 @@ int main(int argc, char** argv)
     const auto time_total_s {std::chrono::duration<double>(t3 - t0).count()};
     const auto time_per_iteration_s {time_calc_s / static_cast<double>(iters)};
 
-    const auto method {std::string("Parallel Transform")};
+    const auto method {std::string("Parallel STL Transform")};
     const auto comments {std::string("stopping_power")};
     const auto passed_check {(std::abs(calculated_value - expected_value) < 1.0e-9)};
 
     // Output
     {
 
-        const std::string base_file_name = "results/parallel_transform";
+        const std::string base_file_name = "results/parallel_stl_transform";
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
 
         nlohmann::json j;

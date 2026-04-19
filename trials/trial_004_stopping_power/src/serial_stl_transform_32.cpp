@@ -1,4 +1,5 @@
 // serial.cpp
+
 #include <chrono>
 #include <cmath>
 #include <cstdint>
@@ -17,8 +18,6 @@
 #include "json.hpp"
 #include "helper.hpp"
 #include "Error.hpp"
-
-#include <execution>
 
 
 
@@ -84,9 +83,6 @@ static inline float stopping_power(
     const auto gamma2 {std::max(0.0f, inv_one_minus_beta2)};
     const auto gamma {std::sqrt(gamma2)};
 
-    // Total energy E = gamma * M c^2 [MeV]
-    const auto total_energy_mev {std::max(0.0f, gamma * projectile_atomic_mass_mev)};
-
     // Maximum energy transfer W_max (PDG Eq. 34.4)
     const auto electron_to_projectile_mass {ELECTRON_MASS_MEV / std::max(SMALL_VALUE, projectile_atomic_mass_mev)};
 
@@ -107,7 +103,7 @@ static inline float stopping_power(
         SMALL_VALUE);
 
     // Square-bracketed term (PDG Eq. 34.5 + optional corrections)
-    auto bracket =
+    const auto bracket =
         0.5f * std::log(log_argument)
       - beta2
       - 0.5f * density_effect_delta;
@@ -171,7 +167,7 @@ static inline void serial_task(
 
 
 /**
- * @brief Compute stopping power for an array of projectile velocities (parallel).
+ * @brief Compute stopping power for an array of projectile velocities (serial).
  *
  * @param velocity_array Projectile velocities in m/s.
  * @param results Output array (must be pre-sized to match velocity_array).
@@ -179,7 +175,7 @@ static inline void serial_task(
  * @warning
  *      This routine does not validate sizes; callers must ensure `results.size() == velocity_array.size()`.
  */
-static inline void parallel_task(
+static inline void serial_task_stl(
     const std::vector<float>& velocity_array,
     std::vector<float>& results)
 {
@@ -195,14 +191,11 @@ static inline void parallel_task(
     static constexpr auto DENSITY_EFFECT_DELTA {0.0f};
     static constexpr auto SHELL_CORRECTION_C_OVER_Z {0.0f};
 
-    const auto n {std::size_t(velocity_array.size())};
-
     std::transform(
-        std::execution::par,
         velocity_array.begin(),
         velocity_array.end(),
         results.begin(),
-        [=](const float velocity)
+        [](const auto& velocity)
         {
             return stopping_power(
                 velocity,
@@ -220,7 +213,6 @@ static inline void parallel_task(
 
 int main(int argc, char** argv)
 {
-
     // Must have 3 arguments
     if (argc < 3)
     {
@@ -249,8 +241,7 @@ int main(int argc, char** argv)
     velocity_array.reserve(n);
 
     // Populate vectors
-    std::generate_n(std::back_inserter(velocity_array), n, [&]()
-    {
+    std::generate_n(std::back_inserter(velocity_array), n, [&]() {
         return static_cast<float>(dist(rng));
     });
 
@@ -275,9 +266,8 @@ int main(int argc, char** argv)
     auto stopping_power_values {std::vector<float>(n)};
 
     // Do as many times as possible before time runs out
-    do
-    {
-        parallel_task(velocity_array, stopping_power_values);
+    do {
+        serial_task_stl(velocity_array, stopping_power_values);
         iters++;
     }
     while (std::chrono::steady_clock::now() < deadline);
@@ -298,21 +288,20 @@ int main(int argc, char** argv)
     const auto time_total_s {std::chrono::duration<double>(t3 - t0).count()};
     const auto time_per_iteration_s {time_calc_s / static_cast<double>(iters)};
 
-    const auto method {std::string("Parallel Transform 32")};
+    const auto method {std::string("Serial STL Transform 32")};
     const auto comments {std::string("stopping_power")};
     const auto passed_check {(std::abs(calculated_value - expected_value) < 1.0e-9)};
 
     // Output
     {
 
-        const std::string base_file_name = "results/parallel_transform_32";
+        const std::string base_file_name = "results/serial_stl_transform_32";
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
 
         // Cast to double for output
         auto stopping_power_values_out {std::vector<double>{}};
         stopping_power_values_out.reserve(stopping_power_values.size());
-        for (auto i = std::size_t(0); i < stopping_power_values.size(); i++)
-        {
+        for (auto i = std::size_t(0); i < stopping_power_values.size(); i++) {
             stopping_power_values_out.emplace_back(static_cast<double>(stopping_power_values[i]));
         }
 
@@ -323,7 +312,8 @@ int main(int argc, char** argv)
         j["method"] = method;
         j["operation"] = "Bethe-Bloch Stopping Power";
         j["comments"] = comments;
-        j["threads"] = helper::get_num_threads();
+        j["threads"] = 1;
+        j["precision"] = "64";
         j["device"] = "CPU";
 
         // Iteration/timing            

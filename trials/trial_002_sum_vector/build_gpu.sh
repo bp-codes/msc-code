@@ -54,6 +54,23 @@ acpp -std=c++23 -O3 -march=native -ffast-math \
      -o bin/parallel_sycl_reduction_32.x
 
 
+nvcc -std=c++20 -O3  \
+    -Xcompiler "-march=native -ffast-math" \
+    src/parallel_cuda_32.cu \
+    -o bin/parallel_cuda_32.x
+
+
+nvcc -std=c++20 -O3  \
+    -Xcompiler "-march=native -ffast-math" \
+    src/parallel_cuda_thrust_32.cu \
+    -o bin/parallel_cuda_thrust_32.x
+
+
+g++ -std=c++23 -O3 -march=native -ffast-math \
+    src/parallel_opencl_32.cpp \
+    -o bin/parallel_opencl_32.x \
+    -lOpenCL
+
 
 
 
