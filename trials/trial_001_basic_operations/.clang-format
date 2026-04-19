@@ -1,0 +1,76 @@
+---
+Language: Cpp
+
+# ---- Core style ----
+BasedOnStyle: Google
+IndentWidth: 4
+ContinuationIndentWidth: 4
+TabWidth: 8
+UseTab: Never
+ColumnLimit: 100
+
+# ---- Braces (K&R) ----
+BreakBeforeBraces: Attach
+BraceWrapping:
+  AfterFunction: false
+  AfterClass: false
+  AfterControlStatement: Never
+
+# ---- Spacing ----
+SpaceBeforeParens: ControlStatements
+SpaceBeforeAssignmentOperators: true
+SpacesInParens: Never
+SpacesInAngles: Never
+SpacesInContainerLiterals: true
+
+# ---- Includes (IMPORTANT for cpplint) ----
+SortIncludes: true
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^".*\.h"'        # main / local headers first
+    Priority: 0
+  - Regex: '^<.*\.h>'        # C system headers
+    Priority: 1
+  - Regex: '^<.*>'           # C++ system headers
+    Priority: 2
+  - Regex: '.*'              # everything else
+    Priority: 3
+
+# ---- Alignment ----
+AlignAfterOpenBracket: Align
+AlignOperands: Align
+AlignTrailingComments: true
+
+# ---- Short statements ----
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+
+# ---- Functions ----
+AlwaysBreakAfterDefinitionReturnType: None
+AlwaysBreakAfterReturnType: None
+
+# ---- Constructors ----
+BreakConstructorInitializers: BeforeColon
+ConstructorInitializerIndentWidth: 4
+
+# ---- Comments ----
+ReflowComments: true
+SpacesBeforeTrailingComments: 2
+
+# ---- Pointers ----
+PointerAlignment: Left
+DerivePointerAlignment: false
+
+# ---- Indentation ----
+IndentCaseLabels: true
+AccessModifierOffset: -4
+
+# ---- Misc ----
+FixNamespaceComments: true
+EmptyLineAfterAccessModifier: Never
+EmptyLineBeforeAccessModifier: LogicalBlock
+
+# ---- Line endings ----
+InsertNewlineAtEOF: true
+---

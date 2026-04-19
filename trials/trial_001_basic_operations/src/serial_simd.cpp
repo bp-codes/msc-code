@@ -1,201 +1,165 @@
-// serial.cpp
+/**
+ * @file serial_simd.cpp
+ * @brief
+ *
+ * @author Ben Palmer
+ * @date 2026
+ *
+ * @copyright
+ * Copyright (c) 2026 Ben Palmer
+ * SPDX-License-Identifier: MIT
+ */
+
+#include <immintrin.h>
+#include <sys/resource.h>
+
 #include <algorithm>
 #include <charconv>
 #include <chrono>
 #include <cmath>
-#include <sys/resource.h>
 #include <cstdint>
-#include <iostream>
-#include <iomanip>
 #include <fstream>
+#include <iomanip>
+#include <iostream>
 #include <random>
 #include <string>
 #include <string_view>
 #include <vector>
-#include <immintrin.h>
+
 #include "Error.hpp"
 #include "helper.hpp"
 #include "json.hpp"
 
 using OperationKind = helper::OperationKind;
 
-namespace
-{
+namespace {
 
-inline constexpr double MIN_DENOMINATOR {1.0e-9};
-inline constexpr std::uint64_t RNG_SEED {123456789ULL};
-
-
+inline constexpr double MIN_DENOMINATOR{1.0e-9};
+inline constexpr std::uint64_t RNG_SEED{123456789ULL};
 
 /**
  * @brief SIMD: c[i] = a[i] + b[i]
  */
-void serial_add(
-    const std::vector<double>& numbers_a,
-    const std::vector<double>& numbers_b,
-    std::vector<double>& numbers_c)
-{
-    const auto n {std::size_t(numbers_a.size())};
-    auto i {std::size_t(0)};
+void serial_add(const std::vector<double>& numbers_a, const std::vector<double>& numbers_b,
+                std::vector<double>& numbers_c) {
+    const auto n{std::size_t(numbers_a.size())};
+    auto i{std::size_t(0)};
 
-    for (; i + 4 <= n; i += 4)
-    {
-        const auto va {_mm256_loadu_pd(&numbers_a[i])};
-        const auto vb {_mm256_loadu_pd(&numbers_b[i])};
-        const auto vc {_mm256_add_pd(va, vb)};
+    for (; i + 4 <= n; i += 4) {
+        const auto va{_mm256_loadu_pd(&numbers_a[i])};
+        const auto vb{_mm256_loadu_pd(&numbers_b[i])};
+        const auto vc{_mm256_add_pd(va, vb)};
         _mm256_storeu_pd(&numbers_c[i], vc);
     }
 
-    for (; i < n; i++)
-    {
+    for (; i < n; i++) {
         numbers_c[i] = numbers_a[i] + numbers_b[i];
     }
 }
 
-
-
 /**
  * @brief SIMD: c[i] = a[i] * b[i]
  */
-void serial_multiply(
-    const std::vector<double>& numbers_a,
-    const std::vector<double>& numbers_b,
-    std::vector<double>& numbers_c)
-{
-    const auto n {std::size_t(numbers_a.size())};
-    auto i {std::size_t(0)};
+void serial_multiply(const std::vector<double>& numbers_a, const std::vector<double>& numbers_b,
+                     std::vector<double>& numbers_c) {
+    const auto n{std::size_t(numbers_a.size())};
+    auto i{std::size_t(0)};
 
-    for (; i + 4 <= n; i += 4)
-    {
-        const auto va {_mm256_loadu_pd(&numbers_a[i])};
-        const auto vb {_mm256_loadu_pd(&numbers_b[i])};
-        const auto vc {_mm256_mul_pd(va, vb)};
+    for (; i + 4 <= n; i += 4) {
+        const auto va{_mm256_loadu_pd(&numbers_a[i])};
+        const auto vb{_mm256_loadu_pd(&numbers_b[i])};
+        const auto vc{_mm256_mul_pd(va, vb)};
         _mm256_storeu_pd(&numbers_c[i], vc);
     }
 
-    for (; i < n; i++)
-    {
+    for (; i < n; i++) {
         numbers_c[i] = numbers_a[i] * numbers_b[i];
     }
 }
 
-
-
 /**
  * @brief SIMD: c[i] = a[i] / max(b[i], MIN_DENOMINATOR)
  */
-void serial_divide(
-    const std::vector<double>& numbers_a,
-    const std::vector<double>& numbers_b,
-    std::vector<double>& numbers_c)
-{
-    const auto n {std::size_t(numbers_a.size())};
-    auto i {std::size_t(0)};
+void serial_divide(const std::vector<double>& numbers_a, const std::vector<double>& numbers_b,
+                   std::vector<double>& numbers_c) {
+    const auto n{std::size_t(numbers_a.size())};
+    auto i{std::size_t(0)};
 
-    const auto epsilon {_mm256_set1_pd(MIN_DENOMINATOR)};
+    const auto epsilon{_mm256_set1_pd(MIN_DENOMINATOR)};
 
-    for (; i + 4 <= n; i += 4)
-    {
-        const auto va {_mm256_loadu_pd(&numbers_a[i])};
-        auto vb {_mm256_loadu_pd(&numbers_b[i])};
+    for (; i + 4 <= n; i += 4) {
+        const auto va{_mm256_loadu_pd(&numbers_a[i])};
+        auto vb{_mm256_loadu_pd(&numbers_b[i])};
 
         vb = _mm256_max_pd(vb, epsilon);
 
-        const auto vc {_mm256_div_pd(va, vb)};
+        const auto vc{_mm256_div_pd(va, vb)};
         _mm256_storeu_pd(&numbers_c[i], vc);
     }
 
-    for (; i < n; i++)
-    {
+    for (; i < n; i++) {
         numbers_c[i] = numbers_a[i] / std::fmax(numbers_b[i], MIN_DENOMINATOR);
     }
 }
 
-
-
 /**
  * @brief Element-wise power: c[i] = pow(a[i], b[i])
  */
-void serial_power(
-    const std::vector<double>& numbers_a,
-    const std::vector<double>& numbers_b,
-    std::vector<double>& numbers_c)
-{
-    const auto n {std::size_t(numbers_a.size())};
-    for (auto i = std::size_t(0); i < n; i++)
-    {
+void serial_power(const std::vector<double>& numbers_a, const std::vector<double>& numbers_b,
+                  std::vector<double>& numbers_c) {
+    const auto n{std::size_t(numbers_a.size())};
+    for (auto i = std::size_t(0); i < n; i++) {
         numbers_c[i] = std::pow(numbers_a[i], numbers_b[i]);
     }
 }
 
-
-
 /**
  * @brief Element-wise exp sum: c[i] = exp(a[i]) + exp(b[i]) [no portable intrinsic for exp]
  */
-void serial_exp(
-    const std::vector<double>& numbers_a,
-    const std::vector<double>& numbers_b,
-    std::vector<double>& numbers_c)
-{
-    const auto n {std::size_t(numbers_a.size())};
-    for (auto i = std::size_t(0); i < n; i++)
-    {
+void serial_exp(const std::vector<double>& numbers_a, const std::vector<double>& numbers_b,
+                std::vector<double>& numbers_c) {
+    const auto n{std::size_t(numbers_a.size())};
+    for (auto i = std::size_t(0); i < n; i++) {
         numbers_c[i] = std::exp(numbers_a[i]) + std::exp(numbers_b[i]);
     }
 }
-
-
 
 /**
  * @brief Element-wise log sum: c[i] = log(a[i]) + log(b[i])  [no portable intrinsic for exp]
  * @warning Inputs must be > 0. No bounds/validity checking is performed in this hot loop.
  */
-void serial_log(
-    const std::vector<double>& numbers_a,
-    const std::vector<double>& numbers_b,
-    std::vector<double>& numbers_c)
-{
-    const auto n {std::size_t(numbers_a.size())};
-    for (auto i = std::size_t(0); i < n; i++)
-    {
+void serial_log(const std::vector<double>& numbers_a, const std::vector<double>& numbers_b,
+                std::vector<double>& numbers_c) {
+    const auto n{std::size_t(numbers_a.size())};
+    for (auto i = std::size_t(0); i < n; i++) {
         numbers_c[i] = std::log(numbers_a[i]) + std::log(numbers_b[i]);
     }
 }
-
-
 
 /**
  * @brief SIMD: c[i] = sqrt(a[i]) + sqrt(b[i])  [no portable intrinsic for exp]
  * @warning Inputs must be >= 0. No bounds/validity checking is performed in this hot loop.
  */
-void serial_sqrt(
-    const std::vector<double>& numbers_a,
-    const std::vector<double>& numbers_b,
-    std::vector<double>& numbers_c)
-{
-    const auto n {std::size_t(numbers_a.size())};
-    auto i {std::size_t(0)};
+void serial_sqrt(const std::vector<double>& numbers_a, const std::vector<double>& numbers_b,
+                 std::vector<double>& numbers_c) {
+    const auto n{std::size_t(numbers_a.size())};
+    auto i{std::size_t(0)};
 
-    for (; i + 4 <= n; i += 4)
-    {
-        const auto va {_mm256_loadu_pd(&numbers_a[i])};
-        const auto vb {_mm256_loadu_pd(&numbers_b[i])};
+    for (; i + 4 <= n; i += 4) {
+        const auto va{_mm256_loadu_pd(&numbers_a[i])};
+        const auto vb{_mm256_loadu_pd(&numbers_b[i])};
 
-        const auto sa {_mm256_sqrt_pd(va)};
-        const auto sb {_mm256_sqrt_pd(vb)};
-        const auto vc {_mm256_add_pd(sa, sb)};
+        const auto sa{_mm256_sqrt_pd(va)};
+        const auto sb{_mm256_sqrt_pd(vb)};
+        const auto vc{_mm256_add_pd(sa, sb)};
 
         _mm256_storeu_pd(&numbers_c[i], vc);
     }
 
-    for (; i < n; i++)
-    {
+    for (; i < n; i++) {
         numbers_c[i] = std::sqrt(numbers_a[i]) + std::sqrt(numbers_b[i]);
     }
 }
-
-
 
 /**
  * @brief Dispatch the selected operation.
@@ -204,46 +168,34 @@ void serial_sqrt(
  * @param numbers_b Second input vector.
  * @param numbers_c Output vector (must be pre-sized).
  */
-void serial_task(
-    OperationKind operation,
-    const std::vector<double>& numbers_a,
-    const std::vector<double>& numbers_b,
-    std::vector<double>& numbers_c)
-{
-    switch (operation)
-    {
-        case OperationKind::Add:
-        {
+void serial_task(OperationKind operation, const std::vector<double>& numbers_a,
+                 const std::vector<double>& numbers_b, std::vector<double>& numbers_c) {
+    switch (operation) {
+        case OperationKind::Add: {
             serial_add(numbers_a, numbers_b, numbers_c);
             return;
         }
-        case OperationKind::Multiply:
-        {
+        case OperationKind::Multiply: {
             serial_multiply(numbers_a, numbers_b, numbers_c);
             return;
         }
-        case OperationKind::Divide:
-        {
+        case OperationKind::Divide: {
             serial_divide(numbers_a, numbers_b, numbers_c);
             return;
         }
-        case OperationKind::Power:
-        {
+        case OperationKind::Power: {
             serial_power(numbers_a, numbers_b, numbers_c);
             return;
         }
-        case OperationKind::Exp:
-        {
+        case OperationKind::Exp: {
             serial_exp(numbers_a, numbers_b, numbers_c);
             return;
         }
-        case OperationKind::Log:
-        {
+        case OperationKind::Log: {
             serial_log(numbers_a, numbers_b, numbers_c);
             return;
         }
-        case OperationKind::Sqrt:
-        {
+        case OperationKind::Sqrt: {
             serial_sqrt(numbers_a, numbers_b, numbers_c);
             return;
         }
@@ -252,53 +204,45 @@ void serial_task(
     THROW_RUNTIME_ERROR("Unhandled OperationKind value.");
 }
 
-
-} // namespace
-
+}  // namespace
 
 /**
  * @brief Entry point into program.
  */
-int main(int argc, char** argv)
-{
-    try
-    {
-        if (argc < 4)
-        {
+int main(int argc, char** argv) {
+    try {
+        if (argc < 4) {
             THROW_INVALID_ARGUMENT("Usage: serial.x time_limit vec_size operation");
         }
 
-        const auto test_time_seconds {helper::parse_floating_point(argv[1])};
-        const auto n {helper::parse_size(argv[2])};
-        const auto operation_string {std::string_view(argv[3])};
-        const auto operation {helper::parse_operation(operation_string)};
+        const auto test_time_seconds{helper::parse_floating_point(argv[1])};
+        const auto n{helper::parse_size(argv[2])};
+        const auto operation_string{std::string_view(argv[3])};
+        const auto operation{helper::parse_operation(operation_string)};
 
-        if (test_time_seconds <= 0.0)
-        {
+        if (test_time_seconds <= 0.0) {
             THROW_INVALID_ARGUMENT("time_limit must be > 0.");
         }
-        if (n == 0)
-        {
+        if (n == 0) {
             THROW_INVALID_ARGUMENT("vec_size must be > 0.");
         }
 
         std::mt19937_64 rng(RNG_SEED);
         std::uniform_real_distribution<double> dist(1.0, 2.0);
 
-        auto numbers_a {std::vector<double>{}};
-        auto numbers_b {std::vector<double>{}};
+        auto numbers_a{std::vector<double>{}};
+        auto numbers_b{std::vector<double>{}};
         numbers_a.reserve(n);
         numbers_b.reserve(n);
 
-        for (auto i = std::size_t(0); i < n; i++)
-        {
+        for (auto i = std::size_t(0); i < n; i++) {
             numbers_a.emplace_back(dist(rng));
             numbers_b.emplace_back(dist(rng));
         }
 
-        auto expected_value {0.0};
+        auto expected_value{0.0};
         {
-            auto numbers_c {std::vector<double>(n)};
+            auto numbers_c{std::vector<double>(n)};
             helper::validate_sizes(numbers_a, numbers_b, numbers_c);
 
             serial_task(operation, numbers_a, numbers_b, numbers_c);
@@ -309,45 +253,44 @@ int main(int argc, char** argv)
 
         // ======= Calculation Starts ========
 
-        const auto t0 {std::chrono::steady_clock::now()};
+        const auto t0{std::chrono::steady_clock::now()};
 
-        const auto t1 {std::chrono::steady_clock::now()};
-        const auto deadline {t1 + std::chrono::duration<double>(test_time_seconds)};
+        const auto t1{std::chrono::steady_clock::now()};
+        const auto deadline{t1 + std::chrono::duration<double>(test_time_seconds)};
 
-        auto iters {std::uint64_t(0)};
-        auto numbers_c {std::vector<double>(n)};
+        auto iters{std::uint64_t(0)};
+        auto numbers_c{std::vector<double>(n)};
         helper::validate_sizes(numbers_a, numbers_b, numbers_c);
 
-        do
-        {
+        do {
             serial_task(operation, numbers_a, numbers_b, numbers_c);
             iters++;
-        }
-        while (std::chrono::steady_clock::now() < deadline);
+        } while (std::chrono::steady_clock::now() < deadline);
 
-        const auto t2 {std::chrono::steady_clock::now()};
-        const auto t3 {std::chrono::steady_clock::now()};
+        const auto t2{std::chrono::steady_clock::now()};
+        const auto t3{std::chrono::steady_clock::now()};
 
         // ======= Calculation Ends ========
 
-        const auto calculated_value {helper::check_sum(numbers_c)};
+        const auto calculated_value{helper::check_sum(numbers_c)};
 
-        const auto time_setup {std::chrono::duration<double>(t1 - t0).count()};
-        const auto time_calc {std::chrono::duration<double>(t2 - t1).count()};
-        const auto time_cleanup {std::chrono::duration<double>(t3 - t2).count()};
-        const auto time_total {std::chrono::duration<double>(t3 - t0).count()};
-        const auto time_per_iteration {time_calc / static_cast<double>(iters)};
+        const auto time_setup{std::chrono::duration<double>(t1 - t0).count()};
+        const auto time_calc{std::chrono::duration<double>(t2 - t1).count()};
+        const auto time_cleanup{std::chrono::duration<double>(t3 - t2).count()};
+        const auto time_total{std::chrono::duration<double>(t3 - t0).count()};
+        const auto time_per_iteration{time_calc / static_cast<double>(iters)};
 
-        const auto passed_check {std::abs(calculated_value - expected_value) < 1.0e-9};
+        const auto passed_check{std::abs(calculated_value - expected_value) < 1.0e-9};
 
-        const auto method {std::string("Serial SIMD")};
-        const auto comments {std::string("operation:") + std::string(operation_string)};
-      
+        const auto method{std::string("Serial SIMD")};
+        const auto comments{std::string("operation:") + std::string(operation_string)};
+
         // Output
         {
-
-            const std::string base_file_name = "results/serial_simd_" + std::string(operation_string);
-            const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
+            const std::string base_file_name =
+                "results/serial_simd_" + std::string(operation_string);
+            const std::string json_file =
+                base_file_name + "_" + helper::random_suffix(12) + ".json";
 
             nlohmann::json j;
 
@@ -360,7 +303,7 @@ int main(int argc, char** argv)
             j["precision"] = "64";
             j["device"] = "CPU";
 
-            // Iteration/timing            
+            // Iteration/timing
             j["test_time_seconds"] = test_time_seconds;
             j["iterations"] = iters;
             j["time_per_iteration"] = time_per_iteration;
@@ -371,7 +314,8 @@ int main(int argc, char** argv)
 
             // Values
             j["expected_value"] = helper::to_string_precise(expected_value);
-            j["calculated_value"] = helper::to_string_precise(calculated_value);;
+            j["calculated_value"] = helper::to_string_precise(calculated_value);
+            ;
             j["difference"] = helper::to_string_precise(expected_value - calculated_value);
             j["passed_check"] = passed_check;
             j["values"] = helper::to_string_precise_vector(numbers_c);
@@ -380,8 +324,7 @@ int main(int argc, char** argv)
             j["max_rss_kb"] = helper::max_rss_kb();
 
             std::ofstream out(json_file);
-            if (!out)
-            {
+            if (!out) {
                 throw std::runtime_error("Failed to open output JSON file.");
             }
 
@@ -390,9 +333,7 @@ int main(int argc, char** argv)
         }
 
         return 0;
-    }
-    catch (const std::exception& e)
-    {
+    } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << "\n";
         return 1;
     }
