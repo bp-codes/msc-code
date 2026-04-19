@@ -1,10 +1,12 @@
 #!/bin/bash
-export OMP_NUM_THREADS=6
 
+set -euo pipefail
+export NUM_THREADS=6
 mkdir -p results
 
 RUNS=5
-TIMER=3.0
+RUN_TIME=10.0
+
 
 executables=(
     ./bin/serial_naive.x
@@ -23,7 +25,7 @@ sizes=(
 
 for size in "${sizes[@]}"; do
     CMD="./bin/precise.x $TIMER $size"
-    #eval $CMD
+    eval $CMD
     echo $CMD
 done
 echo
