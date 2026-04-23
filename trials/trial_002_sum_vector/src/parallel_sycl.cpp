@@ -1,46 +1,42 @@
 // gpu_reuse.cpp
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
-#include <iostream>
-#include <iomanip>
 #include <fstream>
-#include <vector>
+#include <iomanip>
+#include <iostream>
 #include <random>
 #include <string>
-#include <algorithm>
+#include <sycl/sycl.hpp>
+#include <vector>
 
 #include "Error.hpp"
 #include "helper.hpp"
 #include "json.hpp"
 
-#include <sycl/sycl.hpp>
-
-
 // helper: round n up to multiple of m
-static inline std::size_t round_up(std::size_t n, std::size_t m) 
-{
+static inline std::size_t round_up(std::size_t n, std::size_t m) {
     return ((n + m - 1) / m) * m;
 }
 
-
 // ---------------------------------------------------------------------------
 // largest_power_of_two_leq
-// 
+//
 // Returns the largest power of two that is less than or equal to n.
-// 
+//
 // Example:
 //   largest_power_of_two_leq(100) → 64
 //   largest_power_of_two_leq(64)  → 64
 //   largest_power_of_two_leq(65)  → 64
 //   largest_power_of_two_leq(0)   → 0
-// 
+//
 // Algorithm: Bit-smearing (fill all bits to the right of the highest set bit)
 // ---------------------------------------------------------------------------
-inline std::size_t largest_power_of_two_leq(std::size_t n) noexcept
-{
-    if (n == 0) return 0;
+inline std::size_t largest_power_of_two_leq(std::size_t n) noexcept {
+    if (n == 0)
+        return 0;
 
     // Fill all bits to the right of the highest 1-bit
     n |= n >> 1;
@@ -56,18 +52,17 @@ inline std::size_t largest_power_of_two_leq(std::size_t n) noexcept
     return n - (n >> 1);
 }
 
-
 double sycl_task(const double* d_numbers, std::size_t numbers_size, sycl::queue& q,
-                    const std::size_t work_group_size_limit)
-{
-    if (numbers_size == 0) return 0.0;
+                 const std::size_t work_group_size_limit) {
+    if (numbers_size == 0)
+        return 0.0;
 
-    auto result {0.0};
+    auto result{0.0};
 
     // local_size - multiple of 32 for Nvidia, 64 for AMD - work items per work group
-    const auto max_work_group  = q.get_device().get_info<sycl::info::device::max_work_group_size>();
-    const auto local_size  = std::min<std::size_t>(work_group_size_limit, max_work_group);
-    
+    const auto max_work_group = q.get_device().get_info<sycl::info::device::max_work_group_size>();
+    const auto local_size = std::min<std::size_t>(work_group_size_limit, max_work_group);
+
     // Total number of work-items
     const auto work_groups = std::size_t((numbers_size + local_size - 1) / local_size);
     const auto global_size = std::size_t(work_groups * local_size);
@@ -76,69 +71,51 @@ double sycl_task(const double* d_numbers, std::size_t numbers_size, sycl::queue&
         // Alias result and out_buf (a 1 element buffer)
         sycl::buffer<double> out_buf(&result, sycl::range<1>(1));
 
+        q.submit([&](sycl::handler& h) {
+             // Set up reduction to pass to kernel
+             auto reduction_argument =
+                 sycl::reduction(out_buf, h, sycl::plus<double>{},
+                                 sycl::property::reduction::initialize_to_identity{});
 
-        q.submit([&](sycl::handler& h) 
-        {
+             // Launch a kernel for "work_groups" number of work groups
+             h.parallel_for(sycl::nd_range<1>(global_size, local_size), reduction_argument,
+                            [=](sycl::nd_item<1> it, auto& accumulator) {
+                                // Total number of work-items in the 1D grid.
+                                const auto grid_work_items = std::size_t(it.get_global_range(0));
 
-            // Set up reduction to pass to kernel
-            auto reduction_argument = sycl::reduction(
-                out_buf, h,
-                sycl::plus<double>{},
-                sycl::property::reduction::initialize_to_identity{}
-            );
+                                // Linear global ID of this work-item.
+                                const auto grid_id = std::size_t(it.get_global_linear_id());
 
-            // Launch a kernel for "work_groups" number of work groups
-            h.parallel_for( 
-                            sycl::nd_range<1>(global_size, local_size), 
-                            reduction_argument,
-                            [=](sycl::nd_item<1> it, auto& accumulator) 
-            {
-                // Total number of work-items in the 1D grid.
-                const auto grid_work_items = std::size_t(it.get_global_range(0));
+                                // Thread-local partial sum.
+                                auto thread_partial_sum{0.0};
 
-                // Linear global ID of this work-item.
-                const auto grid_id = std::size_t(it.get_global_linear_id());
+                                // Add to thread_partial_sum in strides of grid_work_items
+                                for (std::size_t i = grid_id; i < numbers_size;
+                                     i += grid_work_items) {
+                                    thread_partial_sum += d_numbers[i];
+                                }
 
-                // Thread-local partial sum.
-                auto thread_partial_sum {0.0};
-
-                // Add to thread_partial_sum in strides of grid_work_items
-                for (std::size_t i = grid_id; i < numbers_size; i += grid_work_items)
-                {
-                    thread_partial_sum += d_numbers[i];
-                }
-
-                // Contribute this work-item's partial sum to the global reduction.
-                accumulator.combine(thread_partial_sum);
-            });
-
-        }).wait();
+                                // Contribute this work-item's partial sum to the global reduction.
+                                accumulator.combine(thread_partial_sum);
+                            });
+         }).wait();
     }
 
     return result;
 }
 
-
-
 // Serial task - sum numbers in the vector
-double serial_naive_task(const std::vector<double>& numbers)
-{
-    auto sum {0.0};
-    for(const auto val : numbers)
-    {
+double serial_naive_task(const std::vector<double>& numbers) {
+    auto sum{0.0};
+    for (const auto val : numbers) {
         sum += val;
     }
     return sum;
 }
 
-
-
-int main(int argc, char** argv) 
-{
-
+int main(int argc, char** argv) {
     // Must have 4 arguments
-    if (argc < 4) 
-    {
+    if (argc < 4) {
         std::cerr << "Usage: " << argv[0] << "   time_limit   vec_size   device\n";
         return 1;
     }
@@ -148,12 +125,11 @@ int main(int argc, char** argv)
     const int N = std::atoi(argv[2]);
     const std::size_t work_group_size_limit = (argc < 4) ? 256 : std::atoi(argv[3]);
     std::string device_selection = argv[4];
-    std::transform(device_selection.begin(), device_selection.end(), device_selection.begin(), ::tolower);
+    std::transform(device_selection.begin(), device_selection.end(), device_selection.begin(),
+                   ::tolower);
     const std::string operation = "Sum vector elements.";
 
-
-    if(N <= 0)
-    {
+    if (N <= 0) {
         std::cerr << "Usage: " << argv[0] << " time_limit  vec_size\n";
         return 1;
     }
@@ -167,33 +143,25 @@ int main(int argc, char** argv)
     numbers.reserve(N);
 
     // Populate vector
-    for (int i = 0; i < N; ++i) 
-    {
+    for (int i = 0; i < N; ++i) {
         numbers.emplace_back(dist(rng));
     }
 
     // Calculate expected value using the serial version
     auto expected_value = serial_naive_task(numbers);
- 
 
     // ======= Calculation Starts ========
-    
+
     auto t0 = std::chrono::steady_clock::now();
 
     // SYCL Device selector code
-    auto make_queue = [&](const std::string& device_selection) -> sycl::queue
-    {
-        try
-        {
-            if (device_selection == "cpu") 
-            {    
+    auto make_queue = [&](const std::string& device_selection) -> sycl::queue {
+        try {
+            if (device_selection == "cpu") {
                 // Can't find AdaptiveCPP OpenMP
-                for (const auto& p : sycl::platform::get_platforms())
-                {
-                    for (const auto& d : p.get_devices())
-                    {
-                        if (d.is_cpu()) 
-                        {
+                for (const auto& p : sycl::platform::get_platforms()) {
+                    for (const auto& d : p.get_devices()) {
+                        if (d.is_cpu()) {
                             return sycl::queue{d};
                         }
                     }
@@ -201,25 +169,22 @@ int main(int argc, char** argv)
 
                 // Unable to find CPU - throw
                 throw std::runtime_error("No CPU device found.");
-            }
-            else if (device_selection == "gpu") 
-            {
+            } else if (device_selection == "gpu") {
                 return sycl::queue{sycl::gpu_selector_v};
             }
             return sycl::queue{sycl::default_selector_v};
-        }
-        catch (const sycl::exception& e)
-        {   
+        } catch (const sycl::exception& e) {
             std::cout << "Unable to select, falling back to default device." << std::endl;
             std::cout << "  Response: " << e.what() << std::endl;
             return sycl::queue{sycl::default_selector_v};
-        }        
+        }
     };
 
     // Set up queue, select device
     auto q = make_queue(device_selection);
 
-    std::cerr << "Using device: " << q.get_device().get_info<sycl::info::device::name>() << std::endl;
+    std::cerr << "Using device: " << q.get_device().get_info<sycl::info::device::name>()
+              << std::endl;
 
     // Allocate device memory once
     double* d_numbers = sycl::malloc_device<double>(N, q);
@@ -232,25 +197,23 @@ int main(int argc, char** argv)
     std::uint64_t iters = 0;
 
     // Reuse d_numbers on every iteration
-    auto calculated_value {0.0};
+    auto calculated_value{0.0};
 
-    do 
-    {
+    do {
         calculated_value = sycl_task(d_numbers, N, q, work_group_size_limit);
         iters++;
-    } 
-    while (std::chrono::steady_clock::now() < deadline);
+    } while (std::chrono::steady_clock::now() < deadline);
 
     // Clean up
-    auto t2 = std::chrono::steady_clock::now();    
+    auto t2 = std::chrono::steady_clock::now();
 
-    sycl::free(d_numbers, q); // free at end
+    sycl::free(d_numbers, q);  // free at end
 
     // Actual end time
     auto t3 = std::chrono::steady_clock::now();
 
     // ======= Calculation Ends ========
-   
+
     auto time_setup = std::chrono::duration<double>(t1 - t0).count();
     auto time_calc = std::chrono::duration<double>(t2 - t1).count();
     auto time_cleanup = std::chrono::duration<double>(t3 - t2).count();
@@ -261,9 +224,9 @@ int main(int argc, char** argv)
 
     // Output
     {
-        const auto method {std::string("Parallel SYCL")};
+        const auto method{std::string("Parallel SYCL")};
         const auto operation_string = std::string("sum");
-        const auto comments {std::string("operation:") + std::string(operation_string)};
+        const auto comments{std::string("operation:") + std::string(operation_string)};
 
         const std::string base_file_name = "results/parallel_sycl_" + operation_string;
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
@@ -279,7 +242,7 @@ int main(int argc, char** argv)
         j["precision"] = "64";
         j["device"] = device_selection;
 
-        // Iteration/timing            
+        // Iteration/timing
         j["test_time_seconds"] = test_time_seconds;
         j["iterations"] = iters;
         j["time_per_iteration"] = time_per_iteration;
@@ -287,10 +250,11 @@ int main(int argc, char** argv)
         j["time_calc"] = time_calc;
         j["time_cleanup"] = time_cleanup;
         j["time_total"] = time_total;
-        
+
         // Values
         j["expected_value"] = helper::to_string_precise(expected_value);
-        j["calculated_value"] = helper::to_string_precise(calculated_value);;
+        j["calculated_value"] = helper::to_string_precise(calculated_value);
+        ;
         j["difference"] = helper::to_string_precise(expected_value - calculated_value);
         j["passed_check"] = passed_check;
         j["values"] = helper::to_string_precise_vector(numbers);
@@ -299,8 +263,7 @@ int main(int argc, char** argv)
         j["max_rss_kb"] = helper::max_rss_kb();
 
         std::ofstream out(json_file);
-        if (!out)
-        {
+        if (!out) {
             throw std::runtime_error("Failed to open output JSON file.");
         }
 

@@ -1,59 +1,44 @@
 // gpu_reuse_buffer_inorder.cpp
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
-#include <iostream>
-#include <iomanip>
 #include <fstream>
-#include <vector>
+#include <iomanip>
+#include <iostream>
 #include <random>
 #include <string>
-#include <algorithm>
+#include <sycl/sycl.hpp>
+#include <vector>
 
 #include "Error.hpp"
 #include "helper.hpp"
 #include "json.hpp"
 
-#include <sycl/sycl.hpp>
-
-
 // Built-in reduction using a 1-element buffer, with an in-order queue.
 // No events / depends_on needed.
-inline void sycl_task_submit(const float* data,
-                            std::size_t N,
-                            sycl::queue& q,
-                            float* sum)
-{
-  q.parallel_for(
-      sycl::range<1>(N),
-      sycl::reduction(sum, sycl::plus<>(),
-                      sycl::property::reduction::initialize_to_identity{}),
-      [=](sycl::id<1> i, auto& r) {
-        r += data[i];          // read-only on data
-      });
+inline void sycl_task_submit(const float* data, std::size_t N, sycl::queue& q, float* sum) {
+    q.parallel_for(
+        sycl::range<1>(N),
+        sycl::reduction(sum, sycl::plus<>(), sycl::property::reduction::initialize_to_identity{}),
+        [=](sycl::id<1> i, auto& r) {
+            r += data[i];  // read-only on data
+        });
 }
 
-
-
 // Serial task - sum numbers in the vector
-float serial_naive_task(const std::vector<float>& numbers)
-{
-    auto sum {0.0f};
-    for(const auto val : numbers)
-    {
+float serial_naive_task(const std::vector<float>& numbers) {
+    auto sum{0.0f};
+    for (const auto val : numbers) {
         sum += val;
     }
     return sum;
 }
 
-
-
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
     // prog + 4 params
-    if (argc < 5)
-    {
+    if (argc < 5) {
         std::cerr << "Usage: " << argv[0] << " time_limit vec_size work_group_limit device\n";
         return 1;
     }
@@ -62,13 +47,12 @@ int main(int argc, char** argv)
     const int N = std::atoi(argv[2]);
     const std::size_t work_group_size_limit = static_cast<std::size_t>(std::atoi(argv[3]));
     std::string device_selection = argv[4];
-    std::transform(device_selection.begin(), device_selection.end(),
-                   device_selection.begin(), ::tolower);
+    std::transform(device_selection.begin(), device_selection.end(), device_selection.begin(),
+                   ::tolower);
 
     const std::string operation = "Sum vector elements.";
 
-    if (N <= 0)
-    {
+    if (N <= 0) {
         std::cerr << "vec_size must be > 0\n";
         return 1;
     }
@@ -79,8 +63,7 @@ int main(int argc, char** argv)
 
     std::vector<float> numbers;
     numbers.reserve(N);
-    for (int i = 0; i < N; ++i)
-    {
+    for (int i = 0; i < N; ++i) {
         numbers.emplace_back(static_cast<float>(dist(rng)));
     }
 
@@ -89,32 +72,23 @@ int main(int argc, char** argv)
     // ======= Calculation Starts ========
     auto t0 = std::chrono::steady_clock::now();
 
-    auto make_queue = [&](const std::string& sel) -> sycl::queue
-    {
+    auto make_queue = [&](const std::string& sel) -> sycl::queue {
         sycl::property_list props{sycl::property::queue::in_order{}};
 
-        try
-        {
-            if (sel == "cpu")
-            {
-                for (const auto& p : sycl::platform::get_platforms())
-                {
-                    for (const auto& d : p.get_devices())
-                    {
+        try {
+            if (sel == "cpu") {
+                for (const auto& p : sycl::platform::get_platforms()) {
+                    for (const auto& d : p.get_devices()) {
                         if (d.is_cpu())
                             return sycl::queue{d, props};
                     }
                 }
                 throw std::runtime_error("No CPU device found.");
-            }
-            else if (sel == "gpu")
-            {
+            } else if (sel == "gpu") {
                 return sycl::queue{sycl::gpu_selector_v, props};
             }
             return sycl::queue{sycl::default_selector_v, props};
-        }
-        catch (const sycl::exception& e)
-        {
+        } catch (const sycl::exception& e) {
             std::cout << "Unable to select, falling back to default device.\n";
             std::cout << "  Response: " << e.what() << "\n";
             return sycl::queue{sycl::default_selector_v, props};
@@ -123,12 +97,11 @@ int main(int argc, char** argv)
 
     sycl::queue q = make_queue(device_selection);
 
-    std::cerr << "Using device: "
-              << q.get_device().get_info<sycl::info::device::name>() << "\n";
+    std::cerr << "Using device: " << q.get_device().get_info<sycl::info::device::name>() << "\n";
 
     // Keep output buffer once
     float* data = sycl::malloc_shared<float>(N, q);
-    float* sum  = sycl::malloc_shared<float>(1, q);
+    float* sum = sycl::malloc_shared<float>(1, q);
 
     auto t1 = std::chrono::steady_clock::now();
     auto deadline = t1 + std::chrono::duration<double>(test_time_seconds);
@@ -136,24 +109,19 @@ int main(int argc, char** argv)
     std::uint64_t iters = 0;
     float calculated_value = 0.0;
 
-
-    for (size_t i = 0; i < N; ++i) 
-    {
+    for (size_t i = 0; i < N; ++i) {
         data[i] = numbers[i];
     }
     *sum = 0.0;
 
-    do
-    {
+    do {
         sycl_task_submit(data, static_cast<std::size_t>(N), q, sum);
         q.wait();
         calculated_value = *sum;
         ++iters;
-    }
-    while (std::chrono::steady_clock::now() < deadline);
+    } while (std::chrono::steady_clock::now() < deadline);
 
-    //q.wait();
-
+    // q.wait();
 
     auto t2 = std::chrono::steady_clock::now();
 
@@ -163,19 +131,19 @@ int main(int argc, char** argv)
     auto t3 = std::chrono::steady_clock::now();
     // ======= Calculation Ends ========
 
-    auto time_setup   = std::chrono::duration<double>(t1 - t0).count();
-    auto time_calc    = std::chrono::duration<double>(t2 - t1).count();
+    auto time_setup = std::chrono::duration<double>(t1 - t0).count();
+    auto time_calc = std::chrono::duration<double>(t2 - t1).count();
     auto time_cleanup = std::chrono::duration<double>(t3 - t2).count();
-    auto time_total   = std::chrono::duration<double>(t3 - t0).count();
+    auto time_total = std::chrono::duration<double>(t3 - t0).count();
     auto time_per_iteration = time_calc / static_cast<double>(iters);
 
     bool passed_check = std::abs(calculated_value - expected_value) < 1.0e-9;
 
     // Output
     {
-        const auto method {std::string("Parallel SYCL Reduction 32")};
+        const auto method{std::string("Parallel SYCL Reduction 32")};
         const auto operation_string = std::string("sum");
-        const auto comments {std::string("operation:") + std::string(operation_string)};
+        const auto comments{std::string("operation:") + std::string(operation_string)};
 
         const std::string base_file_name = "results/parallel_sycl_reduction_32_" + operation_string;
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
@@ -191,7 +159,7 @@ int main(int argc, char** argv)
         j["precision"] = "32";
         j["device"] = device_selection;
 
-        // Iteration/timing            
+        // Iteration/timing
         j["test_time_seconds"] = test_time_seconds;
         j["iterations"] = iters;
         j["time_per_iteration"] = time_per_iteration;
@@ -199,10 +167,11 @@ int main(int argc, char** argv)
         j["time_calc"] = time_calc;
         j["time_cleanup"] = time_cleanup;
         j["time_total"] = time_total;
-        
+
         // Values
         j["expected_value"] = helper::to_string_precise(expected_value);
-        j["calculated_value"] = helper::to_string_precise(calculated_value);;
+        j["calculated_value"] = helper::to_string_precise(calculated_value);
+        ;
         j["difference"] = helper::to_string_precise(expected_value - calculated_value);
         j["passed_check"] = passed_check;
         j["values"] = helper::to_string_precise_vector(numbers);
@@ -211,8 +180,7 @@ int main(int argc, char** argv)
         j["max_rss_kb"] = helper::max_rss_kb();
 
         std::ofstream out(json_file);
-        if (!out)
-        {
+        if (!out) {
             throw std::runtime_error("Failed to open output JSON file.");
         }
 

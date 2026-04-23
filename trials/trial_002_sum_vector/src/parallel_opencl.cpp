@@ -1,16 +1,16 @@
 // serial_opencl.cpp
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
-#include <iostream>
-#include <iomanip>
 #include <fstream>
-#include <vector>
+#include <iomanip>
+#include <iostream>
 #include <random>
 #include <string>
-#include <algorithm>
+#include <vector>
 
 #include "Error.hpp"
 #include "helper.hpp"
@@ -19,6 +19,7 @@
 #define CL_TARGET_OPENCL_VERSION 120
 #include <CL/cl.h>
 #include <CL/cl_ext.h>
+
 #include <system_error>
 
 #ifndef CL_PLATFORM_NOT_FOUND_KHR
@@ -29,20 +30,15 @@
 // Serial baseline (unchanged)
 // ======================================================
 
-double serial_naive_task(const std::vector<double>& numbers)
-{
+double serial_naive_task(const std::vector<double>& numbers) {
     double sum{0.0};
     for (const auto val : numbers)
         sum += val;
     return sum;
 }
 
-
-
-void opencl_check(cl_int status, const char* message)
-{
-    if (status != CL_SUCCESS)
-    {
+void opencl_check(cl_int status, const char* message) {
+    if (status != CL_SUCCESS) {
         std::ostringstream oss;
         oss << message << " (OpenCL error " << status << ")";
         THROW_RUNTIME_ERROR(oss.str());
@@ -61,22 +57,37 @@ __kernel void reduce_sum(__global const double* input,
 {
     int gid = get_global_id(0);
     int lid = get_local_id(0);
+    int gsize = get_global_size(0);
     int group_size = get_local_size(0);
 
     double sum = 0.0;
 
-    for (int i = gid; i < N; i += get_global_size(0))
+    int N4 = N / 4;
+    __global const double4* input4 = (__global const double4*)input;
+
+    for (int i = gid; i < N4; i += gsize) {
+        double4 v = input4[i];
+        sum += v.x + v.y + v.z + v.w;
+    }
+
+    for (int i = N4 * 4 + gid; i < N; i += gsize) {
         sum += input[i];
+    }
 
     local_mem[lid] = sum;
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    for (int stride = group_size / 2; stride > 0; stride >>= 1)
-    {
-        if (lid < stride)
-            local_mem[lid] += local_mem[lid + stride];
+    if (group_size >= 256) { if (lid < 128) local_mem[lid] += local_mem[lid + 128]; barrier(CLK_LOCAL_MEM_FENCE); }
+    if (group_size >= 128) { if (lid < 64)  local_mem[lid] += local_mem[lid + 64];  barrier(CLK_LOCAL_MEM_FENCE); }
+    if (group_size >= 64)  { if (lid < 32)  local_mem[lid] += local_mem[lid + 32];  barrier(CLK_LOCAL_MEM_FENCE); }
 
-        barrier(CLK_LOCAL_MEM_FENCE);
+    if (lid < 32) {
+        local_mem[lid] += local_mem[lid + 32];
+        local_mem[lid] += local_mem[lid + 16];
+        local_mem[lid] += local_mem[lid + 8];
+        local_mem[lid] += local_mem[lid + 4];
+        local_mem[lid] += local_mem[lid + 2];
+        local_mem[lid] += local_mem[lid + 1];
     }
 
     if (lid == 0)
@@ -84,12 +95,10 @@ __kernel void reduce_sum(__global const double* input,
 }
 )CLC";
 
-
 // OpenCL context
 //======================================================
 
-struct OpenCLContext
-{
+struct OpenCLContext {
     cl_platform_id platform{};
     cl_device_id device{};
     cl_context context{};
@@ -104,33 +113,26 @@ struct OpenCLContext
     size_t local_size{256};
 };
 
-
-
-
 // Setup
 //======================================================
 
-void opencl_setup(OpenCLContext& ctx,
-                  const std::vector<double>& numbers,
-                  std::string_view device_string)
-{
+void opencl_setup(OpenCLContext& ctx, const std::vector<double>& numbers,
+                  std::string_view device_string) {
     cl_int err;
 
     // ---------------------------
     // 1. Get platforms
     // ---------------------------
-    cl_uint platform_count {0};
+    cl_uint platform_count{0};
     cl_int status = clGetPlatformIDs(0, nullptr, &platform_count);
 
-    if (status == CL_PLATFORM_NOT_FOUND_KHR || platform_count == 0)
-    {
+    if (status == CL_PLATFORM_NOT_FOUND_KHR || platform_count == 0) {
         THROW_RUNTIME_ERROR("No OpenCL platforms found.");
     }
 
     std::vector<cl_platform_id> platforms(platform_count);
-    opencl_check(
-        clGetPlatformIDs(platform_count, platforms.data(), nullptr),
-        "clGetPlatformIDs failed");
+    opencl_check(clGetPlatformIDs(platform_count, platforms.data(), nullptr),
+                 "clGetPlatformIDs failed");
 
     // ---------------------------
     // 2. Select device type
@@ -144,14 +146,11 @@ void opencl_setup(OpenCLContext& ctx,
     ctx.device = nullptr;
     ctx.platform = nullptr;
 
-    for (const auto& platform : platforms)
-    {
-        cl_uint device_count {0};
-        cl_int device_status =
-            clGetDeviceIDs(platform, requested_type, 0, nullptr, &device_count);
+    for (const auto& platform : platforms) {
+        cl_uint device_count{0};
+        cl_int device_status = clGetDeviceIDs(platform, requested_type, 0, nullptr, &device_count);
 
-        if (device_status == CL_SUCCESS && device_count > 0)
-        {
+        if (device_status == CL_SUCCESS && device_count > 0) {
             std::vector<cl_device_id> devices(device_count);
             opencl_check(
                 clGetDeviceIDs(platform, requested_type, device_count, devices.data(), nullptr),
@@ -163,8 +162,7 @@ void opencl_setup(OpenCLContext& ctx,
         }
     }
 
-    if (!ctx.device)
-    {
+    if (!ctx.device) {
         std::ostringstream oss;
         oss << "No suitable OpenCL " << device_string << " device found.";
         THROW_RUNTIME_ERROR(oss.str());
@@ -176,7 +174,11 @@ void opencl_setup(OpenCLContext& ctx,
     ctx.context = clCreateContext(nullptr, 1, &ctx.device, nullptr, nullptr, &err);
     opencl_check(err, "clCreateContext failed");
 
-    ctx.queue = clCreateCommandQueueWithProperties(ctx.context, ctx.device, 0, &err);
+    #if CL_TARGET_OPENCL_VERSION >= 200
+        ctx.queue = clCreateCommandQueueWithProperties(ctx.context, ctx.device, 0, &err);
+    #else
+        ctx.queue = clCreateCommandQueue(ctx.context, ctx.device, 0, &err);
+    #endif
     opencl_check(err, "clCreateCommandQueueWithProperties failed");
 
     // ---------------------------
@@ -189,14 +191,14 @@ void opencl_setup(OpenCLContext& ctx,
 
     err = clBuildProgram(ctx.program, 1, &ctx.device, nullptr, nullptr, nullptr);
 
-    if (err != CL_SUCCESS)
-    {
+    if (err != CL_SUCCESS) {
         // Optional: print build log (VERY useful)
         size_t log_size = 0;
         clGetProgramBuildInfo(ctx.program, ctx.device, CL_PROGRAM_BUILD_LOG, 0, nullptr, &log_size);
 
         std::vector<char> log(log_size);
-        clGetProgramBuildInfo(ctx.program, ctx.device, CL_PROGRAM_BUILD_LOG, log_size, log.data(), nullptr);
+        clGetProgramBuildInfo(ctx.program, ctx.device, CL_PROGRAM_BUILD_LOG, log_size, log.data(),
+                              nullptr);
 
         std::cerr << "Build log:\n" << log.data() << "\n";
         opencl_check(err, "clBuildProgram failed");
@@ -206,47 +208,54 @@ void opencl_setup(OpenCLContext& ctx,
     opencl_check(err, "clCreateKernel failed");
 
     // ---------------------------
-    // 6. Buffers
+    // 6. Buffers (OPTIMISED)
     // ---------------------------
     const int N = numbers.size();
 
+    // tune local size
+    size_t max_workgroup = 0;
+    clGetDeviceInfo(ctx.device, CL_DEVICE_MAX_WORK_GROUP_SIZE,
+                    sizeof(size_t), &max_workgroup, nullptr);
+
+    ctx.local_size = std::min<size_t>(256, max_workgroup);
+
+    // compute max number of groups
+    size_t max_groups = (N + ctx.local_size - 1) / ctx.local_size;
+
     ctx.input_buf = clCreateBuffer(ctx.context,
-                                   CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                                   sizeof(double) * N,
-                                   (void*)numbers.data(),
-                                   &err);
+                               CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                               sizeof(double) * N,
+                               const_cast<double*>(numbers.data()),
+                               &err);
     opencl_check(err, "clCreateBuffer input_buf failed");
 
     ctx.buffer_a = clCreateBuffer(ctx.context,
-                                  CL_MEM_READ_WRITE,
-                                  sizeof(double) * N,
-                                  nullptr,
-                                  &err);
+                                CL_MEM_READ_WRITE,
+                                sizeof(double) * max_groups,
+                                nullptr,
+                                &err);
     opencl_check(err, "clCreateBuffer buffer_a failed");
 
     ctx.buffer_b = clCreateBuffer(ctx.context,
-                                  CL_MEM_READ_WRITE,
-                                  sizeof(double) * N,
-                                  nullptr,
-                                  &err);
+                                CL_MEM_READ_WRITE,
+                                sizeof(double) * max_groups,
+                                nullptr,
+                                &err);
     opencl_check(err, "clCreateBuffer buffer_b failed");
 }
 
 // Device reduction
 //======================================================
 
-double parallel_task(OpenCLContext& ctx, int N)
-{
+double parallel_task(OpenCLContext& ctx, int N) {
     cl_mem in = ctx.input_buf;
     cl_mem out = ctx.buffer_a;
 
     int current_N = N;
     size_t local_size = ctx.local_size;
 
-    while (current_N > 1)
-    {
-        size_t global_size =
-            ((current_N + local_size - 1) / local_size) * local_size;
+    while (current_N > 1) {
+        size_t global_size = ((current_N + local_size - 1) / local_size) * local_size;
 
         size_t num_groups = global_size / local_size;
 
@@ -255,15 +264,8 @@ double parallel_task(OpenCLContext& ctx, int N)
         clSetKernelArg(ctx.kernel, 2, sizeof(double) * local_size, nullptr);
         clSetKernelArg(ctx.kernel, 3, sizeof(int), &current_N);
 
-        clEnqueueNDRangeKernel(ctx.queue,
-                               ctx.kernel,
-                               1,
-                               nullptr,
-                               &global_size,
-                               &local_size,
-                               0,
-                               nullptr,
-                               nullptr);
+        clEnqueueNDRangeKernel(ctx.queue, ctx.kernel, 1, nullptr, &global_size, &local_size, 0,
+                               nullptr, nullptr);
 
         current_N = num_groups;
 
@@ -272,19 +274,15 @@ double parallel_task(OpenCLContext& ctx, int N)
     }
 
     double result{};
-    clEnqueueReadBuffer(ctx.queue, in, CL_TRUE, 0,
-                        sizeof(double), &result,
-                        0, nullptr, nullptr);
+    clEnqueueReadBuffer(ctx.queue, in, CL_TRUE, 0, sizeof(double), &result, 0, nullptr, nullptr);
 
     return result;
 }
 
-
 // Cleanup (t2 to t3)
 //======================================================
 
-void opencl_cleanup(OpenCLContext& ctx)
-{
+void opencl_cleanup(OpenCLContext& ctx) {
     clReleaseMemObject(ctx.input_buf);
     clReleaseMemObject(ctx.buffer_a);
     clReleaseMemObject(ctx.buffer_b);
@@ -298,10 +296,8 @@ void opencl_cleanup(OpenCLContext& ctx)
 // MAIN
 //======================================================
 
-int main(int argc, char** argv)
-{
-    if (argc < 3)
-    {
+int main(int argc, char** argv) {
+    if (argc < 3) {
         std::cerr << "Usage: " << argv[0] << " time_limit vec_size\n";
         return 1;
     }
@@ -311,12 +307,10 @@ int main(int argc, char** argv)
     const std::string operation = "Sum vector elements.";
 
     std::string_view device_string = "GPU";
-    if (argc >= 4)
-    {
+    if (argc >= 4) {
         device_string = argv[3];
 
-        if (device_string != "GPU" && device_string != "CPU")
-        {
+        if (device_string != "GPU" && device_string != "CPU") {
             THROW_INVALID_ARGUMENT("device must be GPU or CPU");
         }
     }
@@ -349,12 +343,10 @@ int main(int argc, char** argv)
     double calculated_value{};
 
     // -------- COMPUTE LOOP --------
-    do
-    {
+    do {
         calculated_value = parallel_task(ctx, N);
         iters++;
-    }
-    while (std::chrono::steady_clock::now() < deadline);
+    } while (std::chrono::steady_clock::now() < deadline);
 
     auto t2 = std::chrono::steady_clock::now();
 

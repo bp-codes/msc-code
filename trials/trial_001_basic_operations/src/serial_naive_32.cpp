@@ -1,4 +1,15 @@
-// serial.cpp
+/**
+ * @file serial_32.cpp
+ * @brief
+ *
+ * @author Ben Palmer
+ * @date 2026
+ *
+ * @copyright
+ * Copyright (c) 2026 Ben Palmer
+ * SPDX-License-Identifier: MIT
+ */
+
 #include <sys/resource.h>
 
 #include <algorithm>
@@ -22,17 +33,14 @@ using OperationKind = helper::OperationKind;
 
 namespace {
 
-inline constexpr double MIN_DENOMINATOR{1.0e-9};
+inline constexpr float MIN_DENOMINATOR{1.0e-9};
 inline constexpr std::uint64_t RNG_SEED{123456789ULL};
 
 /**
  * @brief Element-wise addition: c[i] = a[i] + b[i]
- * @param numbers_a First input vector
- * @param numbers_b Second input vector
- * @param numbers_c Output vector
  */
-void serial_add(const std::vector<double>& numbers_a, const std::vector<double>& numbers_b,
-                std::vector<double>& numbers_c) {
+void serial_add(const std::vector<float>& numbers_a, const std::vector<float>& numbers_b,
+                std::vector<float>& numbers_c) {
     const auto n{std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++) {
         numbers_c[i] = numbers_a[i] + numbers_b[i];
@@ -42,8 +50,8 @@ void serial_add(const std::vector<double>& numbers_a, const std::vector<double>&
 /**
  * @brief Element-wise multiplication: c[i] = a[i] * b[i]
  */
-void serial_multiply(const std::vector<double>& numbers_a, const std::vector<double>& numbers_b,
-                     std::vector<double>& numbers_c) {
+void serial_multiply(const std::vector<float>& numbers_a, const std::vector<float>& numbers_b,
+                     std::vector<float>& numbers_c) {
     const auto n{std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++) {
         numbers_c[i] = numbers_a[i] * numbers_b[i];
@@ -53,8 +61,8 @@ void serial_multiply(const std::vector<double>& numbers_a, const std::vector<dou
 /**
  * @brief Element-wise division: c[i] = a[i] / max(b[i], MIN_DENOMINATOR)
  */
-void serial_divide(const std::vector<double>& numbers_a, const std::vector<double>& numbers_b,
-                   std::vector<double>& numbers_c) {
+void serial_divide(const std::vector<float>& numbers_a, const std::vector<float>& numbers_b,
+                   std::vector<float>& numbers_c) {
     const auto n{std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++) {
         numbers_c[i] = numbers_a[i] / std::fmax(numbers_b[i], MIN_DENOMINATOR);
@@ -64,8 +72,8 @@ void serial_divide(const std::vector<double>& numbers_a, const std::vector<doubl
 /**
  * @brief Element-wise power: c[i] = pow(a[i], b[i])
  */
-void serial_power(const std::vector<double>& numbers_a, const std::vector<double>& numbers_b,
-                  std::vector<double>& numbers_c) {
+void serial_power(const std::vector<float>& numbers_a, const std::vector<float>& numbers_b,
+                  std::vector<float>& numbers_c) {
     const auto n{std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++) {
         numbers_c[i] = std::pow(numbers_a[i], numbers_b[i]);
@@ -75,8 +83,8 @@ void serial_power(const std::vector<double>& numbers_a, const std::vector<double
 /**
  * @brief Element-wise exp sum: c[i] = exp(a[i]) + exp(b[i])
  */
-void serial_exp(const std::vector<double>& numbers_a, const std::vector<double>& numbers_b,
-                std::vector<double>& numbers_c) {
+void serial_exp(const std::vector<float>& numbers_a, const std::vector<float>& numbers_b,
+                std::vector<float>& numbers_c) {
     const auto n{std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++) {
         numbers_c[i] = std::exp(numbers_a[i]) + std::exp(numbers_b[i]);
@@ -85,10 +93,10 @@ void serial_exp(const std::vector<double>& numbers_a, const std::vector<double>&
 
 /**
  * @brief Element-wise log sum: c[i] = log(a[i]) + log(b[i])
- * @warning Inputs must be > 0. No validation in hot loop.
+ * @warning Inputs must be > 0. No bounds/validity checking is performed in this hot loop.
  */
-void serial_log(const std::vector<double>& numbers_a, const std::vector<double>& numbers_b,
-                std::vector<double>& numbers_c) {
+void serial_log(const std::vector<float>& numbers_a, const std::vector<float>& numbers_b,
+                std::vector<float>& numbers_c) {
     const auto n{std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++) {
         numbers_c[i] = std::log(numbers_a[i]) + std::log(numbers_b[i]);
@@ -97,10 +105,10 @@ void serial_log(const std::vector<double>& numbers_a, const std::vector<double>&
 
 /**
  * @brief Element-wise sqrt sum: c[i] = sqrt(a[i]) + sqrt(b[i])
- * @warning Inputs must be >= 0. No validation in hot loop.
+ * @warning Inputs must be >= 0. No bounds/validity checking is performed in this hot loop.
  */
-void serial_sqrt(const std::vector<double>& numbers_a, const std::vector<double>& numbers_b,
-                 std::vector<double>& numbers_c) {
+void serial_sqrt(const std::vector<float>& numbers_a, const std::vector<float>& numbers_b,
+                 std::vector<float>& numbers_c) {
     const auto n{std::size_t(numbers_a.size())};
     for (auto i = std::size_t(0); i < n; i++) {
         numbers_c[i] = std::sqrt(numbers_a[i]) + std::sqrt(numbers_b[i]);
@@ -109,13 +117,13 @@ void serial_sqrt(const std::vector<double>& numbers_a, const std::vector<double>
 
 /**
  * @brief Dispatch the selected operation.
- * @param operation Operation kind
- * @param numbers_a First input vector
- * @param numbers_b Second input vector
- * @param numbers_c Output vector (pre-sized)
+ * @param operation Operation kind.
+ * @param numbers_a First input vector.
+ * @param numbers_b Second input vector.
+ * @param numbers_c Output vector (must be pre-sized).
  */
-void serial_task(OperationKind operation, const std::vector<double>& numbers_a,
-                 const std::vector<double>& numbers_b, std::vector<double>& numbers_c) {
+void serial_task(OperationKind operation, const std::vector<float>& numbers_a,
+                 const std::vector<float>& numbers_b, std::vector<float>& numbers_c) {
     switch (operation) {
         case OperationKind::Add: {
             serial_add(numbers_a, numbers_b, numbers_c);
@@ -153,10 +161,7 @@ void serial_task(OperationKind operation, const std::vector<double>& numbers_a,
 }  // namespace
 
 /**
- * @brief Program entry point.
- * @param argc Argument count
- * @param argv Argument vector
- * @return Exit code
+ * @brief Entry point into program.
  */
 int main(int argc, char** argv) {
     try {
@@ -179,19 +184,19 @@ int main(int argc, char** argv) {
         std::mt19937_64 rng(RNG_SEED);
         std::uniform_real_distribution<double> dist(1.0, 2.0);
 
-        auto numbers_a{std::vector<double>{}};
-        auto numbers_b{std::vector<double>{}};
+        auto numbers_a{std::vector<float>{}};
+        auto numbers_b{std::vector<float>{}};
         numbers_a.reserve(n);
         numbers_b.reserve(n);
 
         for (auto i = std::size_t(0); i < n; i++) {
-            numbers_a.emplace_back(dist(rng));
-            numbers_b.emplace_back(dist(rng));
+            numbers_a.emplace_back(static_cast<float>(dist(rng)));
+            numbers_b.emplace_back(static_cast<float>(dist(rng)));
         }
 
         auto expected_value{0.0};
         {
-            auto numbers_c{std::vector<double>(n)};
+            auto numbers_c{std::vector<float>(n)};
             helper::validate_sizes(numbers_a, numbers_b, numbers_c);
 
             serial_task(operation, numbers_a, numbers_b, numbers_c);
@@ -200,12 +205,15 @@ int main(int argc, char** argv) {
             std::cout << "Serial computed expected value: " << expected_value << "\n";
         }
 
+        // ======= Calculation Starts ========
+
         const auto t0{std::chrono::steady_clock::now()};
+
         const auto t1{std::chrono::steady_clock::now()};
         const auto deadline{t1 + std::chrono::duration<double>(test_time_seconds)};
 
         auto iters{std::uint64_t(0)};
-        auto numbers_c{std::vector<double>(n)};
+        auto numbers_c{std::vector<float>(n)};
         helper::validate_sizes(numbers_a, numbers_b, numbers_c);
 
         do {
@@ -215,6 +223,8 @@ int main(int argc, char** argv) {
 
         const auto t2{std::chrono::steady_clock::now()};
         const auto t3{std::chrono::steady_clock::now()};
+
+        // ======= Calculation Ends ========
 
         const auto calculated_value{helper::check_sum(numbers_c)};
 
@@ -226,44 +236,54 @@ int main(int argc, char** argv) {
 
         const auto passed_check{std::abs(calculated_value - expected_value) < 1.0e-9};
 
-        const auto method{std::string("Serial")};
+        const auto method{std::string("Serial Naive 32")};
         const auto comments{std::string("operation:") + std::string(operation_string)};
 
-        const std::string base_file_name = "results/serial_" + std::string(operation_string);
-        const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
+        // Output
+        {
+            const std::string base_file_name = "results/serial_naive_32_" + std::string(operation_string);
+            const std::string json_file =
+                base_file_name + "_" + helper::random_suffix(12) + ".json";
 
-        nlohmann::json j;
+            nlohmann::json j;
 
-        j["file"] = json_file;
-        j["method"] = method;
-        j["operation"] = operation_string;
-        j["comments"] = comments;
-        j["threads"] = 1;
-        j["precision"] = "64";
-        j["device"] = "CPU";
+            // Metadata / identity
+            j["file"] = json_file;
+            j["method"] = method;
+            j["operation"] = operation_string;
+            j["comments"] = comments;
+            j["threads"] = 1;
+            j["precision"] = "32";
+            j["device"] = "CPU";
 
-        j["test_time_seconds"] = test_time_seconds;
-        j["iterations"] = iters;
-        j["time_per_iteration"] = time_per_iteration;
-        j["time_setup"] = time_setup;
-        j["time_calc"] = time_calc;
-        j["time_cleanup"] = time_cleanup;
-        j["time_total"] = time_total;
+            // Iteration/timing
+            j["test_time_seconds"] = test_time_seconds;
+            j["iterations"] = iters;
+            j["time_per_iteration"] = time_per_iteration;
+            j["time_setup"] = time_setup;
+            j["time_calc"] = time_calc;
+            j["time_cleanup"] = time_cleanup;
+            j["time_total"] = time_total;
 
-        j["expected_value"] = helper::to_string_precise(expected_value);
-        j["calculated_value"] = helper::to_string_precise(calculated_value);
-        j["difference"] = helper::to_string_precise(expected_value - calculated_value);
-        j["passed_check"] = passed_check;
-        j["values"] = helper::to_string_precise_vector(numbers_c);
+            // Values
+            j["expected_value"] = helper::to_string_precise(expected_value);
+            j["calculated_value"] = helper::to_string_precise(calculated_value);
+            ;
+            j["difference"] = helper::to_string_precise(expected_value - calculated_value);
+            j["passed_check"] = passed_check;
+            j["values"] = helper::to_string_precise_vector(numbers_c);
 
-        j["max_rss_kb"] = helper::max_rss_kb();
+            // Memory
+            j["max_rss_kb"] = helper::max_rss_kb();
 
-        std::ofstream out(json_file);
-        if (!out) {
-            throw std::runtime_error("Failed to open output JSON file.");
+            std::ofstream out(json_file);
+            if (!out) {
+                throw std::runtime_error("Failed to open output JSON file.");
+            }
+
+            // Save JSON file.
+            out << std::setw(2) << j << '\n';
         }
-
-        out << std::setw(2) << j << '\n';
 
         return 0;
     } catch (const std::exception& e) {
