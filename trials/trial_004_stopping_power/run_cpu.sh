@@ -18,8 +18,8 @@ trap 'echo "Error on line $LINENO (exit code $?)" >&2' ERR
     do
         echo "  Run $i"
 
-        /usr/bin/time -v -- ./bin/serial.x "$RUN_TIME" "$VECTOR_SIZE"
-        /usr/bin/time -v -- ./bin/serial_stl.x "$RUN_TIME" "$VECTOR_SIZE"
+        /usr/bin/time -v -- ./bin/serial_naive.x "$RUN_TIME" "$VECTOR_SIZE"
+        /usr/bin/time -v -- ./bin/serial_naive_stl.x "$RUN_TIME" "$VECTOR_SIZE"
         /usr/bin/time -v -- ./bin/parallel_transform.x "$RUN_TIME" "$VECTOR_SIZE"
         /usr/bin/time -v -- ./bin/parallel_stl.x "$RUN_TIME" "$VECTOR_SIZE"
         /usr/bin/time -v -- ./bin/parallel_thread.x "$RUN_TIME" "$VECTOR_SIZE"
@@ -27,7 +27,7 @@ trap 'echo "Error on line $LINENO (exit code $?)" >&2' ERR
         /usr/bin/time -v -- ./bin/parallel_openmp_simd.x "$RUN_TIME" "$VECTOR_SIZE"
 
 
-        /usr/bin/time -v -- ./bin/serial_32.x "$RUN_TIME" "$VECTOR_SIZE"
+        /usr/bin/time -v -- ./bin/serial_naive_32.x "$RUN_TIME" "$VECTOR_SIZE"
         /usr/bin/time -v -- ./bin/parallel_transform_32.x "$RUN_TIME" "$VECTOR_SIZE"
         /usr/bin/time -v -- ./bin/parallel_thread_32.x "$RUN_TIME" "$VECTOR_SIZE"
         /usr/bin/time -v -- ./bin/parallel_openmp_32.x "$RUN_TIME" "$VECTOR_SIZE"
@@ -36,5 +36,3 @@ trap 'echo "Error on line $LINENO (exit code $?)" >&2' ERR
     done
 
 } 2>&1 | tee results_cpu.log
-
-

@@ -1,54 +1,41 @@
 // serial.cpp
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
-#include <iostream>
-#include <iomanip>
 #include <fstream>
-#include <vector>
+#include <iomanip>
+#include <iostream>
 #include <random>
 #include <string>
-#include <algorithm>
+#include <vector>
 
 #include "Error.hpp"
 #include "helper.hpp"
 #include "json.hpp"
 
-
-
 // Serial task - sum numbers in the vector
-float task(const std::vector<float>& numbers)
-{
-    auto sum {0.0f};
-    for(const auto val : numbers)
-    {
+float task(const std::vector<float>& numbers) {
+    auto sum{0.0f};
+    for (const auto val : numbers) {
         sum += val;
     }
     return sum;
 }
 
-
-
 // Serial task - sum numbers in the vector
-float serial_naive_task(const std::vector<float>& numbers)
-{
-    auto sum {0.0};
-    for(const auto val : numbers)
-    {
+float serial_naive_task(const std::vector<float>& numbers) {
+    auto sum{0.0};
+    for (const auto val : numbers) {
         sum += val;
     }
     return sum;
 }
 
-
-
-int main(int argc, char** argv) 
-{
-
+int main(int argc, char** argv) {
     // Must have 3 arguments
-    if (argc < 3) 
-    {
+    if (argc < 3) {
         std::cerr << "Usage: " << argv[0] << " time_limit  vec_size\n";
         return 1;
     }
@@ -67,14 +54,12 @@ int main(int argc, char** argv)
     numbers.reserve(N);
 
     // Populate vector
-    for (int i = 0; i < N; ++i) 
-    {
+    for (int i = 0; i < N; ++i) {
         numbers.emplace_back(static_cast<float>(dist(rng)));
     }
 
     auto expected_value = serial_naive_task(numbers);
 
-  
     // ======= Calculation Starts ========
 
     // Setup
@@ -85,26 +70,24 @@ int main(int argc, char** argv)
     auto deadline = t1 + std::chrono::duration<double>(test_time_seconds);
     std::uint64_t iters = 0;
 
-    auto calculated_value_float {0.0f};
+    auto calculated_value_float{0.0f};
 
     // Do as many times as possible before time runs out
-    do 
-    {
+    do {
         calculated_value_float = task(numbers);
         iters++;
-    } 
-    while (std::chrono::steady_clock::now() < deadline);
+    } while (std::chrono::steady_clock::now() < deadline);
 
     auto calculated_value = static_cast<float>(calculated_value_float);
 
     // Clean up
     auto t2 = std::chrono::steady_clock::now();
-    
+
     // Actual end time
     auto t3 = std::chrono::steady_clock::now();
 
     // ======= Calculation Ends ========
-   
+
     auto time_setup = std::chrono::duration<double>(t1 - t0).count();
     auto time_calc = std::chrono::duration<double>(t2 - t1).count();
     auto time_cleanup = std::chrono::duration<double>(t3 - t2).count();
@@ -115,9 +98,9 @@ int main(int argc, char** argv)
 
     // Output
     {
-        const auto method {std::string("Serial Naive 32")};
+        const auto method{std::string("Serial Naive 32")};
         const auto operation_string = std::string("sum");
-        const auto comments {std::string("operation:") + std::string(operation_string)};
+        const auto comments{std::string("operation:") + std::string(operation_string)};
 
         const std::string base_file_name = "results/serial_naive_32_" + operation_string;
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
@@ -133,7 +116,7 @@ int main(int argc, char** argv)
         j["precision"] = "32";
         j["device"] = "CPU";
 
-        // Iteration/timing            
+        // Iteration/timing
         j["test_time_seconds"] = test_time_seconds;
         j["iterations"] = iters;
         j["time_per_iteration"] = time_per_iteration;
@@ -141,10 +124,11 @@ int main(int argc, char** argv)
         j["time_calc"] = time_calc;
         j["time_cleanup"] = time_cleanup;
         j["time_total"] = time_total;
-        
+
         // Values
         j["expected_value"] = helper::to_string_precise(expected_value);
-        j["calculated_value"] = helper::to_string_precise(calculated_value);;
+        j["calculated_value"] = helper::to_string_precise(calculated_value);
+        ;
         j["difference"] = helper::to_string_precise(expected_value - calculated_value);
         j["passed_check"] = passed_check;
         j["values"] = helper::to_string_precise_vector(numbers);
@@ -153,14 +137,13 @@ int main(int argc, char** argv)
         j["max_rss_kb"] = helper::max_rss_kb();
 
         std::ofstream out(json_file);
-        if (!out)
-        {
+        if (!out) {
             throw std::runtime_error("Failed to open output JSON file.");
         }
 
         // Save JSON file.
         out << std::setw(2) << j << '\n';
     }
-    
+
     return 0;
 }

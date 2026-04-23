@@ -222,13 +222,13 @@ int main(int argc, char** argv) {
 
         const auto passed_check{std::abs(calculated_value - expected_value) < 1.0e-9};
 
-        const auto method{std::string("Serial STL")};
+        const auto method{std::string("Serial STL Transform")};
         const auto comments{std::string("operation:") + std::string(operation_string)};
 
         // Output
         {
             const std::string base_file_name =
-                "results/serial_stl_" + std::string(operation_string);
+                "results/serial_stl_transform_" + std::string(operation_string);
             const std::string json_file =
                 base_file_name + "_" + helper::random_suffix(12) + ".json";
 

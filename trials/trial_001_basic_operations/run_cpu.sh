@@ -19,14 +19,14 @@ VECTOR_SIZE=1000000
 
 # Each entry: "executable arguments"
 apps=(
-    "./bin/serial.x"
-    "./bin/serial_32.x"
-    "./bin/serial_stl.x"
-    "./bin/serial_stl_32.x"
+    "./bin/serial_naive.x"
+    "./bin/serial_naive_32.x"
+    "./bin/serial_stl_transform.x"
+    "./bin/serial_stl_transform_32.x"
     "./bin/serial_simd.x"
     "./bin/serial_simd_32.x"
-    "./bin/parallel_stl.x"
-    "./bin/parallel_stl_32.x"
+    "./bin/parallel_stl_transform.x"
+    "./bin/parallel_stl_transform_32.x"
     "./bin/parallel_thread.x"
     "./bin/parallel_thread_32.x"
     "./bin/parallel_openmp.x"
@@ -64,5 +64,3 @@ do
 
     done
 done
-
-
