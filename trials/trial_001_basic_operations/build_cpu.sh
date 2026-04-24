@@ -66,7 +66,6 @@ trap 'echo "Error on line $LINENO (exit code $?)" >&2' ERR
          src/serial_stl_transform_32.cpp \
         -Iinclude \
         -isystem include/nlohmann \
-        -isystem include/nlohmann \
         -o bin/serial_stl_transform_32.x
     g++ -std=c++23 -O3 -march=native -ffast-math \
         -mavx2 -mfma \

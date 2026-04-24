@@ -25,9 +25,9 @@
 #include <string_view>
 #include <vector>
 
-#include <Error.hpp>
-#include <helper.hpp>
 #include <nlohmann/json.hpp>
+#include "helper/Error.hpp"
+#include "helper/helper.hpp"
 
 using OperationKind = helper::OperationKind;
 
@@ -169,7 +169,7 @@ void serial_task(OperationKind operation, const std::vector<double>& numbers_a,
  * @param argv Argument vector
  * @return Exit code
  */
-int main(int argc, char** argv) {
+auto main(int argc, char** argv) -> int {
     try {
         if (argc < 4) {
             THROW_INVALID_ARGUMENT("Usage: serial.x time_limit vec_size operation");
