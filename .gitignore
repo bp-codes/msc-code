@@ -5,8 +5,9 @@ build/*
 output
 output/*
 **/output
-*.log 
+*.log
 *.exe
+*.out
 *.x
 *.mp4
 *.png
