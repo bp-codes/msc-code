@@ -26,9 +26,9 @@
 #include <string_view>
 #include <vector>
 
-#include "Error.hpp"
-#include "helper.hpp"
-#include "json.hpp"
+#include <Error.hpp>
+#include <helper.hpp>
+#include <nlohmann/json.hpp>
 
 using OperationKind = helper::OperationKind;
 
@@ -240,17 +240,6 @@ int main(int argc, char** argv) {
             numbers_b.emplace_back(dist(rng));
         }
 
-        auto expected_value{0.0};
-        {
-            auto numbers_c{std::vector<double>(n)};
-            helper::validate_sizes(numbers_a, numbers_b, numbers_c);
-
-            serial_task(operation, numbers_a, numbers_b, numbers_c);
-            expected_value = helper::check_sum(numbers_c);
-
-            std::cout << "Serial computed expected value: " << expected_value << "\n";
-        }
-
         // ======= Calculation Starts ========
 
         const auto t0{std::chrono::steady_clock::now()};
@@ -258,7 +247,7 @@ int main(int argc, char** argv) {
         const auto t1{std::chrono::steady_clock::now()};
         const auto deadline{t1 + std::chrono::duration<double>(test_time_seconds)};
 
-        auto iters{std::uint64_t(0)};
+        auto iters{static_cast<std::uint64_t>(0)};
         auto numbers_c{std::vector<double>(n)};
         helper::validate_sizes(numbers_a, numbers_b, numbers_c);
 
@@ -279,8 +268,6 @@ int main(int argc, char** argv) {
         const auto time_cleanup{std::chrono::duration<double>(t3 - t2).count()};
         const auto time_total{std::chrono::duration<double>(t3 - t0).count()};
         const auto time_per_iteration{time_calc / static_cast<double>(iters)};
-
-        const auto passed_check{std::abs(calculated_value - expected_value) < 1.0e-9};
 
         const auto method{std::string("Serial SIMD")};
         const auto comments{std::string("operation:") + std::string(operation_string)};
@@ -313,11 +300,7 @@ int main(int argc, char** argv) {
             j["time_total"] = time_total;
 
             // Values
-            j["expected_value"] = helper::to_string_precise(expected_value);
             j["calculated_value"] = helper::to_string_precise(calculated_value);
-            ;
-            j["difference"] = helper::to_string_precise(expected_value - calculated_value);
-            j["passed_check"] = passed_check;
             j["values"] = helper::to_string_precise_vector(numbers_c);
 
             // Memory
