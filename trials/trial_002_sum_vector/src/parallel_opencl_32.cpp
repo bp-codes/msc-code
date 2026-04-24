@@ -313,10 +313,10 @@ int main(int argc, char** argv) {
     std::vector<float> numbers;
     numbers.reserve(N);
 
-    for (int i = 0; i < N; ++i)
+    for (int i = 0; i < N; ++i) {
         numbers.emplace_back(static_cast<float>(dist(rng)));
+    }
 
-    auto expected_value = serial_naive_task(numbers);
 
     // Timing
     //==================================================
@@ -355,8 +355,6 @@ int main(int argc, char** argv) {
     auto time_total = std::chrono::duration<double>(t3 - t0).count();
     auto time_per_iteration = time_calc / iters;
 
-    bool passed_check = std::abs(calculated_value - expected_value) < 1.0e-9;
-
     {
         const auto method{std::string("Parallel OpenCL 32")};
         const auto operation_string = std::string("sum");
@@ -383,10 +381,8 @@ int main(int argc, char** argv) {
         j["time_cleanup"] = time_cleanup;
         j["time_total"] = time_total;
 
-        j["expected_value"] = helper::to_string_precise(expected_value);
         j["calculated_value"] = helper::to_string_precise(calculated_value);
-        j["difference"] = helper::to_string_precise(expected_value - calculated_value);
-        j["passed_check"] = passed_check;
+        j["values"] = helper::to_string_precise_vector(numbers);
 
         j["max_rss_kb"] = helper::max_rss_kb();
 
