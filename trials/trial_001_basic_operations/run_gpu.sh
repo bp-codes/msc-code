@@ -1,21 +1,12 @@
 #!/bin/bash
 
-#  ./bin/sycl.x 5.0 1000000 add
-#  ./bin/sycl_32.x 5.0 1000000 add
-#  ./bin/cuda.x 5.0 1000000 add
-#  ./bin/opencl.x 5.0 1000000 add
-
-#apt update
-#apt install time
-#apt install pocl-opencl-icd ocl-icd-libopencl1 clinfo
-#set -euo pipefail
-
 set -euo pipefail
-shopt -s nocasematch
-RUNS=5
+export NUM_THREADS=6
 mkdir -p results
 
-
+RUNS=2
+RUN_TIME=1.0
+VECTOR_SIZE=1000000
 
 # Each entry: "executable arguments"
 apps=(
@@ -37,8 +28,6 @@ operations=(
     "sqrt"
 )
 
-#./bin/serial.x 5.0 1000000 add
-
 for app in "${apps[@]}"
 do
     for op in "${operations[@]}"
@@ -52,18 +41,18 @@ do
             if [[ "$app" == *opencl* || "$app" == *sycl* ]]; then
 
                 echo "    CPU"
-                CMD="$app 5.0 1000000 $op CPU"
+                CMD="$app "$RUN_TIME" "$VECTOR_SIZE" $op CPU"
                 echo $CMD
                 eval $CMD
 
                 echo "    GPU"
-                CMD="$app 5.0 1000000 $op GPU"
+                CMD="$app "$RUN_TIME" "$VECTOR_SIZE" $op GPU"
                 echo $CMD
                 eval $CMD
 
             else
 
-                CMD="$app 5.0 1000000 $op"
+                CMD="$app "$RUN_TIME" "$VECTOR_SIZE" $op"
                 echo $CMD
                 eval $CMD
 
@@ -72,5 +61,3 @@ do
 
     done
 done
-
-
