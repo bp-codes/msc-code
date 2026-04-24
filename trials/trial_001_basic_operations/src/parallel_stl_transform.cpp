@@ -29,6 +29,7 @@
 
 #include "helper/Error.hpp"
 #include "helper/helper.hpp"
+
 #include <nlohmann/json.hpp>
 
 using OperationKind = helper::OperationKind;

@@ -25,9 +25,10 @@
 #include <string_view>
 #include <vector>
 
-#include <nlohmann/json.hpp>
 #include "helper/Error.hpp"
 #include "helper/helper.hpp"
+
+#include <nlohmann/json.hpp>
 
 using OperationKind = helper::OperationKind;
 

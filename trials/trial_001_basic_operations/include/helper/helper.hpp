@@ -168,7 +168,7 @@ void validate_sizes(const std::vector<T>& numbers_a, const std::vector<T>& numbe
  * @return string.
  */
 template <typename T>
-requires(std::floating_point<T>)
+    requires(std::floating_point<T>)
 [[nodiscard]]
 std::string to_string_precise(const T& value) {
     std::ostringstream oss;
