@@ -15,9 +15,9 @@
 #include <string>
 #include <vector>
 
-#include "Error.hpp"
-#include "helper_cuda.hpp"
-#include "json.hpp"
+#include "helper/Error.hpp"
+#include "helper/helper_cuda.hpp"
+#include <nlohmann/json.hpp>
 
 #define CUDA_CHECK(call)                                                                        \
     do {                                                                                        \

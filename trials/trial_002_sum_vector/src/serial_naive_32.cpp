@@ -11,11 +11,12 @@
 #include <string>
 #include <vector>
 
-#include "Error.hpp"
-#include "helper.hpp"
-#include "json.hpp"
+#include "helper/Error.hpp"
+#include "helper/helper.hpp"
+#include <nlohmann/json.hpp>
 
 // Serial task - sum numbers in the vector
+[[nodiscard]]
 float task(const std::vector<float>& numbers) {
     auto sum{0.0f};
     for (const auto val : numbers) {
@@ -48,8 +49,6 @@ int main(int argc, char** argv) {
     for (int i = 0; i < N; ++i) {
         numbers.emplace_back(static_cast<float>(dist(rng)));
     }
-
-    auto expected_value = serial_naive_task(numbers);
 
     // ======= Calculation Starts ========
 

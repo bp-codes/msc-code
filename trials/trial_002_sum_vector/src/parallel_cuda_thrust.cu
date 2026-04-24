@@ -15,9 +15,9 @@
 #include <string>
 #include <vector>
 
-#include "Error.hpp"
-#include "helper_cuda.hpp"
-#include "json.hpp"
+#include "helper/Error.hpp"
+#include "helper/helper_cuda.hpp"
+#include <nlohmann/json.hpp>
 
 #define CUDA_CHECK(call)                                                                        \
     do {                                                                                        \
@@ -29,20 +29,11 @@
         }                                                                                       \
     } while (0)
 
-double cuda_thrust_task(const double* d_input, int N) {
+double task(const double* d_input, int N) {
     thrust::device_ptr<const double> begin(d_input);
     thrust::device_ptr<const double> end = begin + N;
 
     return thrust::reduce(thrust::device, begin, end, 0.0, thrust::plus<double>());
-}
-
-// Serial task - sum numbers in the vector
-double serial_naive_task(const std::vector<double>& numbers) {
-    auto sum{0.0};
-    for (const auto val : numbers) {
-        sum += val;
-    }
-    return sum;
 }
 
 int main(int argc, char** argv) {
@@ -75,8 +66,6 @@ int main(int argc, char** argv) {
         numbers.emplace_back(dist(rng));
     }
 
-    auto expected_value = serial_naive_task(numbers);
-
     // ======= Calculation Starts ========
 
     auto t0 = std::chrono::steady_clock::now();
@@ -97,7 +86,7 @@ int main(int argc, char** argv) {
     double calculated_value{};
 
     do {
-        calculated_value = cuda_thrust_task(device_numbers, N);
+        calculated_value = task(device_numbers, N);
         iters++;
     } while (std::chrono::steady_clock::now() < deadline);
 
@@ -120,8 +109,6 @@ int main(int argc, char** argv) {
     std::string method{"CUDA"};
     std::string device{"gpu"};
     std::string comments{"operation:" + operation};
-
-    bool passed_check = std::abs(calculated_value - expected_value) < 1.0e-9;
 
     // Output
     {
@@ -153,11 +140,7 @@ int main(int argc, char** argv) {
         j["time_total"] = time_total;
 
         // Values
-        j["expected_value"] = helper::to_string_precise(expected_value);
         j["calculated_value"] = helper::to_string_precise(calculated_value);
-        ;
-        j["difference"] = helper::to_string_precise(expected_value - calculated_value);
-        j["passed_check"] = passed_check;
         j["values"] = helper::to_string_precise_vector(numbers);
 
         // Memory

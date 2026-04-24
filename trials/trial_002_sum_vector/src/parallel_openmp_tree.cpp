@@ -14,9 +14,9 @@
 #include <string>
 #include <vector>
 
-#include "Error.hpp"
-#include "helper.hpp"
-#include "json.hpp"
+#include "helper/Error.hpp"
+#include "helper/helper.hpp"
+#include <nlohmann/json.hpp>
 
 std::size_t floor_pow2(std::size_t x) {
     std::size_t p = 1;
@@ -65,15 +65,6 @@ double task(const std::vector<double>& numbers) {
     return result;
 }
 
-// Serial task - sum numbers in the vector
-double serial_naive_task(const std::vector<double>& numbers) {
-    auto sum{0.0};
-    for (const auto val : numbers) {
-        sum += val;
-    }
-    return sum;
-}
-
 int main(int argc, char** argv) {
     // Set threads
     omp_set_num_threads(helper::get_num_threads());
@@ -101,8 +92,6 @@ int main(int argc, char** argv) {
     for (int i = 0; i < N; ++i) {
         numbers.emplace_back(dist(rng));
     }
-
-    auto expected_value = serial_naive_task(numbers);
 
     // ======= Calculation Starts ========
 
@@ -136,8 +125,6 @@ int main(int argc, char** argv) {
     auto time_total = std::chrono::duration<double>(t3 - t0).count();
     auto time_per_iteration = time_calc / iters;
 
-    bool passed_check = std::abs(calculated_value - expected_value) < 1.0e-9;
-
     // Output
     {
         const auto method{std::string("Parallel OpenMP Tree")};
@@ -168,11 +155,7 @@ int main(int argc, char** argv) {
         j["time_total"] = time_total;
 
         // Values
-        j["expected_value"] = helper::to_string_precise(expected_value);
         j["calculated_value"] = helper::to_string_precise(calculated_value);
-        ;
-        j["difference"] = helper::to_string_precise(expected_value - calculated_value);
-        j["passed_check"] = passed_check;
         j["values"] = helper::to_string_precise_vector(numbers);
 
         // Memory

@@ -13,12 +13,13 @@
 #include <string>
 #include <vector>
 
-#include "Error.hpp"
-#include "helper.hpp"
-#include "json.hpp"
+#include "helper/Error.hpp"
+#include "helper/helper.hpp"
+#include <nlohmann/json.hpp>
 
 // Serial task - sum numbers in the vector
-double serial_naive_task(const std::vector<double>& numbers) {
+[[nodiscard]]
+double task(const std::vector<double>& numbers) {
     __float128 sum{0.0Q};
     for (const auto val : numbers) {
         sum += static_cast<__float128>(val);
@@ -51,8 +52,6 @@ int main(int argc, char** argv) {
         numbers.emplace_back(dist(rng));
     }
 
-    auto expected_value = serial_naive_task(numbers);
-
     // ======= Calculation Starts ========
 
     // Setup
@@ -63,11 +62,11 @@ int main(int argc, char** argv) {
     auto deadline = t1 + std::chrono::duration<double>(test_time_seconds);
     std::uint64_t iters = 0;
 
-    double calculated_value{};
+    double expected_value{};
 
     // Do as many times as possible before time runs out
     do {
-        calculated_value = serial_naive_task(numbers);
+        expected_value = task(numbers);
         iters++;
     } while (std::chrono::steady_clock::now() < deadline);
 
@@ -84,8 +83,6 @@ int main(int argc, char** argv) {
     auto time_cleanup = std::chrono::duration<double>(t3 - t2).count();
     auto time_total = std::chrono::duration<double>(t3 - t0).count();
     auto time_per_iteration = time_calc / iters;
-
-    bool passed_check = std::abs(calculated_value - expected_value) < 1.0e-9;
 
     // Output
     {
@@ -118,10 +115,6 @@ int main(int argc, char** argv) {
 
         // Values
         j["expected_value"] = helper::to_string_precise(expected_value);
-        j["calculated_value"] = helper::to_string_precise(calculated_value);
-        ;
-        j["difference"] = helper::to_string_precise(expected_value - calculated_value);
-        j["passed_check"] = passed_check;
         j["values"] = helper::to_string_precise_vector(numbers);
 
         // Memory

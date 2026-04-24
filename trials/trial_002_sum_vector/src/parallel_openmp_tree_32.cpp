@@ -14,9 +14,9 @@
 #include <string>
 #include <vector>
 
-#include "Error.hpp"
-#include "helper.hpp"
-#include "json.hpp"
+#include "helper/Error.hpp"
+#include "helper/helper.hpp"
+#include <nlohmann/json.hpp>
 
 std::size_t floor_pow2(std::size_t x) {
     std::size_t p = 1;

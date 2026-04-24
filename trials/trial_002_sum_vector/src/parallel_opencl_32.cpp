@@ -12,9 +12,9 @@
 #include <string>
 #include <vector>
 
-#include "Error.hpp"
-#include "helper.hpp"
-#include "json.hpp"
+#include "helper/Error.hpp"
+#include "helper/helper.hpp"
+#include <nlohmann/json.hpp>
 
 #define CL_TARGET_OPENCL_VERSION 120
 #include <CL/cl.h>
@@ -174,11 +174,11 @@ void opencl_setup(OpenCLContext& ctx, const std::vector<float>& numbers,
     ctx.context = clCreateContext(nullptr, 1, &ctx.device, nullptr, nullptr, &err);
     opencl_check(err, "clCreateContext failed");
 
-    #if CL_TARGET_OPENCL_VERSION >= 200
-        ctx.queue = clCreateCommandQueueWithProperties(ctx.context, ctx.device, 0, &err);
-    #else
-        ctx.queue = clCreateCommandQueue(ctx.context, ctx.device, 0, &err);
-    #endif
+#if CL_TARGET_OPENCL_VERSION >= 200
+    ctx.queue = clCreateCommandQueueWithProperties(ctx.context, ctx.device, 0, &err);
+#else
+    ctx.queue = clCreateCommandQueue(ctx.context, ctx.device, 0, &err);
+#endif
     opencl_check(err, "clCreateCommandQueueWithProperties failed");
 
     // ---------------------------
@@ -214,33 +214,24 @@ void opencl_setup(OpenCLContext& ctx, const std::vector<float>& numbers,
 
     // tune local size
     size_t max_workgroup = 0;
-    clGetDeviceInfo(ctx.device, CL_DEVICE_MAX_WORK_GROUP_SIZE,
-                    sizeof(size_t), &max_workgroup, nullptr);
+    clGetDeviceInfo(ctx.device, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(size_t), &max_workgroup,
+                    nullptr);
 
     ctx.local_size = std::min<size_t>(256, max_workgroup);
 
     // compute max number of groups
     size_t max_groups = (N + ctx.local_size - 1) / ctx.local_size;
 
-    ctx.input_buf = clCreateBuffer(ctx.context,
-                               CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                               sizeof(float) * N,
-                               const_cast<float*>(numbers.data()),
-                               &err);
+    ctx.input_buf = clCreateBuffer(ctx.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                                   sizeof(float) * N, const_cast<float*>(numbers.data()), &err);
     opencl_check(err, "clCreateBuffer input_buf failed");
 
-    ctx.buffer_a = clCreateBuffer(ctx.context,
-                                CL_MEM_READ_WRITE,
-                                sizeof(float) * max_groups,
-                                nullptr,
-                                &err);
+    ctx.buffer_a =
+        clCreateBuffer(ctx.context, CL_MEM_READ_WRITE, sizeof(float) * max_groups, nullptr, &err);
     opencl_check(err, "clCreateBuffer buffer_a failed");
 
-    ctx.buffer_b = clCreateBuffer(ctx.context,
-                                CL_MEM_READ_WRITE,
-                                sizeof(float) * max_groups,
-                                nullptr,
-                                &err);
+    ctx.buffer_b =
+        clCreateBuffer(ctx.context, CL_MEM_READ_WRITE, sizeof(float) * max_groups, nullptr, &err);
     opencl_check(err, "clCreateBuffer buffer_b failed");
 }
 
