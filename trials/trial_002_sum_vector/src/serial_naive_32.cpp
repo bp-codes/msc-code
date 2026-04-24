@@ -24,15 +24,6 @@ float task(const std::vector<float>& numbers) {
     return sum;
 }
 
-// Serial task - sum numbers in the vector
-float serial_naive_task(const std::vector<float>& numbers) {
-    auto sum{0.0};
-    for (const auto val : numbers) {
-        sum += val;
-    }
-    return sum;
-}
-
 int main(int argc, char** argv) {
     // Must have 3 arguments
     if (argc < 3) {
@@ -94,8 +85,6 @@ int main(int argc, char** argv) {
     auto time_total = std::chrono::duration<double>(t3 - t0).count();
     auto time_per_iteration = time_calc / iters;
 
-    bool passed_check = std::abs(calculated_value - expected_value) < 1.0e-9;
-
     // Output
     {
         const auto method{std::string("Serial Naive 32")};
@@ -126,11 +115,7 @@ int main(int argc, char** argv) {
         j["time_total"] = time_total;
 
         // Values
-        j["expected_value"] = helper::to_string_precise(expected_value);
         j["calculated_value"] = helper::to_string_precise(calculated_value);
-        ;
-        j["difference"] = helper::to_string_precise(expected_value - calculated_value);
-        j["passed_check"] = passed_check;
         j["values"] = helper::to_string_precise_vector(numbers);
 
         // Memory

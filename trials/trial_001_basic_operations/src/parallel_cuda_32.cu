@@ -1,5 +1,5 @@
 /**
- * @file parallel_cuda_32.cpp
+ * @file parallel_cuda.cpp
  * @brief
  *
  * @author Ben Palmer
@@ -26,261 +26,16 @@
 #include <system_error>
 #include <vector>
 
-#include "Error.hpp"
-#include "json.hpp"
+#include <Error.hpp>
+#include <helper_cuda.hpp>
+#include <nlohmann/json.hpp>
+
+using OperationKind = helper::OperationKind;
 
 namespace {
 
-inline constexpr float MIN_DENOMINATOR{1.0e-9};
+inline constexpr float MIN_DENOMINATOR{1.0e-9f};
 inline constexpr std::uint64_t RNG_SEED{123456789ULL};
-
-[[nodiscard]]
-std::string random_suffix(const std::size_t n) {
-    static constexpr char charset[] =
-        "abcdefghijklmnopqrstuvwxyz"
-        "0123456789";
-
-    static thread_local std::mt19937 rng{RNG_SEED};
-    std::uniform_int_distribution<std::size_t> dist(0, sizeof(charset) - 2);
-
-    std::string s;
-    s.reserve(n);
-    for (int i = 0; i < n; ++i) {
-        s.push_back(charset[dist(rng)]);
-    }
-    return s;
-}
-
-/**
- * @enum OperationKind
- * @brief Supported element-wise operations.
- */
-enum class OperationKind { Add, Multiply, Divide, Power, Exp, Log, Sqrt };
-
-/**
- * @brief Parse an operation string into an OperationKind.
- * @param operation Operation name (e.g. "add")
- * @return Parsed enum value.
- * @throws std::invalid_argument if the operation is unknown.
- */
-[[nodiscard]]
-OperationKind parse_operation(std::string_view operation) {
-    if (operation == "add") {
-        return OperationKind::Add;
-    }
-    if (operation == "multiply") {
-        return OperationKind::Multiply;
-    }
-    if (operation == "divide") {
-        return OperationKind::Divide;
-    }
-    if (operation == "power") {
-        return OperationKind::Power;
-    }
-    if (operation == "exp") {
-        return OperationKind::Exp;
-    }
-    if (operation == "log") {
-        return OperationKind::Log;
-    }
-    if (operation == "sqrt") {
-        return OperationKind::Sqrt;
-    }
-
-    THROW_INVALID_ARGUMENT("Unknown operation.");
-}
-
-/**
- * @brief Parse a float from argv using std::from_chars.
- * @param s Null-terminated string.
- * @return Parsed float.
- * @throws std::invalid_argument on parse failure.
- */
-[[nodiscard]]
-float parse_float(const char* s) {
-    if (s == nullptr) {
-        THROW_INVALID_ARGUMENT("Null argument encountered while parsing float.");
-    }
-
-    float value{};
-    const auto* first{s};
-    const auto* last{s + std::char_traits<char>::length(s)};
-
-    const auto result{std::from_chars(first, last, value)};
-    if (result.ec != std::errc{} || result.ptr != last) {
-        THROW_INVALID_ARGUMENT("Failed to parse float argument.");
-    }
-
-    return value;
-}
-
-/**
- * @brief Parse a non-negative std::size_t from argv using std::from_chars.
- * @param s Null-terminated string.
- * @return Parsed size.
- * @throws std::invalid_argument on parse failure.
- */
-[[nodiscard]]
-std::size_t parse_size(const char* s) {
-    if (s == nullptr) {
-        THROW_INVALID_ARGUMENT("Null argument encountered while parsing size.");
-    }
-
-    std::size_t value{};
-    const auto* first{s};
-    const auto* last{s + std::char_traits<char>::length(s)};
-
-    const auto result{std::from_chars(first, last, value)};
-    if (result.ec != std::errc{} || result.ptr != last) {
-        THROW_INVALID_ARGUMENT("Failed to parse size argument.");
-    }
-
-    return value;
-}
-
-/**
- * @brief Validate that inputs/outputs are consistent before entering compute loops.
- * @param numbers_a First input vector.
- * @param numbers_b Second input vector.
- * @param numbers_c Output vector (must be pre-sized).
- * @throws std::invalid_argument if sizes do not match.
- */
-template <typename T>
-void validate_sizes(const std::vector<T>& numbers_a, const std::vector<T>& numbers_b,
-                    const std::vector<T>& numbers_c) {
-    if (numbers_a.size() != numbers_b.size()) {
-        THROW_INVALID_ARGUMENT("Input vectors must have the same length.");
-    }
-    if (numbers_c.size() != numbers_a.size()) {
-        THROW_INVALID_ARGUMENT("Output vector must be pre-sized to match inputs.");
-    }
-}
-
-// Serial versions (unchanged)
-
-/**
- * @brief Element-wise addition: c[i] = a[i] + b[i]
- */
-void serial_add(const std::vector<float>& numbers_a, const std::vector<float>& numbers_b,
-                std::vector<float>& numbers_c) {
-    const auto n{std::size_t(numbers_a.size())};
-    for (auto i = std::size_t(0); i < n; i++) {
-        numbers_c[i] = numbers_a[i] + numbers_b[i];
-    }
-}
-
-/**
- * @brief Element-wise multiplication: c[i] = a[i] * b[i]
- */
-void serial_multiply(const std::vector<float>& numbers_a, const std::vector<float>& numbers_b,
-                     std::vector<float>& numbers_c) {
-    const auto n{std::size_t(numbers_a.size())};
-    for (auto i = std::size_t(0); i < n; i++) {
-        numbers_c[i] = numbers_a[i] * numbers_b[i];
-    }
-}
-
-/**
- * @brief Element-wise division: c[i] = a[i] / max(b[i], MIN_DENOMINATOR)
- */
-void serial_divide(const std::vector<float>& numbers_a, const std::vector<float>& numbers_b,
-                   std::vector<float>& numbers_c) {
-    const auto n{std::size_t(numbers_a.size())};
-    for (auto i = std::size_t(0); i < n; i++) {
-        numbers_c[i] = numbers_a[i] / std::fmax(numbers_b[i], MIN_DENOMINATOR);
-    }
-}
-
-/**
- * @brief Element-wise power: c[i] = pow(a[i], b[i])
- */
-void serial_power(const std::vector<float>& numbers_a, const std::vector<float>& numbers_b,
-                  std::vector<float>& numbers_c) {
-    const auto n{std::size_t(numbers_a.size())};
-    for (auto i = std::size_t(0); i < n; i++) {
-        numbers_c[i] = std::pow(numbers_a[i], numbers_b[i]);
-    }
-}
-
-/**
- * @brief Element-wise exp sum: c[i] = exp(a[i]) + exp(b[i])
- */
-void serial_exp(const std::vector<float>& numbers_a, const std::vector<float>& numbers_b,
-                std::vector<float>& numbers_c) {
-    const auto n{std::size_t(numbers_a.size())};
-    for (auto i = std::size_t(0); i < n; i++) {
-        numbers_c[i] = std::exp(numbers_a[i]) + std::exp(numbers_b[i]);
-    }
-}
-
-/**
- * @brief Element-wise log sum: c[i] = log(a[i]) + log(b[i])
- * @warning Inputs must be > 0. No bounds/validity checking is performed in this hot loop.
- */
-void serial_log(const std::vector<float>& numbers_a, const std::vector<float>& numbers_b,
-                std::vector<float>& numbers_c) {
-    const auto n{std::size_t(numbers_a.size())};
-    for (auto i = std::size_t(0); i < n; i++) {
-        numbers_c[i] = std::log(numbers_a[i]) + std::log(numbers_b[i]);
-    }
-}
-
-/**
- * @brief Element-wise sqrt sum: c[i] = sqrt(a[i]) + sqrt(b[i])
- * @warning Inputs must be >= 0. No bounds/validity checking is performed in this hot loop.
- */
-void serial_sqrt(const std::vector<float>& numbers_a, const std::vector<float>& numbers_b,
-                 std::vector<float>& numbers_c) {
-    const auto n{std::size_t(numbers_a.size())};
-    for (auto i = std::size_t(0); i < n; i++) {
-        numbers_c[i] = std::sqrt(numbers_a[i]) + std::sqrt(numbers_b[i]);
-    }
-}
-
-/**
- * @brief Dispatch the selected operation.
- * @param operation Operation kind.
- * @param numbers_a First input vector.
- * @param numbers_b Second input vector.
- * @param numbers_c Output vector (must be pre-sized).
- */
-void serial_task(OperationKind operation, const std::vector<float>& numbers_a,
-                 const std::vector<float>& numbers_b, std::vector<float>& numbers_c) {
-    switch (operation) {
-        case OperationKind::Add: {
-            serial_add(numbers_a, numbers_b, numbers_c);
-            return;
-        }
-        case OperationKind::Multiply: {
-            serial_multiply(numbers_a, numbers_b, numbers_c);
-            return;
-        }
-        case OperationKind::Divide: {
-            serial_divide(numbers_a, numbers_b, numbers_c);
-            return;
-        }
-        case OperationKind::Power: {
-            serial_power(numbers_a, numbers_b, numbers_c);
-            return;
-        }
-        case OperationKind::Exp: {
-            serial_exp(numbers_a, numbers_b, numbers_c);
-            return;
-        }
-        case OperationKind::Log: {
-            serial_log(numbers_a, numbers_b, numbers_c);
-            return;
-        }
-        case OperationKind::Sqrt: {
-            serial_sqrt(numbers_a, numbers_b, numbers_c);
-            return;
-        }
-    }
-
-    THROW_RUNTIME_ERROR("Unhandled OperationKind value.");
-}
-
-// CUDA parallel versions
 
 inline void cuda_check(cudaError_t status, const char* message) {
     if (status != cudaSuccess) {
@@ -379,26 +134,6 @@ cudaError_t launch_kernel(OperationKind operation, std::size_t n, cudaStream_t s
     return cudaErrorInvalidValue;
 }
 
-/**
- * @brief Compute the sum of all elements in a vector (serial).
- * @param numbers Vector to sum.
- * @return Sum of elements.
- */
-[[nodiscard]]
-double check_sum(const std::vector<double>& numbers) {
-    return std::accumulate(numbers.begin(), numbers.end(), 0.0);
-}
-
-/**
- * @brief Compute the sum of all elements in a vector (serial).
- * @param numbers Vector to sum.
- * @return Sum of elements.
- */
-[[nodiscard]]
-float check_sum(const std::vector<float>& numbers) {
-    return std::accumulate(numbers.begin(), numbers.end(), 0.0f);
-}
-
 }  // namespace
 
 /**
@@ -410,10 +145,10 @@ int main(int argc, char** argv) {
             THROW_INVALID_ARGUMENT("Usage: cuda.x time_limit vec_size operation");
         }
 
-        const auto test_time_seconds{parse_float(argv[1])};
-        const auto n{parse_size(argv[2])};
+        const auto test_time_seconds{helper::parse_floating_point(argv[1])};
+        const auto n{helper::parse_size(argv[2])};
         const auto operation_string{std::string_view(argv[3])};
-        const auto operation{parse_operation(operation_string)};
+        const auto operation{helper::parse_operation(operation_string)};
 
         if (test_time_seconds <= 0.0) {
             THROW_INVALID_ARGUMENT("time_limit must be > 0.");
@@ -433,17 +168,6 @@ int main(int argc, char** argv) {
         for (auto i = std::size_t(0); i < n; i++) {
             numbers_a.emplace_back(static_cast<float>(dist(rng)));
             numbers_b.emplace_back(static_cast<float>(dist(rng)));
-        }
-
-        auto expected_value{0.0};
-        {
-            auto numbers_c{std::vector<float>(n)};
-            validate_sizes(numbers_a, numbers_b, numbers_c);
-
-            serial_task(operation, numbers_a, numbers_b, numbers_c);
-            expected_value = check_sum(numbers_c);
-
-            std::cout << "Serial computed expected value: " << expected_value << "\n";
         }
 
         // ======= Calculation Starts ========
@@ -484,7 +208,7 @@ int main(int argc, char** argv) {
         const auto t1{std::chrono::steady_clock::now()};
         const auto deadline{t1 + std::chrono::duration<double>(test_time_seconds)};
 
-        auto iters{std::uint64_t(0)};
+        auto iters{static_cast<std::uint64_t>(0)};
 
         // Do as many times as possible before time runs out
         do {
@@ -512,7 +236,7 @@ int main(int argc, char** argv) {
         // ======= Calculation Ends ========
         const auto t3{std::chrono::steady_clock::now()};
 
-        const auto calculated_value{check_sum(numbers_c)};
+        const auto calculated_value{helper::check_sum(numbers_c)};
 
         const auto time_setup{std::chrono::duration<double>(t1 - t0).count()};
         const auto time_calc{std::chrono::duration<double>(t2 - t1).count()};
@@ -520,16 +244,15 @@ int main(int argc, char** argv) {
         const auto time_total{std::chrono::duration<double>(t3 - t0).count()};
         const auto time_per_iteration{time_calc / static_cast<double>(iters)};
 
-        const auto passed_check{std::abs(calculated_value - expected_value) < 1.0e-9};
-
-        const auto method{std::string("Parallel CUDA 32")};
+        const auto method{std::string("Parallel CUDA")};
         const auto comments{std::string("operation:") + std::string(operation_string)};
 
         // Output
         {
             const std::string base_file_name =
-                "results/parallel_cuda_32_" + std::string(operation_string);
-            const std::string json_file = base_file_name + "_" + random_suffix(12) + ".json";
+                "results/parallel_cuda_" + std::string(operation_string);
+            const std::string json_file =
+                base_file_name + "_" + helper::random_suffix(12) + ".json";
 
             nlohmann::json j;
 
@@ -538,7 +261,8 @@ int main(int argc, char** argv) {
             j["method"] = method;
             j["operation"] = operation_string;
             j["comments"] = comments;
-            j["precision"] = "32";
+            j["threads"] = 1;
+            j["precision"] = "64";
             j["device"] = "GPU";
 
             // Iteration/timing
@@ -551,11 +275,8 @@ int main(int argc, char** argv) {
             j["time_total"] = time_total;
 
             // Values
-            j["expected_value"] = expected_value;
-            j["calculated_value"] = calculated_value;
-            j["difference"] = (expected_value - calculated_value);
-            j["passed_check"] = passed_check;
-            j["values"] = numbers_c;
+            j["calculated_value"] = helper::to_string_precise(calculated_value);
+            j["values"] = helper::to_string_precise_vector(numbers_c);
 
             // Memory
             // j["max_rss_kb"] = max_rss_kb();

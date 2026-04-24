@@ -15,6 +15,7 @@
 
 #include <cmath>
 #include <concepts>
+
 #include <sycl/sycl.hpp>
 
 namespace SyclFunctions {

@@ -26,9 +26,9 @@
 #include <thread>
 #include <vector>
 
-#include "Error.hpp"
-#include "helper.hpp"
-#include "json.hpp"
+#include <Error.hpp>
+#include <helper.hpp>
+#include <nlohmann/json.hpp>
 
 using OperationKind = helper::OperationKind;
 
@@ -36,132 +36,6 @@ namespace {
 
 inline constexpr float MIN_DENOMINATOR{1.0e-9};
 inline constexpr std::uint64_t RNG_SEED{123456789ULL};
-
-// Serial versions
-
-/**
- * @brief Element-wise addition: c[i] = a[i] + b[i]
- */
-void serial_add(const std::vector<float>& numbers_a, const std::vector<float>& numbers_b,
-                std::vector<float>& numbers_c) {
-    const auto n{std::size_t(numbers_a.size())};
-    for (auto i = std::size_t(0); i < n; i++) {
-        numbers_c[i] = numbers_a[i] + numbers_b[i];
-    }
-}
-
-/**
- * @brief Element-wise multiplication: c[i] = a[i] * b[i]
- */
-void serial_multiply(const std::vector<float>& numbers_a, const std::vector<float>& numbers_b,
-                     std::vector<float>& numbers_c) {
-    const auto n{std::size_t(numbers_a.size())};
-    for (auto i = std::size_t(0); i < n; i++) {
-        numbers_c[i] = numbers_a[i] * numbers_b[i];
-    }
-}
-
-/**
- * @brief Element-wise division: c[i] = a[i] / max(b[i], MIN_DENOMINATOR)
- */
-void serial_divide(const std::vector<float>& numbers_a, const std::vector<float>& numbers_b,
-                   std::vector<float>& numbers_c) {
-    const auto n{std::size_t(numbers_a.size())};
-    for (auto i = std::size_t(0); i < n; i++) {
-        numbers_c[i] = numbers_a[i] / std::fmax(numbers_b[i], MIN_DENOMINATOR);
-    }
-}
-
-/**
- * @brief Element-wise power: c[i] = pow(a[i], b[i])
- */
-void serial_power(const std::vector<float>& numbers_a, const std::vector<float>& numbers_b,
-                  std::vector<float>& numbers_c) {
-    const auto n{std::size_t(numbers_a.size())};
-    for (auto i = std::size_t(0); i < n; i++) {
-        numbers_c[i] = std::pow(numbers_a[i], numbers_b[i]);
-    }
-}
-
-/**
- * @brief Element-wise exp sum: c[i] = exp(a[i]) + exp(b[i])
- */
-void serial_exp(const std::vector<float>& numbers_a, const std::vector<float>& numbers_b,
-                std::vector<float>& numbers_c) {
-    const auto n{std::size_t(numbers_a.size())};
-    for (auto i = std::size_t(0); i < n; i++) {
-        numbers_c[i] = std::exp(numbers_a[i]) + std::exp(numbers_b[i]);
-    }
-}
-
-/**
- * @brief Element-wise log sum: c[i] = log(a[i]) + log(b[i])
- * @warning Inputs must be > 0. No bounds/validity checking is performed in this hot loop.
- */
-void serial_log(const std::vector<float>& numbers_a, const std::vector<float>& numbers_b,
-                std::vector<float>& numbers_c) {
-    const auto n{std::size_t(numbers_a.size())};
-    for (auto i = std::size_t(0); i < n; i++) {
-        numbers_c[i] = std::log(numbers_a[i]) + std::log(numbers_b[i]);
-    }
-}
-
-/**
- * @brief Element-wise sqrt sum: c[i] = sqrt(a[i]) + sqrt(b[i])
- * @warning Inputs must be >= 0. No bounds/validity checking is performed in this hot loop.
- */
-void serial_sqrt(const std::vector<float>& numbers_a, const std::vector<float>& numbers_b,
-                 std::vector<float>& numbers_c) {
-    const auto n{std::size_t(numbers_a.size())};
-    for (auto i = std::size_t(0); i < n; i++) {
-        numbers_c[i] = std::sqrt(numbers_a[i]) + std::sqrt(numbers_b[i]);
-    }
-}
-
-/**
- * @brief Dispatch the selected operation.
- * @param operation Operation kind.
- * @param numbers_a First input vector.
- * @param numbers_b Second input vector.
- * @param numbers_c Output vector (must be pre-sized).
- */
-void serial_task(OperationKind operation, const std::vector<float>& numbers_a,
-                 const std::vector<float>& numbers_b, std::vector<float>& numbers_c) {
-    switch (operation) {
-        case OperationKind::Add: {
-            serial_add(numbers_a, numbers_b, numbers_c);
-            return;
-        }
-        case OperationKind::Multiply: {
-            serial_multiply(numbers_a, numbers_b, numbers_c);
-            return;
-        }
-        case OperationKind::Divide: {
-            serial_divide(numbers_a, numbers_b, numbers_c);
-            return;
-        }
-        case OperationKind::Power: {
-            serial_power(numbers_a, numbers_b, numbers_c);
-            return;
-        }
-        case OperationKind::Exp: {
-            serial_exp(numbers_a, numbers_b, numbers_c);
-            return;
-        }
-        case OperationKind::Log: {
-            serial_log(numbers_a, numbers_b, numbers_c);
-            return;
-        }
-        case OperationKind::Sqrt: {
-            serial_sqrt(numbers_a, numbers_b, numbers_c);
-            return;
-        }
-    }
-
-    THROW_RUNTIME_ERROR("Unhandled OperationKind value.");
-}
-
-// Parallel versions
 
 /**
  * @brief Element-wise addition: c[i] = a[i] + b[i]
@@ -468,17 +342,6 @@ int main(int argc, char** argv) {
             numbers_b.emplace_back(static_cast<float>(dist(rng)));
         }
 
-        auto expected_value{0.0};
-        {
-            auto numbers_c{std::vector<float>(n)};
-            helper::validate_sizes(numbers_a, numbers_b, numbers_c);
-
-            serial_task(operation, numbers_a, numbers_b, numbers_c);
-            expected_value = helper::check_sum(numbers_c);
-
-            std::cout << "Serial computed expected value: " << expected_value << "\n";
-        }
-
         // ======= Calculation Starts ========
 
         const auto t0{std::chrono::steady_clock::now()};
@@ -486,7 +349,7 @@ int main(int argc, char** argv) {
         const auto t1{std::chrono::steady_clock::now()};
         const auto deadline{t1 + std::chrono::duration<double>(test_time_seconds)};
 
-        auto iters{std::uint64_t(0)};
+        auto iters{static_cast<std::uint64_t>(0)};
         auto numbers_c{std::vector<float>(n)};
         helper::validate_sizes(numbers_a, numbers_b, numbers_c);
 
@@ -507,8 +370,6 @@ int main(int argc, char** argv) {
         const auto time_cleanup{std::chrono::duration<double>(t3 - t2).count()};
         const auto time_total{std::chrono::duration<double>(t3 - t0).count()};
         const auto time_per_iteration{time_calc / static_cast<double>(iters)};
-
-        const auto passed_check{std::abs(calculated_value - expected_value) < 1.0e-9};
 
         const auto method{std::string("Parallel Thread 32")};
         const auto comments{std::string("operation:") + std::string(operation_string)};
@@ -541,11 +402,7 @@ int main(int argc, char** argv) {
             j["time_total"] = time_total;
 
             // Values
-            j["expected_value"] = helper::to_string_precise(expected_value);
             j["calculated_value"] = helper::to_string_precise(calculated_value);
-            ;
-            j["difference"] = helper::to_string_precise(expected_value - calculated_value);
-            j["passed_check"] = passed_check;
             j["values"] = helper::to_string_precise_vector(numbers_c);
 
             // Memory

@@ -5,8 +5,8 @@ set -Eeuo pipefail
 trap 'echo "Error on line $LINENO (exit code $?)" >&2' ERR
 {
 
-    find src \( -name "*.cpp" -o -name "*.hpp" \) -print0 | \
-    xargs -0 -n1 cppcheck -I src \
+    find src \( -name "*.cpp" -o -name "*.hpp" -o -name '*.cu' \) -print0 | \
+    xargs -0 -n1 cppcheck --language=c++ -I src \
         --enable=warning,style,performance \
         --quiet \
         --suppress=syntaxError:src/json.hpp \

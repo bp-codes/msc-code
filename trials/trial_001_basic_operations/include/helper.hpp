@@ -12,7 +12,8 @@
 #include <string>
 
 #include "Error.hpp"
-#include "json.hpp"
+
+#include <nlohmann/json.hpp>
 
 namespace helper {
 
