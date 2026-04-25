@@ -13,9 +13,9 @@
 #include <algorithm>
 #include <numeric>
 
-#include "json.hpp"
-#include "helper.hpp"
-#include "Error.hpp"
+#include <nlohmann/json.hpp>
+#include "helper/helper.hpp"
+#include "helper/Error.hpp"
 
 #include <thread>
 
@@ -76,7 +76,7 @@ static inline double stopping_power(
 
     // Relativistic kinematics
     const auto beta_raw {projectile_velocity_ms / SPEED_OF_LIGHT_MS};
-    const auto beta {std::clamp(beta_raw, SMALL_VALUE, 0.99999)};            // Clamped to sensible values to avoid errors 
+    const auto beta {std::clamp(beta_raw, SMALL_VALUE, 0.99999)};            // Clamped to sensible values to avoid errors
     const auto beta2 {beta * beta};
 
     const auto inv_one_minus_beta2 {1.0 / (1.0 - beta2)};
@@ -193,7 +193,7 @@ static inline void parallel_task(
     static constexpr auto MEAN_EXCITATION_ENERGY_MEV {286.0e-6}; // 286 eV = 286e-6 MeV
     static constexpr auto DENSITY_EFFECT_DELTA {0.0};
     static constexpr auto SHELL_CORRECTION_C_OVER_Z {0.0};
-    
+
     const auto n {std::size_t(velocity_array.size())};
     const std::size_t num_threads = std::min(helper::get_num_threads(), n);
     const std::size_t chunk = (n + num_threads - 1) / num_threads;
@@ -215,7 +215,7 @@ static inline void parallel_task(
             [&, begin, end]()
             {
                 for (std::size_t i = begin; i < end; ++i)
-                {        
+                {
                     results[i] = stopping_power(
                     velocity_array[i],
                     PROJECTILE_ATOMIC_NUMBER,
@@ -340,7 +340,7 @@ int main(int argc, char** argv)
         j["threads"] = helper::get_num_threads();
         j["device"] = "CPU";
 
-        // Iteration/timing            
+        // Iteration/timing
         j["test_time_seconds"] = test_time_s;
         j["iterations"] = iters;
         j["time_per_iteration"] = time_per_iteration_s;

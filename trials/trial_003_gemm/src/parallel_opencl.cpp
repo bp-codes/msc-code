@@ -10,10 +10,10 @@
 #include <cmath>
 #include <random>
 
-#include "Matrix.hpp"
-#include "Error.hpp"
-#include "helper.hpp"
-#include "json.hpp"
+#include "helper/Matrix.hpp"
+#include "helper/Error.hpp"
+#include "helper/helper.hpp"
+#include <nlohmann/json.hpp>
 
 
 #define CL_TARGET_OPENCL_VERSION 120
@@ -298,7 +298,7 @@ void gemm_opencl(OpenCLContext& ctx,
     opencl_check(clSetKernelArg(ctx.kernel, 6, sizeof(double), &beta), "arg6");
     opencl_check(clSetKernelArg(ctx.kernel, 7, sizeof(cl_mem), &ctx.matrix_c), "arg7");
     opencl_check(clSetKernelArg(ctx.kernel, 8, sizeof(cl_mem), &ctx.matrix_x), "arg8");
-    
+
     constexpr size_t TILE = 16;
 
     size_t local[2]  = {TILE, TILE};
@@ -366,13 +366,13 @@ Matrix<double> gemm_serial(double alpha,
 
 
 // X = k A * B + l C
-int main(int argc, char** argv) 
+int main(int argc, char** argv)
 {
     if (argc < 5) {
         std::cerr << "Usage: " << argv[0] << " test_time_seconds rows cols\n";
         return 1;
     }
-    
+
     double test_time_seconds = std::atof(argv[1]);
 
     const std::size_t M = std::atoi(argv[2]);  // rows of A and C
@@ -410,10 +410,10 @@ int main(int argc, char** argv)
     const auto expected_value = helper::check_sum(X_expected.vector());
     std::cout << expected_value << std::endl;
 
-    
+
 
     // ======= Calculation Starts ========
-    
+
     // Setup
     const auto t0 = std::chrono::steady_clock::now();
 
@@ -432,12 +432,12 @@ int main(int argc, char** argv)
 
 
     // Test starts
-    do 
+    do
     {
         //X = gemm_parallel(k, A, B, l, C);
         gemm_opencl(ctx, k, A, B, l, C, X);
         iters++;
-    } 
+    }
     while (std::chrono::steady_clock::now() < deadline);
     // Test ends
 
@@ -460,7 +460,7 @@ int main(int argc, char** argv)
 
     // Actual end time
     const auto t3 = std::chrono::steady_clock::now();
-    
+
     // ======= Calculation Ends ========
 
     const auto calculated_value = helper::check_sum(X.vector());
@@ -473,7 +473,7 @@ int main(int argc, char** argv)
     const auto time_per_iteration = time_calc / iters;
 
     const auto passed_check {std::abs(calculated_value - expected_value) < 1.0e-9};
-    const std::string operation_string = "gemm"; 
+    const std::string operation_string = "gemm";
 
     const auto matrix_size {std::to_string(M) + "x" + std::to_string(K) + "_by_" + std::to_string(K) + "x" + std::to_string(N)};
     const auto method {std::string("Parallel OpenCL " + matrix_size)};
@@ -499,7 +499,7 @@ int main(int argc, char** argv)
         j["N"] = N;
         j["K"] = K;
 
-        // Iteration/timing            
+        // Iteration/timing
         j["test_time_seconds"] = test_time_seconds;
         j["iterations"] = iters;
         j["time_per_iteration"] = time_per_iteration;
@@ -507,7 +507,7 @@ int main(int argc, char** argv)
         j["time_calc"] = time_calc;
         j["time_cleanup"] = time_cleanup;
         j["time_total"] = time_total;
-        
+
         // Values
         j["expected_value"] = helper::to_string_precise(expected_value);
         j["calculated_value"] = helper::to_string_precise(calculated_value);;
@@ -527,6 +527,6 @@ int main(int argc, char** argv)
         // Save JSON file.
         out << std::setw(2) << j << '\n';
     }
-    
+
     return 0;
 }

@@ -15,9 +15,9 @@
 #include <algorithm>
 #include <numeric>
 
-#include "json.hpp"
-#include "helper_cuda.hpp"
-#include "Error.hpp"
+#include "nlohmann/json.hpp"
+#include "helper/helper_cuda.hpp"
+#include "helper/Error.hpp"
 
 #include <cuda_runtime.h>
 
@@ -332,7 +332,7 @@ int main(int argc, char** argv)
 
     // Fill input once (host writes shared memory)
     std::mt19937_64 rng(123456789ULL);
-    std::uniform_real_distribution<double> dist(1.0e7, 1.0e8); 
+    std::uniform_real_distribution<double> dist(1.0e7, 1.0e8);
 
     for (auto i = std::size_t(0); i < n; i++)
     {
@@ -417,7 +417,7 @@ int main(int argc, char** argv)
         j["threads"] = 1;
         j["device"] = "GPU";
 
-        // Iteration/timing            
+        // Iteration/timing
         j["test_time_seconds"] = test_time_s;
         j["iterations"] = iters;
         j["time_per_iteration"] = time_per_iteration_s;

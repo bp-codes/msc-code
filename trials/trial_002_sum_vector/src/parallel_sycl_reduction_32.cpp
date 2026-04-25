@@ -1,4 +1,15 @@
-// gpu_reuse_buffer_inorder.cpp
+/**
+ * @file serial.cpp
+ * @brief
+ *
+ * @author Ben Palmer
+ * @date 2026
+ *
+ * @copyright
+ * Copyright (c) 2026 Ben Palmer
+ * SPDX-License-Identifier: MIT
+ */
+
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -13,6 +24,7 @@
 
 #include "helper/Error.hpp"
 #include "helper/helper.hpp"
+
 #include <nlohmann/json.hpp>
 #include <sycl/sycl.hpp>
 
@@ -40,8 +52,6 @@ int main(int argc, char** argv) {
     std::string device_selection = argv[4];
     std::transform(device_selection.begin(), device_selection.end(), device_selection.begin(),
                    ::tolower);
-
-    const std::string operation = "Sum vector elements.";
 
     if (N <= 0) {
         std::cerr << "vec_size must be > 0\n";

@@ -14,9 +14,9 @@
 #include <algorithm>
 #include <numeric>
 
-#include "json.hpp"
-#include "helper.hpp"
-#include "Error.hpp"
+#include <nlohmann/json.hpp>
+#include "helper/helper.hpp"
+#include "helper/Error.hpp"
 
 #include <omp.h>
 
@@ -77,7 +77,7 @@ static inline float stopping_power(
 
     // Relativistic kinematics
     const auto beta_raw {projectile_velocity_ms / SPEED_OF_LIGHT_MS};
-    const auto beta {std::clamp(beta_raw, SMALL_VALUE, 0.99999f)};            // Clamped to sensible values to avoid errors 
+    const auto beta {std::clamp(beta_raw, SMALL_VALUE, 0.99999f)};            // Clamped to sensible values to avoid errors
     const auto beta2 {beta * beta};
 
     const auto inv_one_minus_beta2 {1.0f / (1.0f - beta2)};
@@ -313,7 +313,7 @@ int main(int argc, char** argv)
         {
             stopping_power_values_out.emplace_back(static_cast<double>(stopping_power_values[i]));
         }
-        
+
         nlohmann::json j;
 
         // Metadata / identity
@@ -324,7 +324,7 @@ int main(int argc, char** argv)
         j["threads"] = helper::get_num_threads();
         j["device"] = "CPU";
 
-        // Iteration/timing            
+        // Iteration/timing
         j["test_time_seconds"] = test_time_s;
         j["iterations"] = iters;
         j["time_per_iteration"] = time_per_iteration_s;

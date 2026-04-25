@@ -1,4 +1,15 @@
-// gpu_reuse.cpp
+/**
+ * @file serial.cpp
+ * @brief
+ *
+ * @author Ben Palmer
+ * @date 2026
+ *
+ * @copyright
+ * Copyright (c) 2026 Ben Palmer
+ * SPDX-License-Identifier: MIT
+ */
+
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -13,6 +24,7 @@
 
 #include "helper/Error.hpp"
 #include "helper/helper.hpp"
+
 #include <nlohmann/json.hpp>
 #include <sycl/sycl.hpp>
 
@@ -55,7 +67,7 @@ inline std::size_t largest_power_of_two_leq(std::size_t n) noexcept {
 // Task
 [[nodiscard]]
 float task(const float* d_numbers, std::size_t numbers_size, sycl::queue& q,
-                const std::size_t work_group_size_limit) {
+           const std::size_t work_group_size_limit) {
     if (numbers_size == 0)
         return 0.0f;
 
@@ -120,7 +132,6 @@ int main(int argc, char** argv) {
     std::string device_selection = argv[4];
     std::transform(device_selection.begin(), device_selection.end(), device_selection.begin(),
                    ::tolower);
-    const std::string operation = "Sum vector elements.";
 
     if (N <= 0) {
         std::cerr << "Usage: " << argv[0] << " time_limit  vec_size\n";

@@ -15,9 +15,9 @@
 #include <algorithm>
 #include <numeric>
 
-#include "json.hpp"
-#include "helper.hpp"
-#include "Error.hpp"
+#include <nlohmann/json.hpp>
+#include "helper/helper.hpp"
+#include "helper/Error.hpp"
 
 #include <quadmath.h>
 
@@ -77,7 +77,7 @@ static inline __float128 stopping_power(
 
     // Relativistic kinematics
     const __float128 beta_raw {projectile_velocity_ms / SPEED_OF_LIGHT_MS};
-    const __float128 beta {std::clamp(beta_raw, SMALL_VALUE, 0.99999Q)};            // Clamped to sensible values to avoid errors 
+    const __float128 beta {std::clamp(beta_raw, SMALL_VALUE, 0.99999Q)};            // Clamped to sensible values to avoid errors
     const __float128 beta2 {beta * beta};
 
     const __float128 inv_one_minus_beta2 {1.0Q / (1.0Q - beta2)};
@@ -277,7 +277,7 @@ int main(int argc, char** argv)
         j["threads"] = 1;
         j["device"] = "CPU";
 
-        // Iteration/timing            
+        // Iteration/timing
         j["test_time_seconds"] = test_time_s;
         j["iterations"] = iters;
         j["time_per_iteration"] = time_per_iteration_s;

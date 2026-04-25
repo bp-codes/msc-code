@@ -14,9 +14,9 @@
 #include <algorithm>
 #include <numeric>
 
-#include "json.hpp"
-#include "helper.hpp"
-#include "Error.hpp"
+#include <nlohmann/json.hpp>
+#include "helper/helper.hpp"
+#include "helper/Error.hpp"
 
 #define CL_TARGET_OPENCL_VERSION 120
 #include <CL/cl.h>
@@ -600,7 +600,7 @@ int main(int argc, char** argv)
         const auto t2 {std::chrono::steady_clock::now()};
 
         opencl_check(clEnqueueReadBuffer(queue, stopping_power_values_device, CL_TRUE, 0, n * sizeof(float), stopping_power_values.data(), 0, nullptr, nullptr), "clEnqueueReadBuffer(dev_c) failed.");
-        
+
         const auto calculated_value {static_cast<double>(helper::check_sum(stopping_power_values))};
 
         // Free device allocations
@@ -691,4 +691,3 @@ int main(int argc, char** argv)
     }
 
 }
-

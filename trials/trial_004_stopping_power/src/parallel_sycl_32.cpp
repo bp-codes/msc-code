@@ -15,9 +15,9 @@
 #include <algorithm>
 #include <numeric>
 
-#include "json.hpp"
-#include "helper.hpp"
-#include "Error.hpp"
+#include <nlohmann/json.hpp>
+#include "helper/helper.hpp"
+#include "helper/Error.hpp"
 
 #include <sycl/sycl.hpp>
 
@@ -114,7 +114,7 @@ static inline float stopping_power(
 
     // Relativistic kinematics
     const auto beta_raw {projectile_velocity_ms / SPEED_OF_LIGHT_MS};
-    const auto beta {std::clamp(beta_raw, SMALL_VALUE, 0.99999f)};            // Clamped to sensible values to avoid errors 
+    const auto beta {std::clamp(beta_raw, SMALL_VALUE, 0.99999f)};            // Clamped to sensible values to avoid errors
     const auto beta2 {beta * beta};
 
     const auto inv_one_minus_beta2 {1.0f / (1.0f - beta2)};
@@ -288,7 +288,7 @@ int main(int argc, char** argv)
     : sycl::queue{sycl::gpu_selector_v};
 
     std::cerr << "Using device: " << queue.get_device().get_info<sycl::info::device::name>() << "\n";
-    
+
 
     // Allocate USM: shared (host visible) + device (device-only)
     auto* velocity_host {sycl::malloc_shared<float>(n, queue)};
@@ -312,7 +312,7 @@ int main(int argc, char** argv)
 
     // Fill input once (host writes shared memory)
     std::mt19937_64 rng(123456789ULL);
-    std::uniform_real_distribution<double> dist(1.0e7, 1.0e8); 
+    std::uniform_real_distribution<double> dist(1.0e7, 1.0e8);
 
     for (auto i = std::size_t(0); i < n; i++)
     {
@@ -406,7 +406,7 @@ int main(int argc, char** argv)
         j["threads"] = 1;
         j["device"] = "GPU";
 
-        // Iteration/timing            
+        // Iteration/timing
         j["test_time_seconds"] = test_time_s;
         j["iterations"] = iters;
         j["time_per_iteration"] = time_per_iteration_s;

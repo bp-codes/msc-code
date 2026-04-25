@@ -1,4 +1,15 @@
-// cuda.cu
+/**
+ * @file serial.cpp
+ * @brief
+ *
+ * @author Ben Palmer
+ * @date 2026
+ *
+ * @copyright
+ * Copyright (c) 2026 Ben Palmer
+ * SPDX-License-Identifier: MIT
+ */
+
 #include <thrust/device_ptr.h>
 #include <thrust/execution_policy.h>
 #include <thrust/reduce.h>
@@ -17,6 +28,7 @@
 
 #include "helper/Error.hpp"
 #include "helper/helper_cuda.hpp"
+
 #include <nlohmann/json.hpp>
 
 #define CUDA_CHECK(call)                                                                        \
@@ -55,7 +67,6 @@ int main(int argc, char** argv) {
     // Read in test_time and size of vector
     const double test_time_seconds = std::atof(argv[1]);
     const int N = std::atoi(argv[2]);
-    const std::string operation = "Sum vector elements.";
 
     if (N <= 0) {
         std::cerr << "Usage: " << argv[0] << " time_limit  vec_size\n";
@@ -119,7 +130,6 @@ int main(int argc, char** argv) {
 
     std::string method{"CUDA"};
     std::string device{"gpu"};
-    std::string comments{"operation:" + operation};
 
     bool passed_check = std::abs(calculated_value - expected_value) < 1.0e-9;
 
@@ -153,11 +163,7 @@ int main(int argc, char** argv) {
         j["time_total"] = time_total;
 
         // Values
-        j["expected_value"] = helper::to_string_precise(expected_value);
         j["calculated_value"] = helper::to_string_precise(calculated_value);
-        ;
-        j["difference"] = helper::to_string_precise(expected_value - calculated_value);
-        j["passed_check"] = passed_check;
         j["values"] = helper::to_string_precise_vector(numbers);
 
         // Memory

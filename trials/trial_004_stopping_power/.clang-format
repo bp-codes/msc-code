@@ -27,14 +27,24 @@ SpacesInContainerLiterals: true
 SortIncludes: true
 IncludeBlocks: Regroup
 IncludeCategories:
-  - Regex: '^".*\.h"'        # main / local headers first
+  # 0. Matching header (best effort: .h first)
+  - Regex: '^".*\.h"'
     Priority: 0
-  - Regex: '^<.*\.h>'        # C system headers
+  # 1. C system headers
+  - Regex: '^<[^>]+\.h>'
     Priority: 1
-  - Regex: '^<.*>'           # C++ system headers
+  # 2. C++ standard library (no extension)
+  - Regex: '^<[^./>]+>$'
     Priority: 2
-  - Regex: '.*'              # everything else
+  # 3. Project headers (quoted, non-.h)
+  - Regex: '^".*"'
     Priority: 3
+  # 4. Third-party headers in <> with extensions (.hpp, etc.)
+  - Regex: '^<.*\.(hpp|hh|hxx)>'
+    Priority: 4
+  # fallback
+  - Regex: '.*'
+    Priority: 5
 
 # ---- Alignment ----
 AlignAfterOpenBracket: Align
@@ -70,6 +80,11 @@ AccessModifierOffset: -4
 FixNamespaceComments: true
 EmptyLineAfterAccessModifier: Never
 EmptyLineBeforeAccessModifier: LogicalBlock
+
+# ---- Spacing (vertical) ----
+MaxEmptyLinesToKeep: 1
+KeepEmptyLinesAtTheStartOfBlocks: false
+SeparateDefinitionBlocks: Always
 
 # ---- Line endings ----
 InsertNewlineAtEOF: true

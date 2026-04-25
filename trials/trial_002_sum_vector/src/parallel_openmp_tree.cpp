@@ -1,4 +1,15 @@
-// serial.cpp
+/**
+ * @file serial.cpp
+ * @brief
+ *
+ * @author Ben Palmer
+ * @date 2026
+ *
+ * @copyright
+ * Copyright (c) 2026 Ben Palmer
+ * SPDX-License-Identifier: MIT
+ */
+
 #include <omp.h>
 
 #include <algorithm>
@@ -16,6 +27,7 @@
 
 #include "helper/Error.hpp"
 #include "helper/helper.hpp"
+
 #include <nlohmann/json.hpp>
 
 std::size_t floor_pow2(std::size_t x) {
@@ -78,7 +90,6 @@ int main(int argc, char** argv) {
     // Read in test_time and size of vector
     double test_time_seconds = std::atof(argv[1]);
     const int N = std::atoi(argv[2]);
-    const std::string operation = "Sum vector elements.";
 
     // Random number generator
     std::mt19937_64 rng(123456789ULL);

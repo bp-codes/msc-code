@@ -1,4 +1,15 @@
-// serial.cpp
+/**
+ * @file serial.cpp
+ * @brief
+ *
+ * @author Ben Palmer
+ * @date 2026
+ *
+ * @copyright
+ * Copyright (c) 2026 Ben Palmer
+ * SPDX-License-Identifier: MIT
+ */
+
 #include <immintrin.h>
 
 #include <algorithm>
@@ -17,6 +28,7 @@
 
 #include "helper/Error.hpp"
 #include "helper/helper.hpp"
+
 #include <nlohmann/json.hpp>
 
 // Task
@@ -94,7 +106,6 @@ int main(int argc, char** argv) {
     // Read in test_time and size of vector
     const double test_time_seconds = std::atof(argv[1]);
     const int N = std::atoi(argv[2]);
-    const std::string operation = "Sum vector elements.";
 
     if (N <= 0) {
         std::cerr << "Usage: " << argv[0] << " time_limit  vec_size\n";

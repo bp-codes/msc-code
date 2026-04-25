@@ -1,4 +1,15 @@
-// cuda.cu
+/**
+ * @file serial.cpp
+ * @brief
+ *
+ * @author Ben Palmer
+ * @date 2026
+ *
+ * @copyright
+ * Copyright (c) 2026 Ben Palmer
+ * SPDX-License-Identifier: MIT
+ */
+
 #include <cuda_runtime.h>
 
 #include <algorithm>
@@ -15,6 +26,7 @@
 
 #include "helper/Error.hpp"
 #include "helper/helper_cuda.hpp"
+
 #include <nlohmann/json.hpp>
 
 #define CUDA_CHECK(call)                                                                        \
@@ -42,8 +54,8 @@ __global__ void reduce_one_block(const float* __restrict__ in, float* __restrict
 
     // 2. Warp-level reduction
     float val = shared_data[tid];
-    for (int offset = 16; offset > 0; offset >>= 1)  // Halves offset with each loop
-    {
+    // Halves offset with each loop
+    for (int offset = 16; offset > 0; offset >>= 1) {
         val += __shfl_down_sync(
             0xffffffff, val,
             offset);  // 0xffffffff all 32 threads, thread value: val, how far to read
@@ -153,7 +165,6 @@ int main(int argc, char** argv) {
     // Read in test_time and size of vector
     const double test_time_seconds = std::atof(argv[1]);
     const int N = std::atoi(argv[2]);
-    const std::string operation = "Sum vector elements.";
 
     if (N <= 0) {
         std::cerr << "Usage: " << argv[0] << " time_limit  vec_size\n";
@@ -215,7 +226,6 @@ int main(int argc, char** argv) {
 
     std::string method{"CUDA"};
     std::string device{"gpu"};
-    std::string comments{"operation:" + operation};
 
     // Output
     {

@@ -1,4 +1,22 @@
-// serial_opencl.cpp
+/**
+ * @file serial.cpp
+ * @brief
+ *
+ * @author Ben Palmer
+ * @date 2026
+ *
+ * @copyright
+ * Copyright (c) 2026 Ben Palmer
+ * SPDX-License-Identifier: MIT
+ */
+
+#define CL_TARGET_OPENCL_VERSION 120
+#ifndef CL_PLATFORM_NOT_FOUND_KHR
+#define CL_PLATFORM_NOT_FOUND_KHR -1001
+#endif
+
+#include <CL/cl.h>
+#include <CL/cl_ext.h>
 
 #include <algorithm>
 #include <chrono>
@@ -10,21 +28,14 @@
 #include <iostream>
 #include <random>
 #include <string>
+#include <system_error>
 #include <vector>
+#include <utility>
 
 #include "helper/Error.hpp"
 #include "helper/helper.hpp"
+
 #include <nlohmann/json.hpp>
-
-#define CL_TARGET_OPENCL_VERSION 120
-#include <CL/cl.h>
-#include <CL/cl_ext.h>
-
-#include <system_error>
-
-#ifndef CL_PLATFORM_NOT_FOUND_KHR
-#define CL_PLATFORM_NOT_FOUND_KHR -1001
-#endif
 
 // ======================================================
 // Serial baseline (unchanged)
@@ -295,7 +306,6 @@ int main(int argc, char** argv) {
 
     const double test_time_seconds = std::atof(argv[1]);
     const int N = std::atoi(argv[2]);
-    const std::string operation = "Sum vector elements.";
 
     std::string_view device_string = "GPU";
     if (argc >= 4) {
@@ -316,7 +326,6 @@ int main(int argc, char** argv) {
     for (int i = 0; i < N; ++i) {
         numbers.emplace_back(static_cast<float>(dist(rng)));
     }
-
 
     // Timing
     //==================================================

@@ -10,7 +10,7 @@
 #include <cmath>
 #include <random>
 
-#include "Matrix.hpp"
+#include "helper/Matrix.hpp"
 #include "helper/Error.hpp"
 #include "helper/helper.hpp"
 #include <nlohmann/json.hpp>

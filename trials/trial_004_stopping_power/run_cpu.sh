@@ -3,9 +3,12 @@ set -Eeuo pipefail
 export NUM_THREADS=6
 mkdir -p results
 
-RUNS=3
-RUN_TIME=10.0
+RUNS=2
+RUN_TIME=2.0
 VECTOR_SIZE=1000000
+
+TIME="/usr/bin/time -v --"
+TIME=""
 
 trap 'echo "Error on line $LINENO (exit code $?)" >&2' ERR
 
@@ -18,20 +21,20 @@ trap 'echo "Error on line $LINENO (exit code $?)" >&2' ERR
     do
         echo "  Run $i"
 
-        /usr/bin/time -v -- ./bin/serial_naive.x "$RUN_TIME" "$VECTOR_SIZE"
-        /usr/bin/time -v -- ./bin/serial_naive_stl.x "$RUN_TIME" "$VECTOR_SIZE"
-        /usr/bin/time -v -- ./bin/parallel_transform.x "$RUN_TIME" "$VECTOR_SIZE"
-        /usr/bin/time -v -- ./bin/parallel_stl.x "$RUN_TIME" "$VECTOR_SIZE"
-        /usr/bin/time -v -- ./bin/parallel_thread.x "$RUN_TIME" "$VECTOR_SIZE"
-        /usr/bin/time -v -- ./bin/parallel_openmp.x "$RUN_TIME" "$VECTOR_SIZE"
-        /usr/bin/time -v -- ./bin/parallel_openmp_simd.x "$RUN_TIME" "$VECTOR_SIZE"
+        $TIME ./bin/serial_naive.x "$RUN_TIME" "$VECTOR_SIZE"
+        $TIME ./bin/serial_stl_transform.x "$RUN_TIME" "$VECTOR_SIZE"
+        $TIME ./bin/parallel_stl_transform.x "$RUN_TIME" "$VECTOR_SIZE"
+        $TIME ./bin/parallel_thread.x "$RUN_TIME" "$VECTOR_SIZE"
+        $TIME ./bin/parallel_openmp.x "$RUN_TIME" "$VECTOR_SIZE"
+        $TIME ./bin/parallel_openmp_simd.x "$RUN_TIME" "$VECTOR_SIZE"
 
 
-        /usr/bin/time -v -- ./bin/serial_naive_32.x "$RUN_TIME" "$VECTOR_SIZE"
-        /usr/bin/time -v -- ./bin/parallel_transform_32.x "$RUN_TIME" "$VECTOR_SIZE"
-        /usr/bin/time -v -- ./bin/parallel_thread_32.x "$RUN_TIME" "$VECTOR_SIZE"
-        /usr/bin/time -v -- ./bin/parallel_openmp_32.x "$RUN_TIME" "$VECTOR_SIZE"
-        /usr/bin/time -v -- ./bin/parallel_openmp_simd_32.x "$RUN_TIME" "$VECTOR_SIZE"
+        $TIME ./bin/serial_naive_32.x "$RUN_TIME" "$VECTOR_SIZE"
+        $TIME ./bin/serial_stl_transform_32.x "$RUN_TIME" "$VECTOR_SIZE"
+        $TIME ./bin/parallel_stl_transform_32.x "$RUN_TIME" "$VECTOR_SIZE"
+        $TIME ./bin/parallel_thread_32.x "$RUN_TIME" "$VECTOR_SIZE"
+        $TIME ./bin/parallel_openmp_32.x "$RUN_TIME" "$VECTOR_SIZE"
+        $TIME ./bin/parallel_openmp_simd_32.x "$RUN_TIME" "$VECTOR_SIZE"
 
     done
 
