@@ -24,9 +24,9 @@
 #include <system_error>
 #include <vector>
 
-#include <Error.hpp>
-#include <SyclFunctions.hpp>
-#include <helper.hpp>
+#include <helper/Error.hpp>
+#include <helper/SyclFunctions.hpp>
+#include <helper/helper.hpp>
 #include <nlohmann/json.hpp>
 #include <sycl/sycl.hpp>
 
@@ -164,7 +164,7 @@ sycl::event parallel_task(OperationKind operation, std::size_t n, sycl::queue& q
 /**
  * @brief Entry point into program.
  */
-int main(int argc, char** argv) {
+auto main(int argc, char** argv) -> int {
     try {
         if (argc < 4) {
             THROW_INVALID_ARGUMENT("Usage: serial.x time_limit vec_size operation");

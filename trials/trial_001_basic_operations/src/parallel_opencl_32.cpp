@@ -31,8 +31,9 @@
 #include <system_error>
 #include <vector>
 
-#include <Error.hpp>
-#include <helper.hpp>
+#include "helper/Error.hpp"
+#include "helper/helper.hpp"
+
 #include <nlohmann/json.hpp>
 
 using OperationKind = helper::OperationKind;
@@ -270,7 +271,7 @@ void print_build_log(cl_program program, cl_device_id device) {
 /**
  * @brief Entry point into program.
  */
-int main(int argc, char** argv) {
+auto main(int argc, char** argv) -> int {
     cl_context context{nullptr};
     cl_command_queue queue{nullptr};
     cl_program program{nullptr};

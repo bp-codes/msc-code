@@ -24,7 +24,7 @@ nvcc -std=c++20 -O3  \
     -Xcompiler "-march=native -ffast-math" \
     src/parallel_cuda.cu \
     -Iinclude \
-    -isystem include/nlohmann -Wno-nan-infinity-disabled \
+    -isystem include/nlohmann \
     -o bin/parallel_cuda.x
 
 
@@ -52,7 +52,7 @@ nvcc -std=c++20 -O3  \
     -Xcompiler "-march=native -ffast-math" \
     src/parallel_cuda_32.cu \
     -Iinclude \
-    -isystem include/nlohmann -Wno-nan-infinity-disabled \
+    -isystem include/nlohmann \
     -o bin/parallel_cuda_32.x
 
 

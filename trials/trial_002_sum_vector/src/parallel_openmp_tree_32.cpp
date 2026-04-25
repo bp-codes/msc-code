@@ -1,4 +1,15 @@
-// serial.cpp
+/**
+ * @file serial.cpp
+ * @brief
+ *
+ * @author Ben Palmer
+ * @date 2026
+ *
+ * @copyright
+ * Copyright (c) 2026 Ben Palmer
+ * SPDX-License-Identifier: MIT
+ */
+
 #include <omp.h>
 
 #include <algorithm>
@@ -14,9 +25,10 @@
 #include <string>
 #include <vector>
 
-#include "Error.hpp"
-#include "helper.hpp"
-#include "json.hpp"
+#include "helper/Error.hpp"
+#include "helper/helper.hpp"
+
+#include <nlohmann/json.hpp>
 
 std::size_t floor_pow2(std::size_t x) {
     std::size_t p = 1;
@@ -87,7 +99,6 @@ int main(int argc, char** argv) {
     // Read in test_time and size of vector
     double test_time_seconds = std::atof(argv[1]);
     const int N = std::atoi(argv[2]);
-    const std::string operation = "Sum vector elements.";
 
     // Random number generator
     std::mt19937_64 rng(123456789ULL);
@@ -168,11 +179,7 @@ int main(int argc, char** argv) {
         j["time_total"] = time_total;
 
         // Values
-        j["expected_value"] = helper::to_string_precise(expected_value);
         j["calculated_value"] = helper::to_string_precise(calculated_value);
-        ;
-        j["difference"] = helper::to_string_precise(expected_value - calculated_value);
-        j["passed_check"] = passed_check;
         j["values"] = helper::to_string_precise_vector(numbers);
 
         // Memory

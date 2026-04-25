@@ -26,8 +26,9 @@
 #include <system_error>
 #include <vector>
 
-#include <Error.hpp>
-#include <helper_cuda.hpp>
+#include "helper/Error.hpp"
+#include "helper/helper.hpp"
+
 #include <nlohmann/json.hpp>
 
 using OperationKind = helper::OperationKind;
@@ -139,7 +140,7 @@ cudaError_t launch_kernel(OperationKind operation, std::size_t n, cudaStream_t s
 /**
  * @brief Entry point into program.
  */
-int main(int argc, char** argv) {
+auto main(int argc, char** argv) -> int {
     try {
         if (argc < 4) {
             THROW_INVALID_ARGUMENT("Usage: cuda.x time_limit vec_size operation");

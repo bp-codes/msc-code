@@ -1,4 +1,15 @@
-// cuda.cu
+/**
+ * @file serial.cpp
+ * @brief
+ *
+ * @author Ben Palmer
+ * @date 2026
+ *
+ * @copyright
+ * Copyright (c) 2026 Ben Palmer
+ * SPDX-License-Identifier: MIT
+ */
+
 #include <cuda_runtime.h>
 
 #include <algorithm>
@@ -13,9 +24,10 @@
 #include <string>
 #include <vector>
 
-#include "Error.hpp"
-#include "helper_cuda.hpp"
-#include "json.hpp"
+#include "helper/Error.hpp"
+#include "helper/helper_cuda.hpp"
+
+#include <nlohmann/json.hpp>
 
 #define CUDA_CHECK(call)                                                                        \
     do {                                                                                        \
@@ -42,8 +54,8 @@ __global__ void reduce_one_block(const float* __restrict__ in, float* __restrict
 
     // 2. Warp-level reduction
     float val = shared_data[tid];
-    for (int offset = 16; offset > 0; offset >>= 1)  // Halves offset with each loop
-    {
+    // Halves offset with each loop
+    for (int offset = 16; offset > 0; offset >>= 1) {
         val += __shfl_down_sync(
             0xffffffff, val,
             offset);  // 0xffffffff all 32 threads, thread value: val, how far to read
@@ -68,7 +80,7 @@ __global__ void reduce_one_block(const float* __restrict__ in, float* __restrict
 }
 
 // Host wrapper – replace your cuda_task with this
-float cuda_task(const float* d_input, int N) {
+float task(const float* d_input, int N) {
     const int block_size = 256;
     const int num_blocks = (N + block_size - 1) / block_size;
 
@@ -143,15 +155,6 @@ float cuda_task(const float* d_input, int N) {
     return host_result;
 }
 
-// Serial task - sum numbers in the vector
-float serial_naive_task(const std::vector<float>& numbers) {
-    auto sum{0.0f};
-    for (const auto val : numbers) {
-        sum += val;
-    }
-    return sum;
-}
-
 int main(int argc, char** argv) {
     // Must have 3 arguments
     if (argc < 3) {
@@ -162,7 +165,6 @@ int main(int argc, char** argv) {
     // Read in test_time and size of vector
     const double test_time_seconds = std::atof(argv[1]);
     const int N = std::atoi(argv[2]);
-    const std::string operation = "Sum vector elements.";
 
     if (N <= 0) {
         std::cerr << "Usage: " << argv[0] << " time_limit  vec_size\n";
@@ -181,8 +183,6 @@ int main(int argc, char** argv) {
     for (int i = 0; i < N; ++i) {
         numbers.emplace_back(static_cast<float>(dist(rng)));
     }
-
-    auto expected_value = serial_naive_task(numbers);
 
     // ======= Calculation Starts ========
 
@@ -204,7 +204,7 @@ int main(int argc, char** argv) {
     float calculated_value{};
 
     do {
-        calculated_value = cuda_task(device_numbers, N);
+        calculated_value = task(device_numbers, N);
         iters++;
     } while (std::chrono::steady_clock::now() < deadline);
 
@@ -226,9 +226,6 @@ int main(int argc, char** argv) {
 
     std::string method{"CUDA"};
     std::string device{"gpu"};
-    std::string comments{"operation:" + operation};
-
-    bool passed_check = std::abs(calculated_value - expected_value) < 1.0e-9;
 
     // Output
     {
@@ -260,11 +257,7 @@ int main(int argc, char** argv) {
         j["time_total"] = time_total;
 
         // Values
-        j["expected_value"] = helper::to_string_precise(expected_value);
         j["calculated_value"] = helper::to_string_precise(calculated_value);
-        ;
-        j["difference"] = helper::to_string_precise(expected_value - calculated_value);
-        j["passed_check"] = passed_check;
         j["values"] = helper::to_string_precise_vector(numbers);
 
         // Memory

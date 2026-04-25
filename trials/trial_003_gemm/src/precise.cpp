@@ -10,10 +10,10 @@
 #include <cmath>
 #include <random>
 
-#include "MatrixPrecise.hpp"
-#include "Error.hpp"
-#include "helper.hpp"
-#include "json.hpp"
+#include "helper/MatrixPrecise.hpp"
+#include "helper/Error.hpp"
+#include "helper/helper.hpp"
+#include <nlohmann/json.hpp>
 
 #include <quadmath.h>
 
@@ -71,13 +71,13 @@ Matrix<__float128> dgemm_serial(__float128 alpha,
 
 
 // X = k A * B + l C
-int main(int argc, char** argv) 
+int main(int argc, char** argv)
 {
     if (argc < 5) {
         std::cerr << "Usage: " << argv[0] << " test_time_seconds rows cols\n";
         return 1;
     }
-    
+
     double test_time_seconds = std::atof(argv[1]);
 
     const std::size_t M = std::atoi(argv[2]);  // rows of A and C
@@ -107,7 +107,7 @@ int main(int argc, char** argv)
 
 
     // ======= Calculation Starts ========
-    
+
     // Setup
     const auto t0 = std::chrono::steady_clock::now();
 
@@ -119,11 +119,11 @@ int main(int argc, char** argv)
     Matrix<__float128>X {M, N};
 
     // Test starts
-    do 
+    do
     {
         X = dgemm_serial(k, A, B, l, C);
         iters++;
-    } 
+    }
     while (std::chrono::steady_clock::now() < deadline);
     // Test ends
 
@@ -147,7 +147,7 @@ int main(int argc, char** argv)
     const auto time_per_iteration = time_calc / iters;
 
     const auto passed_check {std::abs(calculated_value - expected_value) < 1.0e-9};
-    const std::string operation_string = "gemm"; 
+    const std::string operation_string = "gemm";
 
     const auto matrix_size {std::to_string(M) + "x" + std::to_string(K) + "_by_" + std::to_string(K) + "x" + std::to_string(N)};
     const auto method {std::string("Precise " + matrix_size)};
@@ -173,7 +173,7 @@ int main(int argc, char** argv)
         j["N"] = N;
         j["K"] = K;
 
-        // Iteration/timing            
+        // Iteration/timing
         j["test_time_seconds"] = test_time_seconds;
         j["iterations"] = iters;
         j["time_per_iteration"] = time_per_iteration;
@@ -181,7 +181,7 @@ int main(int argc, char** argv)
         j["time_calc"] = time_calc;
         j["time_cleanup"] = time_cleanup;
         j["time_total"] = time_total;
-        
+
         // Values
         j["expected_value"] = helper::to_string_precise(expected_value);
         j["calculated_value"] = helper::to_string_precise(calculated_value);;

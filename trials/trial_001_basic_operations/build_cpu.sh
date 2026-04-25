@@ -37,7 +37,8 @@ trap 'echo "Error on line $LINENO (exit code $?)" >&2' ERR
          src/parallel_stl_transform.cpp \
         -Iinclude \
         -isystem include/nlohmann \
-        -o bin/parallel_stl_transform.x -ltbb
+        -o bin/parallel_stl_transform.x \
+        -ltbb
     g++ -std=c++23 -O3 -march=native -ffast-math \
          src/parallel_thread.cpp \
         -Iinclude \
@@ -66,7 +67,6 @@ trap 'echo "Error on line $LINENO (exit code $?)" >&2' ERR
          src/serial_stl_transform_32.cpp \
         -Iinclude \
         -isystem include/nlohmann \
-        -isystem include/nlohmann \
         -o bin/serial_stl_transform_32.x
     g++ -std=c++23 -O3 -march=native -ffast-math \
         -mavx2 -mfma \
@@ -80,7 +80,8 @@ trap 'echo "Error on line $LINENO (exit code $?)" >&2' ERR
          src/parallel_stl_transform_32.cpp \
         -Iinclude \
         -isystem include/nlohmann \
-        -o bin/parallel_stl_transform_32.x -ltbb
+        -o bin/parallel_stl_transform_32.x \
+        -ltbb
     g++ -std=c++23 -O3 -march=native -ffast-math \
          src/parallel_thread_32.cpp \
         -Iinclude \

@@ -1,4 +1,22 @@
-// serial_opencl.cpp
+/**
+ * @file serial.cpp
+ * @brief
+ *
+ * @author Ben Palmer
+ * @date 2026
+ *
+ * @copyright
+ * Copyright (c) 2026 Ben Palmer
+ * SPDX-License-Identifier: MIT
+ */
+
+#define CL_TARGET_OPENCL_VERSION 120
+#ifndef CL_PLATFORM_NOT_FOUND_KHR
+#define CL_PLATFORM_NOT_FOUND_KHR -1001
+#endif
+
+#include <CL/cl.h>
+#include <CL/cl_ext.h>
 
 #include <algorithm>
 #include <chrono>
@@ -10,21 +28,14 @@
 #include <iostream>
 #include <random>
 #include <string>
-#include <vector>
-
-#include "Error.hpp"
-#include "helper.hpp"
-#include "json.hpp"
-
-#define CL_TARGET_OPENCL_VERSION 120
-#include <CL/cl.h>
-#include <CL/cl_ext.h>
-
 #include <system_error>
+#include <vector>
+#include <utility>
 
-#ifndef CL_PLATFORM_NOT_FOUND_KHR
-#define CL_PLATFORM_NOT_FOUND_KHR -1001
-#endif
+#include "helper/Error.hpp"
+#include "helper/helper.hpp"
+
+#include <nlohmann/json.hpp>
 
 // ======================================================
 // Serial baseline (unchanged)
@@ -174,11 +185,11 @@ void opencl_setup(OpenCLContext& ctx, const std::vector<float>& numbers,
     ctx.context = clCreateContext(nullptr, 1, &ctx.device, nullptr, nullptr, &err);
     opencl_check(err, "clCreateContext failed");
 
-    #if CL_TARGET_OPENCL_VERSION >= 200
-        ctx.queue = clCreateCommandQueueWithProperties(ctx.context, ctx.device, 0, &err);
-    #else
-        ctx.queue = clCreateCommandQueue(ctx.context, ctx.device, 0, &err);
-    #endif
+#if CL_TARGET_OPENCL_VERSION >= 200
+    ctx.queue = clCreateCommandQueueWithProperties(ctx.context, ctx.device, 0, &err);
+#else
+    ctx.queue = clCreateCommandQueue(ctx.context, ctx.device, 0, &err);
+#endif
     opencl_check(err, "clCreateCommandQueueWithProperties failed");
 
     // ---------------------------
@@ -214,33 +225,24 @@ void opencl_setup(OpenCLContext& ctx, const std::vector<float>& numbers,
 
     // tune local size
     size_t max_workgroup = 0;
-    clGetDeviceInfo(ctx.device, CL_DEVICE_MAX_WORK_GROUP_SIZE,
-                    sizeof(size_t), &max_workgroup, nullptr);
+    clGetDeviceInfo(ctx.device, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(size_t), &max_workgroup,
+                    nullptr);
 
     ctx.local_size = std::min<size_t>(256, max_workgroup);
 
     // compute max number of groups
     size_t max_groups = (N + ctx.local_size - 1) / ctx.local_size;
 
-    ctx.input_buf = clCreateBuffer(ctx.context,
-                               CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                               sizeof(float) * N,
-                               const_cast<float*>(numbers.data()),
-                               &err);
+    ctx.input_buf = clCreateBuffer(ctx.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                                   sizeof(float) * N, const_cast<float*>(numbers.data()), &err);
     opencl_check(err, "clCreateBuffer input_buf failed");
 
-    ctx.buffer_a = clCreateBuffer(ctx.context,
-                                CL_MEM_READ_WRITE,
-                                sizeof(float) * max_groups,
-                                nullptr,
-                                &err);
+    ctx.buffer_a =
+        clCreateBuffer(ctx.context, CL_MEM_READ_WRITE, sizeof(float) * max_groups, nullptr, &err);
     opencl_check(err, "clCreateBuffer buffer_a failed");
 
-    ctx.buffer_b = clCreateBuffer(ctx.context,
-                                CL_MEM_READ_WRITE,
-                                sizeof(float) * max_groups,
-                                nullptr,
-                                &err);
+    ctx.buffer_b =
+        clCreateBuffer(ctx.context, CL_MEM_READ_WRITE, sizeof(float) * max_groups, nullptr, &err);
     opencl_check(err, "clCreateBuffer buffer_b failed");
 }
 
@@ -304,7 +306,6 @@ int main(int argc, char** argv) {
 
     const double test_time_seconds = std::atof(argv[1]);
     const int N = std::atoi(argv[2]);
-    const std::string operation = "Sum vector elements.";
 
     std::string_view device_string = "GPU";
     if (argc >= 4) {
@@ -322,10 +323,9 @@ int main(int argc, char** argv) {
     std::vector<float> numbers;
     numbers.reserve(N);
 
-    for (int i = 0; i < N; ++i)
+    for (int i = 0; i < N; ++i) {
         numbers.emplace_back(static_cast<float>(dist(rng)));
-
-    auto expected_value = serial_naive_task(numbers);
+    }
 
     // Timing
     //==================================================
@@ -364,8 +364,6 @@ int main(int argc, char** argv) {
     auto time_total = std::chrono::duration<double>(t3 - t0).count();
     auto time_per_iteration = time_calc / iters;
 
-    bool passed_check = std::abs(calculated_value - expected_value) < 1.0e-9;
-
     {
         const auto method{std::string("Parallel OpenCL 32")};
         const auto operation_string = std::string("sum");
@@ -392,10 +390,8 @@ int main(int argc, char** argv) {
         j["time_cleanup"] = time_cleanup;
         j["time_total"] = time_total;
 
-        j["expected_value"] = helper::to_string_precise(expected_value);
         j["calculated_value"] = helper::to_string_precise(calculated_value);
-        j["difference"] = helper::to_string_precise(expected_value - calculated_value);
-        j["passed_check"] = passed_check;
+        j["values"] = helper::to_string_precise_vector(numbers);
 
         j["max_rss_kb"] = helper::max_rss_kb();
 

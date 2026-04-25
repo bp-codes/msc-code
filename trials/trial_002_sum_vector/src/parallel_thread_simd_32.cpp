@@ -1,4 +1,15 @@
-// serial.cpp
+/**
+ * @file serial.cpp
+ * @brief
+ *
+ * @author Ben Palmer
+ * @date 2026
+ *
+ * @copyright
+ * Copyright (c) 2026 Ben Palmer
+ * SPDX-License-Identifier: MIT
+ */
+
 #include <immintrin.h>
 
 #include <algorithm>
@@ -15,11 +26,12 @@
 #include <thread>
 #include <vector>
 
-#include "Error.hpp"
-#include "helper.hpp"
-#include "json.hpp"
+#include "helper/Error.hpp"
+#include "helper/helper.hpp"
 
-// Parallel task - sum numbers in the vector
+#include <nlohmann/json.hpp>
+
+// Task
 [[nodiscard]]
 float task(const std::vector<float>& numbers) {
     const auto n{std::size_t(numbers.size())};
@@ -84,15 +96,6 @@ float task(const std::vector<float>& numbers) {
     return sum;
 }
 
-// Serial task - sum numbers in the vector
-float serial_naive_task(const std::vector<float>& numbers) {
-    auto sum{0.0f};
-    for (const auto val : numbers) {
-        sum += val;
-    }
-    return sum;
-}
-
 int main(int argc, char** argv) {
     // Must have 3 arguments
     if (argc < 3) {
@@ -103,7 +106,6 @@ int main(int argc, char** argv) {
     // Read in test_time and size of vector
     const double test_time_seconds = std::atof(argv[1]);
     const int N = std::atoi(argv[2]);
-    const std::string operation = "Sum vector elements.";
 
     if (N <= 0) {
         std::cerr << "Usage: " << argv[0] << " time_limit  vec_size\n";
@@ -122,8 +124,6 @@ int main(int argc, char** argv) {
     for (int i = 0; i < N; ++i) {
         numbers.emplace_back(static_cast<float>(dist(rng)));
     }
-
-    auto expected_value = serial_naive_task(numbers);
 
     // ======= Calculation Starts ========
 
@@ -157,8 +157,6 @@ int main(int argc, char** argv) {
     auto time_total = std::chrono::duration<double>(t3 - t0).count();
     auto time_per_iteration = time_calc / iters;
 
-    bool passed_check = std::abs(calculated_value - expected_value) < 1.0e-9;
-
     // Output
     {
         const auto method{std::string("Parallel Thread SIMD 32")};
@@ -189,11 +187,7 @@ int main(int argc, char** argv) {
         j["time_total"] = time_total;
 
         // Values
-        j["expected_value"] = helper::to_string_precise(expected_value);
         j["calculated_value"] = helper::to_string_precise(calculated_value);
-        ;
-        j["difference"] = helper::to_string_precise(expected_value - calculated_value);
-        j["passed_check"] = passed_check;
         j["values"] = helper::to_string_precise_vector(numbers);
 
         // Memory

@@ -11,10 +11,10 @@
 #include <cmath>
 #include <random>
 
-#include "Matrix.hpp"
-#include "Error.hpp"
-#include "helper.hpp"
-#include "json.hpp"
+#include "helper/Matrix.hpp"
+#include "helper/Error.hpp"
+#include "helper/helper.hpp"
+#include <nlohmann/json.hpp>
 
 #include <cuda_runtime.h>
 
@@ -91,9 +91,9 @@ inline void dgemm_cuda(const double* d_A,
                        const double* d_B,
                        const double* d_C,
                        double* d_X,
-                       const double k, 
+                       const double k,
                        const double l,
-                       const int M, 
+                       const int M,
                        const int N,
                        const int K,
                        cudaStream_t stream = 0)
@@ -162,13 +162,13 @@ Matrix<double> dgemm_serial(double alpha,
 
 
 // X = k A * B + l C
-int main(int argc, char** argv) 
+int main(int argc, char** argv)
 {
     if (argc < 4) {
         std::cerr << "Usage: " << argv[0] << " test_time rows cols\n";
         return 1;
     }
-    
+
     const double test_time_seconds = std::atof(argv[1]);
 
     const std::size_t M = std::atoi(argv[2]);  // rows of A and C
@@ -206,7 +206,7 @@ int main(int argc, char** argv)
     std::cout << expected_value << std::endl;
 
     // ======= Calculation Starts ========
-    
+
     // Setup
     auto t0 = std::chrono::steady_clock::now();
 
@@ -242,14 +242,14 @@ int main(int argc, char** argv)
     Matrix<double>X {M, N};
 
     // Test starts
-    do 
+    do
     {
         //X = dgemm_serial(k, A, B, l, C);
         dgemm_cuda(d_A, d_B, d_C, d_X, k, l, M, N, K);
         // Ensure the iteration completed before counting it
         CUDA_CHECK(cudaDeviceSynchronize());
         iters++;
-    } 
+    }
     while (std::chrono::steady_clock::now() < deadline);
     // Test ends
     CUDA_CHECK(cudaDeviceSynchronize());
@@ -283,7 +283,7 @@ int main(int argc, char** argv)
     const auto time_per_iteration = time_calc / iters;
 
     const auto passed_check {std::abs(calculated_value - expected_value) < 1.0e-9};
-    const std::string operation_string = "gemm"; 
+    const std::string operation_string = "gemm";
 
     const auto matrix_size {std::to_string(M) + "x" + std::to_string(K) + "_by_" + std::to_string(K) + "x" + std::to_string(N)};
     const auto method {std::string("Parallel CUDA " + matrix_size)};
@@ -309,7 +309,7 @@ int main(int argc, char** argv)
         j["N"] = N;
         j["K"] = K;
 
-        // Iteration/timing            
+        // Iteration/timing
         j["test_time_seconds"] = test_time_seconds;
         j["iterations"] = iters;
         j["time_per_iteration"] = time_per_iteration;
@@ -317,7 +317,7 @@ int main(int argc, char** argv)
         j["time_calc"] = time_calc;
         j["time_cleanup"] = time_cleanup;
         j["time_total"] = time_total;
-        
+
         // Values
         j["expected_value"] = helper::to_string_precise(expected_value);
         j["calculated_value"] = helper::to_string_precise(calculated_value);;
