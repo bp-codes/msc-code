@@ -276,7 +276,7 @@ auto main(int argc, char** argv) -> int {
     // Calc timing start
     const auto t1{std::chrono::steady_clock::now()};
     const auto deadline{t1 + std::chrono::duration<double>(test_time_s)};
-    auto iters{std::uint64_t(0)};
+    auto iters{static_cast<std::uint64_t>(0)};
 
     // Run as many iterations as possible
     do {

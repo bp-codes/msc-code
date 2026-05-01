@@ -446,7 +446,7 @@ auto main(int argc, char** argv) -> int {
         constexpr std::size_t local_size{256};
         const std::size_t global_size{((n + local_size - 1) / local_size) * local_size};
 
-        auto iters{std::uint64_t(0)};
+        auto iters{static_cast<std::uint64_t>(0)};
 
         do {
             opencl_check(clEnqueueNDRangeKernel(queue, kernel, 1, nullptr, &global_size,
