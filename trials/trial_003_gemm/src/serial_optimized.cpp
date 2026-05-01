@@ -1,4 +1,15 @@
-// serial.cpp
+/**
+ * @file serial.cpp
+ * @brief
+ *
+ * @author Ben Palmer
+ * @date 2026
+ *
+ * @copyright
+ * Copyright (c) 2026 Ben Palmer
+ * SPDX-License-Identifier: MIT
+ */
+
 #include <cblas.h>
 #include <immintrin.h>
 #include <omp.h>
@@ -12,6 +23,8 @@
 #include <iostream>
 #include <random>
 #include <vector>
+#include <string>
+#include <algorithm>
 
 #include "helper/Error.hpp"
 #include "helper/Matrix.hpp"

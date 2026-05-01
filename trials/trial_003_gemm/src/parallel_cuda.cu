@@ -1,4 +1,14 @@
-// openmp.cpp
+/**
+ * @file serial.cpp
+ * @brief
+ *
+ * @author Ben Palmer
+ * @date 2026
+ *
+ * @copyright
+ * Copyright (c) 2026 Ben Palmer
+ * SPDX-License-Identifier: MIT
+ */
 
 #include <cuda_runtime.h>
 
@@ -11,6 +21,8 @@
 #include <iostream>
 #include <random>
 #include <vector>
+#include <string>
+#include <cstdio>
 
 #include "helper/Error.hpp"
 #include "helper/Matrix.hpp"
@@ -70,8 +82,6 @@ __global__ void dgemm_kernel_tiled(const double* __restrict__ A, const double* _
 inline void task(const double* d_A, const double* d_B, const double* d_C, double* d_X,
                  const double k, const double l, const int M, const int N, const int K,
                  cudaStream_t stream = 0) {
-    constexpr int TILE = 16;
-
     dim3 block(TILE, TILE);
     dim3 grid((N + TILE - 1) / TILE, (M + TILE - 1) / TILE);
 

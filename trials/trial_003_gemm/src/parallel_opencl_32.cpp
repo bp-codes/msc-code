@@ -1,4 +1,23 @@
-// serial.cpp
+/**
+ * @file serial.cpp
+ * @brief
+ *
+ * @author Ben Palmer
+ * @date 2026
+ *
+ * @copyright
+ * Copyright (c) 2026 Ben Palmer
+ * SPDX-License-Identifier: MIT
+ */
+
+#define CL_TARGET_OPENCL_VERSION 120
+#ifndef CL_PLATFORM_NOT_FOUND_KHR
+#define CL_PLATFORM_NOT_FOUND_KHR -1001
+#endif
+
+#include <CL/cl.h>
+#include <CL/cl_ext.h>
+
 #include <chrono>
 #include <cmath>
 #include <cstdint>
@@ -7,23 +26,15 @@
 #include <iomanip>
 #include <iostream>
 #include <random>
+#include <system_error>
 #include <vector>
+#include <string>
 
 #include "helper/Error.hpp"
 #include "helper/Matrix.hpp"
 #include "helper/helper.hpp"
 
 #include <nlohmann/json.hpp>
-
-#define CL_TARGET_OPENCL_VERSION 120
-#include <CL/cl.h>
-#include <CL/cl_ext.h>
-
-#include <system_error>
-
-#ifndef CL_PLATFORM_NOT_FOUND_KHR
-#define CL_PLATFORM_NOT_FOUND_KHR -1001
-#endif
 
 // OpenCL kernel code
 // ======================================================
@@ -116,8 +127,6 @@ struct OpenCLContext {
     cl_mem matrix_b{};
     cl_mem matrix_c{};
     cl_mem matrix_x{};
-
-    std::size_t local_size{256};
 };
 
 // Setup
@@ -216,16 +225,19 @@ void opencl_setup(OpenCLContext& ctx, const Matrix<float>& A, const Matrix<float
     const std::size_t K = A.cols();
     const std::size_t N = B.cols();
 
+    auto* a_ptr = const_cast<float*>(A.data());
     ctx.matrix_a = clCreateBuffer(ctx.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                                  sizeof(float) * M * K, (void*)A.data(), &err);
+                                  sizeof(float) * M * K, reinterpret_cast<void*>(a_ptr), &err);
     opencl_check(err, "buffer A failed");
 
+    auto* b_ptr = const_cast<float*>(B.data());
     ctx.matrix_b = clCreateBuffer(ctx.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                                  sizeof(float) * K * N, (void*)B.data(), &err);
+                                  sizeof(float) * K * N, reinterpret_cast<void*>(b_ptr), &err);
     opencl_check(err, "buffer B failed");
 
+    auto* c_ptr = const_cast<float*>(C.data());
     ctx.matrix_c = clCreateBuffer(ctx.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                                  sizeof(float) * M * N, (void*)C.data(), &err);
+                                  sizeof(float) * M * N, reinterpret_cast<void*>(c_ptr), &err);
     opencl_check(err, "buffer C failed");
 
     ctx.matrix_x =
@@ -255,7 +267,8 @@ void task(OpenCLContext& ctx, float alpha, const Matrix<float>& A, const Matrix<
     constexpr size_t TILE = 16;
 
     size_t local[2] = {TILE, TILE};
-    size_t global[2] = {((size_t)M + TILE - 1) / TILE * TILE, ((size_t)N + TILE - 1) / TILE * TILE};
+    size_t global[2] = {(static_cast<std::size_t>(M) + TILE - 1)
+                        / TILE * TILE, (static_cast<std::size_t>(N) + TILE - 1) / TILE * TILE};
 
     opencl_check(clEnqueueNDRangeKernel(ctx.queue, ctx.kernel, 2, nullptr, global, local, 0,
                                         nullptr, nullptr),
@@ -271,7 +284,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    double test_time_seconds = std::atof(argv[1]);
+    const double test_time_seconds = std::atof(argv[1]);
 
     const std::size_t M = std::atoi(argv[2]);  // rows of A and C
     const std::size_t N = std::atoi(argv[3]);  // cols of B and C

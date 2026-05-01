@@ -1,4 +1,15 @@
-// serial.cpp
+/**
+ * @file serial.cpp
+ * @brief
+ *
+ * @author Ben Palmer
+ * @date 2026
+ *
+ * @copyright
+ * Copyright (c) 2026 Ben Palmer
+ * SPDX-License-Identifier: MIT
+ */
+
 #include <cblas.h>
 #include <omp.h>
 
@@ -11,6 +22,7 @@
 #include <iostream>
 #include <random>
 #include <vector>
+#include <string>
 
 #include "helper/Error.hpp"
 #include "helper/Matrix.hpp"
@@ -75,7 +87,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    double test_time_seconds = std::atof(argv[1]);
+    const double test_time_seconds = std::atof(argv[1]);
 
     const std::size_t M = std::atoi(argv[2]);  // rows of A and C
     const std::size_t N = std::atoi(argv[3]);  // cols of B and C
