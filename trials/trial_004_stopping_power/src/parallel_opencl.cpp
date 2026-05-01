@@ -15,6 +15,8 @@
 #define CL_PLATFORM_NOT_FOUND_KHR -1001
 #endif
 
+#include <CL/cl.h>
+
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -35,9 +37,6 @@
 #include "helper/helper.hpp"
 
 #include <nlohmann/json.hpp>
-
-#include <CL/cl.h>
-
 
 static inline void check_opencl_error(const cl_int err, const char* const message) {
     if (err != CL_SUCCESS) {
