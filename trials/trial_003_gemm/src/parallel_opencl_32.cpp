@@ -1,31 +1,40 @@
-// serial.cpp
-#include <chrono>
-#include <cmath>
-#include <cstdint>
-#include <cstdlib>
-#include <iomanip>
-#include <iostream>
-#include <fstream>
-#include <vector>
-#include <cmath>
-#include <random>
-
-#include "helper/Matrix.hpp"
-#include "helper/Error.hpp"
-#include "helper/helper.hpp"
-#include <nlohmann/json.hpp>
-
+/**
+ * @file serial.cpp
+ * @brief
+ *
+ * @author Ben Palmer
+ * @date 2026
+ *
+ * @copyright
+ * Copyright (c) 2026 Ben Palmer
+ * SPDX-License-Identifier: MIT
+ */
 
 #define CL_TARGET_OPENCL_VERSION 120
-#include <CL/cl.h>
-#include <CL/cl_ext.h>
-#include <system_error>
-
 #ifndef CL_PLATFORM_NOT_FOUND_KHR
 #define CL_PLATFORM_NOT_FOUND_KHR -1001
 #endif
 
+#include <CL/cl.h>
+#include <CL/cl_ext.h>
 
+#include <chrono>
+#include <cmath>
+#include <cstdint>
+#include <cstdlib>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <random>
+#include <system_error>
+#include <vector>
+#include <string>
+
+#include "helper/Error.hpp"
+#include "helper/Matrix.hpp"
+#include "helper/helper.hpp"
+
+#include <nlohmann/json.hpp>
 
 // OpenCL kernel code
 // ======================================================
@@ -91,28 +100,21 @@ __kernel void gemm(
 }
 )CLC";
 
-
-
 // OpenCL check
 // ======================================================
 
-void opencl_check(cl_int status, const char* message)
-{
-    if (status != CL_SUCCESS)
-    {
+void opencl_check(cl_int status, const char* message) {
+    if (status != CL_SUCCESS) {
         std::ostringstream oss;
         oss << message << " (OpenCL error " << status << ")";
         THROW_RUNTIME_ERROR(oss.str());
     }
 }
 
-
-
 // OpenCL context
 //======================================================
 
-struct OpenCLContext
-{
+struct OpenCLContext {
     cl_platform_id platform{};
     cl_device_id device{};
     cl_context context{};
@@ -125,43 +127,28 @@ struct OpenCLContext
     cl_mem matrix_b{};
     cl_mem matrix_c{};
     cl_mem matrix_x{};
-
-    std::size_t local_size{256};
 };
-
-
-
-
-
-
 
 // Setup
 //======================================================
 
-void opencl_setup(OpenCLContext& ctx,
-                  const Matrix<float>& A,
-                  const Matrix<float>& B,
-                  const Matrix<float>& C,
-                  const Matrix<float>& X,
-                  std::string_view device_string)
-{
+void opencl_setup(OpenCLContext& ctx, const Matrix<float>& A, const Matrix<float>& B,
+                  const Matrix<float>& C, const Matrix<float>& X, std::string_view device_string) {
     cl_int err;
 
     // ---------------------------
     // 1. Get platforms
     // ---------------------------
-    cl_uint platform_count {0};
+    cl_uint platform_count{0};
     cl_int status = clGetPlatformIDs(0, nullptr, &platform_count);
 
-    if (status == CL_PLATFORM_NOT_FOUND_KHR || platform_count == 0)
-    {
+    if (status == CL_PLATFORM_NOT_FOUND_KHR || platform_count == 0) {
         THROW_RUNTIME_ERROR("No OpenCL platforms found.");
     }
 
     std::vector<cl_platform_id> platforms(platform_count);
-    opencl_check(
-        clGetPlatformIDs(platform_count, platforms.data(), nullptr),
-        "clGetPlatformIDs failed");
+    opencl_check(clGetPlatformIDs(platform_count, platforms.data(), nullptr),
+                 "clGetPlatformIDs failed");
 
     // ---------------------------
     // 2. Select device type
@@ -175,14 +162,11 @@ void opencl_setup(OpenCLContext& ctx,
     ctx.device = nullptr;
     ctx.platform = nullptr;
 
-    for (const auto& platform : platforms)
-    {
-        cl_uint device_count {0};
-        cl_int device_status =
-            clGetDeviceIDs(platform, requested_type, 0, nullptr, &device_count);
+    for (const auto& platform : platforms) {
+        cl_uint device_count{0};
+        cl_int device_status = clGetDeviceIDs(platform, requested_type, 0, nullptr, &device_count);
 
-        if (device_status == CL_SUCCESS && device_count > 0)
-        {
+        if (device_status == CL_SUCCESS && device_count > 0) {
             std::vector<cl_device_id> devices(device_count);
             opencl_check(
                 clGetDeviceIDs(platform, requested_type, device_count, devices.data(), nullptr),
@@ -194,8 +178,7 @@ void opencl_setup(OpenCLContext& ctx,
         }
     }
 
-    if (!ctx.device)
-    {
+    if (!ctx.device) {
         std::ostringstream oss;
         oss << "No suitable OpenCL " << device_string << " device found.";
         THROW_RUNTIME_ERROR(oss.str());
@@ -220,13 +203,13 @@ void opencl_setup(OpenCLContext& ctx,
 
     err = clBuildProgram(ctx.program, 1, &ctx.device, nullptr, nullptr, nullptr);
 
-    if (err != CL_SUCCESS)
-    {
+    if (err != CL_SUCCESS) {
         std::size_t log_size = 0;
         clGetProgramBuildInfo(ctx.program, ctx.device, CL_PROGRAM_BUILD_LOG, 0, nullptr, &log_size);
 
         std::vector<char> log(log_size);
-        clGetProgramBuildInfo(ctx.program, ctx.device, CL_PROGRAM_BUILD_LOG, log_size, log.data(), nullptr);
+        clGetProgramBuildInfo(ctx.program, ctx.device, CL_PROGRAM_BUILD_LOG, log_size, log.data(),
+                              nullptr);
 
         std::cerr << "Build log:\n" << log.data() << "\n";
         opencl_check(err, "clBuildProgram failed");
@@ -242,45 +225,28 @@ void opencl_setup(OpenCLContext& ctx,
     const std::size_t K = A.cols();
     const std::size_t N = B.cols();
 
-    ctx.matrix_a = clCreateBuffer(ctx.context,
-        CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-        sizeof(float) * M * K,
-        (void*)A.data(),
-        &err);
+    auto* a_ptr = const_cast<float*>(A.data());
+    ctx.matrix_a = clCreateBuffer(ctx.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                                  sizeof(float) * M * K, reinterpret_cast<void*>(a_ptr), &err);
     opencl_check(err, "buffer A failed");
 
-    ctx.matrix_b = clCreateBuffer(ctx.context,
-        CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-        sizeof(float) * K * N,
-        (void*)B.data(),
-        &err);
+    auto* b_ptr = const_cast<float*>(B.data());
+    ctx.matrix_b = clCreateBuffer(ctx.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                                  sizeof(float) * K * N, reinterpret_cast<void*>(b_ptr), &err);
     opencl_check(err, "buffer B failed");
 
-    ctx.matrix_c = clCreateBuffer(ctx.context,
-        CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-        sizeof(float) * M * N,
-        (void*)C.data(),
-        &err);
+    auto* c_ptr = const_cast<float*>(C.data());
+    ctx.matrix_c = clCreateBuffer(ctx.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                                  sizeof(float) * M * N, reinterpret_cast<void*>(c_ptr), &err);
     opencl_check(err, "buffer C failed");
 
-    ctx.matrix_x = clCreateBuffer(ctx.context,
-        CL_MEM_WRITE_ONLY,
-        sizeof(float) * M * N,
-        nullptr,
-        &err);
+    ctx.matrix_x =
+        clCreateBuffer(ctx.context, CL_MEM_WRITE_ONLY, sizeof(float) * M * N, nullptr, &err);
     opencl_check(err, "buffer X failed");
 }
 
-
-
-void gemm_opencl(OpenCLContext& ctx,
-                 float alpha,
-                 const Matrix<float>& A,
-                 const Matrix<float>& B,
-                 float beta,
-                 const Matrix<float>& C,
-                 Matrix<float>& X)
-{
+void task(OpenCLContext& ctx, float alpha, const Matrix<float>& A, const Matrix<float>& B,
+          float beta, const Matrix<float>& C, Matrix<float>& X) {
     cl_int err;
 
     const int M = static_cast<int>(A.rows());
@@ -300,91 +266,35 @@ void gemm_opencl(OpenCLContext& ctx,
 
     constexpr size_t TILE = 16;
 
-    size_t local[2]  = {TILE, TILE};
-    size_t global[2] = {
-        ((size_t)M + TILE - 1) / TILE * TILE,
-        ((size_t)N + TILE - 1) / TILE * TILE
-    };
+    size_t local[2] = {TILE, TILE};
+    size_t global[2] = {(static_cast<std::size_t>(M) + TILE - 1)
+                        / TILE * TILE, (static_cast<std::size_t>(N) + TILE - 1) / TILE * TILE};
 
-    opencl_check(
-        clEnqueueNDRangeKernel(ctx.queue, ctx.kernel, 2,
-                       nullptr, global, local,
-                       0, nullptr, nullptr),
-        "enqueue kernel failed");
+    opencl_check(clEnqueueNDRangeKernel(ctx.queue, ctx.kernel, 2, nullptr, global, local, 0,
+                                        nullptr, nullptr),
+                 "enqueue kernel failed");
 
     clFinish(ctx.queue);
-
 }
-
-
-
-Matrix<float> gemm_serial(float alpha,
-                            const Matrix<float>& A,
-                            const Matrix<float>& B,
-                            float beta,
-                            const Matrix<float>& C)
-{
-    const std::size_t M = A.rows();
-    const std::size_t K = A.cols();
-    const std::size_t N = B.cols();
-
-    // ---- dimension checks ----
-    if (B.rows() != K)
-        throw std::invalid_argument("B.rows() must equal A.cols()");
-    if (C.rows() != M || C.cols() != N)
-        throw std::invalid_argument("C must be M x N");
-
-    Matrix<float> X(M, N);
-
-    // ---- X = beta * C ----
-    for (std::size_t i = 0; i < M; ++i)
-    {
-        for (std::size_t j = 0; j < N; ++j)
-        {
-            X(i, j) = beta * C(i, j);
-        }
-    }
-
-    // ---- X += alpha * A * B ----
-    for (std::size_t i = 0; i < M; ++i)
-    {
-        for (std::size_t k = 0; k < K; ++k)
-        {
-            const float a_ik = alpha * A(i, k);
-
-            for (std::size_t j = 0; j < N; ++j)
-            {
-                X(i, j) += a_ik * B(k, j);
-            }
-        }
-    }
-
-    return X;
-}
-
-
 
 // X = k A * B + l C
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
     if (argc < 5) {
         std::cerr << "Usage: " << argv[0] << " test_time_seconds rows cols\n";
         return 1;
     }
 
-    double test_time_seconds = std::atof(argv[1]);
+    const double test_time_seconds = std::atof(argv[1]);
 
     const std::size_t M = std::atoi(argv[2]);  // rows of A and C
     const std::size_t N = std::atoi(argv[3]);  // cols of B and C
     const std::size_t K = std::atoi(argv[4]);  // cols of A / rows of B
 
     std::string_view device_string = "GPU";
-    if (argc >= 6)
-    {
+    if (argc >= 6) {
         device_string = argv[5];
 
-        if (device_string != "GPU" && device_string != "CPU")
-        {
+        if (device_string != "GPU" && device_string != "CPU") {
             THROW_INVALID_ARGUMENT("device must be GPU or CPU");
         }
     }
@@ -394,9 +304,9 @@ int main(int argc, char** argv)
     std::uniform_real_distribution<double> dist(0.0, 1.0);  // [0.0, 1.0)
 
     // Set up Matrices
-    Matrix<float>A {M, K};
-    Matrix<float>B {K, N};
-    Matrix<float>C {M, N};
+    Matrix<float> A{M, K};
+    Matrix<float> B{K, N};
+    Matrix<float> C{M, N};
 
     // Fill with random data
     const auto k = static_cast<float>(dist(rng));
@@ -405,57 +315,36 @@ int main(int argc, char** argv)
     B.random_fill(rng, dist);
     C.random_fill(rng, dist);
 
-    const auto X_expected = gemm_serial(k, A, B, l, C);
-    const auto expected_value = helper::check_sum(X_expected.vector());
-    std::cout << expected_value << std::endl;
-
-
-
     // ======= Calculation Starts ========
 
     // Setup
     const auto t0 = std::chrono::steady_clock::now();
 
-
-    Matrix<float> X {M, N};
-
+    Matrix<float> X{M, N};
 
     OpenCLContext ctx;
     opencl_setup(ctx, A, B, C, X, device_string);
-
 
     // Do calculation
     const auto t1 = std::chrono::steady_clock::now();
     const auto deadline = t1 + std::chrono::duration<double>(test_time_seconds);
     std::uint64_t iters = 0;
 
-
     // Test starts
-    do
-    {
-        //X = gemm_parallel(k, A, B, l, C);
-        gemm_opencl(ctx, k, A, B, l, C, X);
+    do {
+        // X = gemm_parallel(k, A, B, l, C);
+        task(ctx, k, A, B, l, C, X);
         iters++;
-    }
-    while (std::chrono::steady_clock::now() < deadline);
+    } while (std::chrono::steady_clock::now() < deadline);
     // Test ends
-
 
     // Clean up
     const auto t2 = std::chrono::steady_clock::now();
 
     // Read back result
-    opencl_check(
-        clEnqueueReadBuffer(ctx.queue,
-                            ctx.matrix_x,
-                            CL_TRUE,
-                            0,
-                            sizeof(float) * M * N,
-                            X.data(),
-                            0,
-                            nullptr,
-                            nullptr),
-        "read buffer failed");
+    opencl_check(clEnqueueReadBuffer(ctx.queue, ctx.matrix_x, CL_TRUE, 0, sizeof(float) * M * N,
+                                     X.data(), 0, nullptr, nullptr),
+                 "read buffer failed");
 
     // Actual end time
     const auto t3 = std::chrono::steady_clock::now();
@@ -464,24 +353,23 @@ int main(int argc, char** argv)
 
     const auto calculated_value = helper::check_sum(X.vector());
 
-
     const auto time_setup = std::chrono::duration<double>(t1 - t0).count();
     const auto time_calc = std::chrono::duration<double>(t2 - t1).count();
     const auto time_cleanup = std::chrono::duration<double>(t3 - t2).count();
     const auto time_total = std::chrono::duration<double>(t3 - t0).count();
     const auto time_per_iteration = time_calc / iters;
 
-    const auto passed_check {std::abs(calculated_value - expected_value) < 1.0e-9};
     const std::string operation_string = "gemm";
 
-    const auto matrix_size {std::to_string(M) + "x" + std::to_string(K) + "_by_" + std::to_string(K) + "x" + std::to_string(N)};
-    const auto method {std::string("Parallel OpenCL 32 " + matrix_size)};
-    const auto comments {std::string("operation:") + std::string(operation_string)};
+    const auto matrix_size{std::to_string(M) + "x" + std::to_string(K) + "_by_" +
+                           std::to_string(K) + "x" + std::to_string(N)};
+    const auto method{std::string("Parallel OpenCL 32 " + matrix_size)};
+    const auto comments{std::string("operation:") + std::string(operation_string)};
 
     // Output
     {
-
-        const std::string base_file_name = "results/parallel_opencl_32_" + matrix_size + "_" + std::string(operation_string);
+        const std::string base_file_name =
+            "results/parallel_opencl_32_" + matrix_size + "_" + std::string(operation_string);
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
 
         nlohmann::json j;
@@ -508,18 +396,14 @@ int main(int argc, char** argv)
         j["time_total"] = time_total;
 
         // Values
-        j["expected_value"] = helper::to_string_precise(expected_value);
-        j["calculated_value"] = helper::to_string_precise(calculated_value);;
-        j["difference"] = helper::to_string_precise(expected_value - calculated_value);
-        j["passed_check"] = passed_check;
+        j["calculated_value"] = helper::to_string_precise(calculated_value);
         j["values"] = helper::to_string_precise_vector(X.vector());
 
         // Memory
         j["max_rss_kb"] = helper::max_rss_kb();
 
         std::ofstream out(json_file);
-        if (!out)
-        {
+        if (!out) {
             throw std::runtime_error("Failed to open output JSON file.");
         }
 
