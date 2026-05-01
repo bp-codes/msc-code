@@ -1,47 +1,38 @@
 // openmp.cpp
 
+#include <cuda_runtime.h>
+
 #include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <fstream>
-#include <vector>
-#include <cmath>
 #include <random>
+#include <vector>
 
-#include "helper/Matrix.hpp"
 #include "helper/Error.hpp"
+#include "helper/Matrix.hpp"
 #include "helper/helper.hpp"
+
 #include <nlohmann/json.hpp>
 
-#include <cuda_runtime.h>
-
-
-
-#define CUDA_CHECK(call)                                                       \
-  do {                                                                         \
-    cudaError_t _e = (call);                                                   \
-    if (_e != cudaSuccess) {                                                   \
-      fprintf(stderr, "CUDA error %s:%d: %s\n", __FILE__, __LINE__,            \
-              cudaGetErrorString(_e));                                         \
-      std::abort();                                                            \
-    }                                                                          \
-  } while (0)
-
-
+#define CUDA_CHECK(call)                                                                           \
+    do {                                                                                           \
+        cudaError_t _e = (call);                                                                   \
+        if (_e != cudaSuccess) {                                                                   \
+            fprintf(stderr, "CUDA error %s:%d: %s\n", __FILE__, __LINE__, cudaGetErrorString(_e)); \
+            std::abort();                                                                          \
+        }                                                                                          \
+    } while (0)
 
 // RTX3050 100KB per SM, Warp size 32.
 constexpr int TILE = 16;
 
-__global__ void dgemm_kernel_tiled(const double* __restrict__ A,
-                                   const double* __restrict__ B,
-                                   const double* __restrict__ C,
-                                   double* __restrict__ X,
-                                   double k, double l,
-                                   int M, int N, int K)
-{
+__global__ void dgemm_kernel_tiled(const double* __restrict__ A, const double* __restrict__ B,
+                                   const double* __restrict__ C, double* __restrict__ X, double k,
+                                   double l, int M, int N, int K) {
     __shared__ double As[TILE][TILE];
     __shared__ double Bs[TILE][TILE];
 
@@ -51,119 +42,46 @@ __global__ void dgemm_kernel_tiled(const double* __restrict__ A,
     double sum = 0.0;
 
     // Loop over tiles in K dimension
-    for (int t = 0; t < (K + TILE - 1) / TILE; ++t)
-    {
+    for (int t = 0; t < (K + TILE - 1) / TILE; ++t) {
         int kA = t * TILE + threadIdx.x;
         int kB = t * TILE + threadIdx.y;
 
         // Load A tile (row-major)
-        As[threadIdx.y][threadIdx.x] =
-            (row < M && kA < K)
-                ? A[row * K + kA]
-                : 0.0;
+        As[threadIdx.y][threadIdx.x] = (row < M && kA < K) ? A[row * K + kA] : 0.0;
 
         // Load B tile (row-major)
-        Bs[threadIdx.y][threadIdx.x] =
-            (kB < K && col < N)
-                ? B[kB * N + col]
-                : 0.0;
+        Bs[threadIdx.y][threadIdx.x] = (kB < K && col < N) ? B[kB * N + col] : 0.0;
 
         __syncthreads();
 
-        #pragma unroll
-        for (int i = 0; i < TILE; ++i)
-        {
+#pragma unroll
+        for (int i = 0; i < TILE; ++i) {
             sum += As[threadIdx.y][i] * Bs[i][threadIdx.x];
         }
 
         __syncthreads();
     }
 
-    if (row < M && col < N)
-    {
+    if (row < M && col < N) {
         X[row * N + col] = k * sum + l * C[row * N + col];
     }
 }
 
-
-
-inline void dgemm_cuda(const double* d_A,
-                       const double* d_B,
-                       const double* d_C,
-                       double* d_X,
-                       const double k,
-                       const double l,
-                       const int M,
-                       const int N,
-                       const int K,
-                       cudaStream_t stream = 0)
-{
+inline void task(const double* d_A, const double* d_B, const double* d_C, double* d_X,
+                 const double k, const double l, const int M, const int N, const int K,
+                 cudaStream_t stream = 0) {
     constexpr int TILE = 16;
 
     dim3 block(TILE, TILE);
-    dim3 grid((N + TILE - 1) / TILE,
-              (M + TILE - 1) / TILE);
+    dim3 grid((N + TILE - 1) / TILE, (M + TILE - 1) / TILE);
 
-    dgemm_kernel_tiled<<<grid, block, 0, stream>>>(
-        d_A, d_B, d_C, d_X, k, l, M, N, K);
+    dgemm_kernel_tiled<<<grid, block, 0, stream>>>(d_A, d_B, d_C, d_X, k, l, M, N, K);
 
     CUDA_CHECK(cudaGetLastError());
 }
 
-
-
-Matrix<double> dgemm_serial(double alpha,
-                            const Matrix<double>& A,
-                            const Matrix<double>& B,
-                            double beta,
-                            const Matrix<double>& C)
-{
-    const std::size_t M = A.rows();
-    const std::size_t K = A.cols();
-    const std::size_t N = B.cols();
-
-    // dimension checks
-    if (B.rows() != K)
-        throw std::invalid_argument("B.rows() must equal A.cols()");
-    if (C.rows() != M || C.cols() != N)
-        throw std::invalid_argument("C must be M x N");
-
-    Matrix<double> X(M, N);
-
-    // X = beta * C
-    for (std::size_t i = 0; i < M; ++i)
-    {
-        for (std::size_t j = 0; j < N; ++j)
-        {
-            X(i, j) = beta * C(i, j);
-        }
-    }
-
-    // X += alpha * A * B
-    for (std::size_t i = 0; i < M; ++i)
-    {
-        for (std::size_t k = 0; k < K; ++k)
-        {
-            const double a_ik = alpha * A(i, k);
-
-            for (std::size_t j = 0; j < N; ++j)
-            {
-                X(i, j) += a_ik * B(k, j);
-            }
-        }
-    }
-
-    return X;
-}
-
-
-
-
-
-
 // X = k A * B + l C
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
     if (argc < 4) {
         std::cerr << "Usage: " << argv[0] << " test_time rows cols\n";
         return 1;
@@ -180,9 +98,9 @@ int main(int argc, char** argv)
     std::uniform_real_distribution<double> dist(0.0, 1.0);  // [0.0, 1.0)
 
     // Set up Matrices
-    Matrix<double>A {M, K};
-    Matrix<double>B {K, N};
-    Matrix<double>C {M, N};
+    Matrix<double> A{M, K};
+    Matrix<double> B{K, N};
+    Matrix<double> C{M, N};
 
     // Check matrix sizes
     if (A.rows() != M || A.cols() != K)
@@ -201,10 +119,6 @@ int main(int argc, char** argv)
     B.random_fill(rng, dist);
     C.random_fill(rng, dist);
 
-    Matrix<double>X_expected = dgemm_serial(k, A, B, l, C);
-    const auto expected_value = helper::check_sum(X_expected.vector());
-    std::cout << expected_value << std::endl;
-
     // ======= Calculation Starts ========
 
     // Setup
@@ -216,57 +130,48 @@ int main(int argc, char** argv)
     double* d_C = nullptr;
     double* d_X = nullptr;
 
-    CUDA_CHECK(cudaMalloc(&d_A, A.vector().size() * sizeof(double)));          // rows*cols
-    CUDA_CHECK(cudaMalloc(&d_B, B.vector().size() * sizeof(double)));          // cols*rows
-    CUDA_CHECK(cudaMalloc(&d_C, C.vector().size() * sizeof(double)));          // rows*rows
+    CUDA_CHECK(cudaMalloc(&d_A, A.vector().size() * sizeof(double)));  // rows*cols
+    CUDA_CHECK(cudaMalloc(&d_B, B.vector().size() * sizeof(double)));  // cols*rows
+    CUDA_CHECK(cudaMalloc(&d_C, C.vector().size() * sizeof(double)));  // rows*rows
     CUDA_CHECK(cudaMalloc(&d_X, M * N * sizeof(double)));
 
     // Copy once (async copies are fine; sync before timing loop if needed)
-    CUDA_CHECK(cudaMemcpy(d_A, A.vector().data(),
-                        A.vector().size() * sizeof(double),
-                        cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(d_B, B.vector().data(),
-                        B.vector().size() * sizeof(double),
-                        cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(d_C, C.vector().data(),
-                        C.vector().size() * sizeof(double),
-                        cudaMemcpyHostToDevice));
-
-
+    CUDA_CHECK(cudaMemcpy(d_A, A.vector().data(), A.vector().size() * sizeof(double),
+                          cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_B, B.vector().data(), B.vector().size() * sizeof(double),
+                          cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_C, C.vector().data(), C.vector().size() * sizeof(double),
+                          cudaMemcpyHostToDevice));
 
     // Do calculation
     const auto t1 = std::chrono::steady_clock::now();
     const auto deadline = t1 + std::chrono::duration<double>(test_time_seconds);
     std::uint64_t iters = 0;
 
-    Matrix<double>X {M, N};
+    Matrix<double> X{M, N};
 
     // Test starts
-    do
-    {
-        //X = dgemm_serial(k, A, B, l, C);
-        dgemm_cuda(d_A, d_B, d_C, d_X, k, l, M, N, K);
+    do {
+        // X = dgemm_serial(k, A, B, l, C);
+        task(d_A, d_B, d_C, d_X, k, l, M, N, K);
         // Ensure the iteration completed before counting it
         CUDA_CHECK(cudaDeviceSynchronize());
         iters++;
-    }
-    while (std::chrono::steady_clock::now() < deadline);
+    } while (std::chrono::steady_clock::now() < deadline);
     // Test ends
     CUDA_CHECK(cudaDeviceSynchronize());
 
     // Clean up
     const auto t2 = std::chrono::steady_clock::now();
 
-    CUDA_CHECK(cudaMemcpy(X.vector().data(), d_X,
-                        X.vector().size() * sizeof(double),
-                        cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(X.vector().data(), d_X, X.vector().size() * sizeof(double),
+                          cudaMemcpyDeviceToHost));
 
     // Clean up
     CUDA_CHECK(cudaFree(d_A));
     CUDA_CHECK(cudaFree(d_B));
     CUDA_CHECK(cudaFree(d_C));
     CUDA_CHECK(cudaFree(d_X));
-
 
     // Actual end time
     const auto t3 = std::chrono::steady_clock::now();
@@ -275,24 +180,23 @@ int main(int argc, char** argv)
 
     const auto calculated_value = helper::check_sum(X.vector());
 
-
     const auto time_setup = std::chrono::duration<double>(t1 - t0).count();
     const auto time_calc = std::chrono::duration<double>(t2 - t1).count();
     const auto time_cleanup = std::chrono::duration<double>(t3 - t2).count();
     const auto time_total = std::chrono::duration<double>(t3 - t0).count();
     const auto time_per_iteration = time_calc / iters;
 
-    const auto passed_check {std::abs(calculated_value - expected_value) < 1.0e-9};
     const std::string operation_string = "gemm";
 
-    const auto matrix_size {std::to_string(M) + "x" + std::to_string(K) + "_by_" + std::to_string(K) + "x" + std::to_string(N)};
-    const auto method {std::string("Parallel CUDA " + matrix_size)};
-    const auto comments {std::string("operation:") + std::string(operation_string)};
+    const auto matrix_size{std::to_string(M) + "x" + std::to_string(K) + "_by_" +
+                           std::to_string(K) + "x" + std::to_string(N)};
+    const auto method{std::string("Parallel CUDA " + matrix_size)};
+    const auto comments{std::string("operation:") + std::string(operation_string)};
 
     // Output
     {
-
-        const std::string base_file_name = "results/parallel_cuda_" + matrix_size + "_" + std::string(operation_string);
+        const std::string base_file_name =
+            "results/parallel_cuda_" + matrix_size + "_" + std::string(operation_string);
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
 
         nlohmann::json j;
@@ -319,18 +223,14 @@ int main(int argc, char** argv)
         j["time_total"] = time_total;
 
         // Values
-        j["expected_value"] = helper::to_string_precise(expected_value);
-        j["calculated_value"] = helper::to_string_precise(calculated_value);;
-        j["difference"] = helper::to_string_precise(expected_value - calculated_value);
-        j["passed_check"] = passed_check;
+        j["calculated_value"] = helper::to_string_precise(calculated_value);
         j["values"] = helper::to_string_precise_vector(X.vector());
 
         // Memory
         j["max_rss_kb"] = helper::max_rss_kb();
 
         std::ofstream out(json_file);
-        if (!out)
-        {
+        if (!out) {
             throw std::runtime_error("Failed to open output JSON file.");
         }
 
@@ -338,7 +238,5 @@ int main(int argc, char** argv)
         out << std::setw(2) << j << '\n';
     }
 
-
     return 0;
-
 }

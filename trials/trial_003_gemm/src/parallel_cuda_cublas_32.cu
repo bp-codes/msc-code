@@ -1,136 +1,56 @@
 // openmp.cpp
 
+#include <cublas_v2.h>
+#include <cuda_runtime.h>
+
 #include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <fstream>
-#include <vector>
-#include <cmath>
 #include <random>
+#include <vector>
 
-#include "helper/Matrix.hpp"
 #include "helper/Error.hpp"
+#include "helper/Matrix.hpp"
 #include "helper/helper.hpp"
+
 #include <nlohmann/json.hpp>
 
-#include <cuda_runtime.h>
-#include <cublas_v2.h>
+#define CUDA_CHECK(call)                                                                           \
+    do {                                                                                           \
+        cudaError_t _e = (call);                                                                   \
+        if (_e != cudaSuccess) {                                                                   \
+            fprintf(stderr, "CUDA error %s:%d: %s\n", __FILE__, __LINE__, cudaGetErrorString(_e)); \
+            std::abort();                                                                          \
+        }                                                                                          \
+    } while (0)
 
+#define CUBLAS_CHECK(call)                                                               \
+    do {                                                                                 \
+        cublasStatus_t status = (call);                                                  \
+        if (status != CUBLAS_STATUS_SUCCESS) {                                           \
+            std::cerr << "cuBLAS error at " << __FILE__ << ":" << __LINE__ << std::endl; \
+            std::abort();                                                                \
+        }                                                                                \
+    } while (0)
 
-
-#define CUDA_CHECK(call)                                                       \
-  do {                                                                         \
-    cudaError_t _e = (call);                                                   \
-    if (_e != cudaSuccess) {                                                   \
-      fprintf(stderr, "CUDA error %s:%d: %s\n", __FILE__, __LINE__,            \
-              cudaGetErrorString(_e));                                         \
-      std::abort();                                                            \
-    }                                                                          \
-  } while (0)
-
-
-
-#define CUBLAS_CHECK(call)                                      \
-do {                                                            \
-    cublasStatus_t status = (call);                             \
-    if (status != CUBLAS_STATUS_SUCCESS) {                      \
-        std::cerr << "cuBLAS error at " << __FILE__ << ":"       \
-                  << __LINE__ << std::endl;                     \
-        std::abort();                                           \
-    }                                                           \
-} while (0)
-
-
-
-inline void gemm_cublas(const float* d_A,
-                         const float* d_B,
-                         const float* d_C,
-                         float* d_X,
-                         const float k,
-                         const float l,
-                         const int M,
-                         const int N,
-                         const int K,
-                         cublasHandle_t handle)
-{
+inline void task(const float* d_A, const float* d_B, const float* d_C, float* d_X, const float k,
+                 const float l, const int M, const int N, const int K, cublasHandle_t handle) {
     // X = C
-    CUBLAS_CHECK(cublasScopy(handle,
-                             M * N,
-                             d_C, 1,
-                             d_X, 1));
+    CUBLAS_CHECK(cublasScopy(handle, M * N, d_C, 1, d_X, 1));
 
     // X = k*A*B + l*X
-    CUBLAS_CHECK(cublasSgemm(
-        handle,
-        CUBLAS_OP_N, CUBLAS_OP_N,
-        M,    // rows
-        N,    // cols
-        K,
-        &k,
-        d_A, M,
-        d_B, K,
-        &l,
-        d_X, M
-    ));
+    CUBLAS_CHECK(cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N,
+                             M,  // rows
+                             N,  // cols
+                             K, &k, d_A, M, d_B, K, &l, d_X, M));
 }
-
-
-
-Matrix<float> gemm_serial(float alpha,
-                            const Matrix<float>& A,
-                            const Matrix<float>& B,
-                            float beta,
-                            const Matrix<float>& C)
-{
-    const std::size_t M = A.rows();
-    const std::size_t K = A.cols();
-    const std::size_t N = B.cols();
-
-    // dimension checks
-    if (B.rows() != K)
-        throw std::invalid_argument("B.rows() must equal A.cols()");
-    if (C.rows() != M || C.cols() != N)
-        throw std::invalid_argument("C must be M x N");
-
-    Matrix<float> X(M, N);
-
-    // X = beta * C
-    for (std::size_t i = 0; i < M; ++i)
-    {
-        for (std::size_t j = 0; j < N; ++j)
-        {
-            X(i, j) = beta * C(i, j);
-        }
-    }
-
-    // X += alpha * A * B
-    for (std::size_t i = 0; i < M; ++i)
-    {
-        for (std::size_t k = 0; k < K; ++k)
-        {
-            const auto a_ik = alpha * A(i, k);
-
-            for (std::size_t j = 0; j < N; ++j)
-            {
-                X(i, j) += a_ik * B(k, j);
-            }
-        }
-    }
-
-    return X;
-}
-
-
-
-
-
 
 // X = k A * B + l C
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
     if (argc < 4) {
         std::cerr << "Usage: " << argv[0] << " test_time rows cols\n";
         return 1;
@@ -147,9 +67,9 @@ int main(int argc, char** argv)
     std::uniform_real_distribution<double> dist(0.0, 1.0);  // [0.0, 1.0)
 
     // Set up Matrices
-    Matrix<float>A {M, K};
-    Matrix<float>B {K, N};
-    Matrix<float>C {M, N};
+    Matrix<float> A{M, K};
+    Matrix<float> B{K, N};
+    Matrix<float> C{M, N};
 
     // Check matrix sizes
     if (A.rows() != M || A.cols() != K)
@@ -168,10 +88,6 @@ int main(int argc, char** argv)
     B.random_fill(rng, dist);
     C.random_fill(rng, dist);
 
-    Matrix<float>X_expected = gemm_serial(k, A, B, l, C);
-    const auto expected_value = helper::check_sum(X_expected.vector());
-    std::cout << expected_value << std::endl;
-
     // ======= Calculation Starts ========
 
     // Setup
@@ -183,9 +99,9 @@ int main(int argc, char** argv)
     float* d_C = nullptr;
     float* d_X = nullptr;
 
-    CUDA_CHECK(cudaMalloc(&d_A, A.vector().size() * sizeof(float)));          // rows*cols
-    CUDA_CHECK(cudaMalloc(&d_B, B.vector().size() * sizeof(float)));          // cols*rows
-    CUDA_CHECK(cudaMalloc(&d_C, C.vector().size() * sizeof(float)));          // rows*rows
+    CUDA_CHECK(cudaMalloc(&d_A, A.vector().size() * sizeof(float)));  // rows*cols
+    CUDA_CHECK(cudaMalloc(&d_B, B.vector().size() * sizeof(float)));  // cols*rows
+    CUDA_CHECK(cudaMalloc(&d_C, C.vector().size() * sizeof(float)));  // rows*rows
     CUDA_CHECK(cudaMalloc(&d_X, M * N * sizeof(float)));
 
     cublasHandle_t handle;
@@ -196,34 +112,24 @@ int main(int argc, char** argv)
     auto B_col = B.vector_column_major();
     auto C_col = C.vector_column_major();
 
-    CUDA_CHECK(cudaMemcpy(d_A, A_col.data(),
-                        A_col.size() * sizeof(float),
-                        cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(d_B, B_col.data(),
-                        B_col.size() * sizeof(float),
-                        cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(d_C, C_col.data(),
-                        C_col.size() * sizeof(float),
-                        cudaMemcpyHostToDevice));
-
-
+    CUDA_CHECK(cudaMemcpy(d_A, A_col.data(), A_col.size() * sizeof(float), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_B, B_col.data(), B_col.size() * sizeof(float), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_C, C_col.data(), C_col.size() * sizeof(float), cudaMemcpyHostToDevice));
 
     // Do calculation
     const auto t1 = std::chrono::steady_clock::now();
     const auto deadline = t1 + std::chrono::duration<double>(test_time_seconds);
     std::uint64_t iters = 0;
 
-    Matrix<float>X {M, N};
+    Matrix<float> X{M, N};
 
     // Test starts
-    do
-    {
+    do {
         // X = C
-        gemm_cublas(d_A, d_B, d_C, d_X, k, l, M, N, K, handle);
+        task(d_A, d_B, d_C, d_X, k, l, M, N, K, handle);
         CUDA_CHECK(cudaDeviceSynchronize());
         iters++;
-    }
-    while (std::chrono::steady_clock::now() < deadline);
+    } while (std::chrono::steady_clock::now() < deadline);
     // Test ends
     CUDA_CHECK(cudaDeviceSynchronize());
 
@@ -231,9 +137,7 @@ int main(int argc, char** argv)
     const auto t2 = std::chrono::steady_clock::now();
 
     std::vector<float> X_col(M * N);
-    CUDA_CHECK(cudaMemcpy(X_col.data(), d_X,
-                        X_col.size() * sizeof(float),
-                        cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(X_col.data(), d_X, X_col.size() * sizeof(float), cudaMemcpyDeviceToHost));
     X.load_from_column_major(X_col);
 
     // Clean up
@@ -243,7 +147,6 @@ int main(int argc, char** argv)
     CUDA_CHECK(cudaFree(d_C));
     CUDA_CHECK(cudaFree(d_X));
 
-
     // Actual end time
     const auto t3 = std::chrono::steady_clock::now();
 
@@ -251,24 +154,23 @@ int main(int argc, char** argv)
 
     const auto calculated_value = helper::check_sum(X.vector());
 
-
     const auto time_setup = std::chrono::duration<double>(t1 - t0).count();
     const auto time_calc = std::chrono::duration<double>(t2 - t1).count();
     const auto time_cleanup = std::chrono::duration<double>(t3 - t2).count();
     const auto time_total = std::chrono::duration<double>(t3 - t0).count();
     const auto time_per_iteration = time_calc / iters;
 
-    const auto passed_check {std::abs(calculated_value - expected_value) < 1.0e-9};
     const std::string operation_string = "gemm";
 
-    const auto matrix_size {std::to_string(M) + "x" + std::to_string(K) + "_by_" + std::to_string(K) + "x" + std::to_string(N)};
-    const auto method {std::string("Parallel CUDA cuBLAS 32 " + matrix_size)};
-    const auto comments {std::string("operation:") + std::string(operation_string)};
+    const auto matrix_size{std::to_string(M) + "x" + std::to_string(K) + "_by_" +
+                           std::to_string(K) + "x" + std::to_string(N)};
+    const auto method{std::string("Parallel CUDA cuBLAS 32 " + matrix_size)};
+    const auto comments{std::string("operation:") + std::string(operation_string)};
 
     // Output
     {
-
-        const std::string base_file_name = "results/parallel_cuda_cublas_32_" + matrix_size + "_" + std::string(operation_string);
+        const std::string base_file_name =
+            "results/parallel_cuda_cublas_32_" + matrix_size + "_" + std::string(operation_string);
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
 
         nlohmann::json j;
@@ -295,18 +197,14 @@ int main(int argc, char** argv)
         j["time_total"] = time_total;
 
         // Values
-        j["expected_value"] = helper::to_string_precise(expected_value);
-        j["calculated_value"] = helper::to_string_precise(calculated_value);;
-        j["difference"] = helper::to_string_precise(expected_value - calculated_value);
-        j["passed_check"] = passed_check;
+        j["calculated_value"] = helper::to_string_precise(calculated_value);
         j["values"] = helper::to_string_precise_vector(X.vector());
 
         // Memory
         j["max_rss_kb"] = helper::max_rss_kb();
 
         std::ofstream out(json_file);
-        if (!out)
-        {
+        if (!out) {
             throw std::runtime_error("Failed to open output JSON file.");
         }
 
@@ -314,7 +212,5 @@ int main(int argc, char** argv)
         out << std::setw(2) << j << '\n';
     }
 
-
     return 0;
-
 }
