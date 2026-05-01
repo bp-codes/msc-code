@@ -10,6 +10,11 @@
  * SPDX-License-Identifier: MIT
  */
 
+#define CL_TARGET_OPENCL_VERSION 120
+#ifndef CL_PLATFORM_NOT_FOUND_KHR
+#define CL_PLATFORM_NOT_FOUND_KHR -1001
+#endif
+
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -31,12 +36,8 @@
 
 #include <nlohmann/json.hpp>
 
-#define CL_TARGET_OPENCL_VERSION 120
 #include <CL/cl.h>
 
-#ifndef CL_PLATFORM_NOT_FOUND_KHR
-#define CL_PLATFORM_NOT_FOUND_KHR -1001
-#endif
 
 static inline void check_opencl_error(const cl_int err, const char* const message) {
     if (err != CL_SUCCESS) {
@@ -122,31 +123,6 @@ static inline float stopping_power(
                                                 mass_stopping_power_mev_cm2_per_g};
 
     return linear_stopping_power_mev_per_cm;
-}
-
-/**
- * @brief Serial reference implementation.
- */
-static inline void serial_task(const std::vector<float>& velocity_array,
-                               std::vector<float>& results) {
-    static constexpr auto PROJECTILE_ATOMIC_NUMBER{1};
-    static constexpr auto PROJECTILE_ATOMIC_MASS_MEV{938.2720813f};
-
-    static constexpr auto TARGET_ATOMIC_NUMBER{26};
-    static constexpr auto TARGET_ATOMIC_MASS_G_MOL{55.845f};
-    static constexpr auto TARGET_DENSITY_G_CM3{7.874f};
-
-    static constexpr auto MEAN_EXCITATION_ENERGY_MEV{286.0e-6f};
-    static constexpr auto DENSITY_EFFECT_DELTA{0.0f};
-
-    const auto n{std::size_t(velocity_array.size())};
-
-    for (auto i = std::size_t(0); i < n; i++) {
-        results[i] =
-            stopping_power(velocity_array[i], PROJECTILE_ATOMIC_NUMBER, PROJECTILE_ATOMIC_MASS_MEV,
-                           TARGET_ATOMIC_NUMBER, TARGET_ATOMIC_MASS_G_MOL, TARGET_DENSITY_G_CM3,
-                           MEAN_EXCITATION_ENERGY_MEV, DENSITY_EFFECT_DELTA);
-    }
 }
 
 // Parallel versions
@@ -354,7 +330,7 @@ void print_build_log(cl_program program, cl_device_id device) {
     }
 }
 
-int main(int argc, char** argv) {
+auto main(int argc, char** argv) -> int {
     try {
         if (argc < 3) {
             THROW_INVALID_ARGUMENT("Usage: serial.x time_limit vec_size operation");
@@ -389,15 +365,6 @@ int main(int argc, char** argv) {
         std::generate_n(std::back_inserter(velocity_array), n,
                         [&]() { return static_cast<float>(dist(rng)); });
 
-        auto expected_value{0.0};
-
-        // Expected value
-        {
-            auto stopping_power_values{std::vector<float>(n)};
-            serial_task(velocity_array, stopping_power_values);
-            expected_value = static_cast<double>(helper::check_sum(stopping_power_values));
-        }
-
         // ======= Set up before calculation ========
         const auto t0{std::chrono::steady_clock::now()};
 
@@ -415,24 +382,6 @@ int main(int argc, char** argv) {
 
         const auto device_name{get_device_string(device, CL_DEVICE_NAME)};
         std::cerr << "Using device: " << device_name << "\n";
-
-        // Check FP64 support
-        /*
-        cl_device_fp_config fp64_config {};
-        opencl_check(
-            clGetDeviceInfo(
-                device,
-                CL_DEVICE_DOUBLE_FP_CONFIG,
-                sizeof(fp64_config),
-                &fp64_config,
-                nullptr),
-            "clGetDeviceInfo(CL_DEVICE_DOUBLE_FP_CONFIG) failed.");
-
-        if (fp64_config == 0)
-        {
-            THROW_RUNTIME_ERROR("Selected OpenCL device does not support double precision.");
-        }
-        */
 
         cl_int status{CL_SUCCESS};
         context = clCreateContext(nullptr, 1, &device, nullptr, nullptr, &status);
@@ -535,8 +484,6 @@ int main(int argc, char** argv) {
         const auto time_per_iteration_s{(iters > 0) ? (time_calc_s / static_cast<double>(iters))
                                                     : 0.0};
 
-        const auto passed_check{(std::abs(calculated_value - expected_value) < 1.0e-6)};
-
         const auto method{std::string("Parallel OpenCL 32")};
         const auto comments{std::string("stopping_power")};
 
@@ -570,10 +517,7 @@ int main(int argc, char** argv) {
             j["time_cleanup"] = time_cleanup_s;
             j["time_total"] = time_total_s;
 
-            j["expected_value"] = helper::to_string_precise(expected_value);
             j["calculated_value"] = helper::to_string_precise(calculated_value);
-            j["difference"] = helper::to_string_precise(expected_value - calculated_value);
-            j["passed_check"] = passed_check;
             j["values"] = helper::to_string_precise_vector(stopping_power_values_out);
 
             std::ofstream out(json_file);

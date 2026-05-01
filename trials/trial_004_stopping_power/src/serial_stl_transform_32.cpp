@@ -138,8 +138,7 @@ static inline float stopping_power(
  *      This routine does not validate sizes; callers must ensure `results.size() ==
  * velocity_array.size()`.
  */
-static inline void task(const std::vector<float>& velocity_array,
-                               std::vector<float>& results) {
+static inline void task(const std::vector<float>& velocity_array, std::vector<float>& results) {
     // Parameters
     static constexpr auto PROJECTILE_ATOMIC_NUMBER{1};
     static constexpr auto PROJECTILE_ATOMIC_MASS_MEV{
@@ -197,7 +196,7 @@ static inline void serial_task_stl(const std::vector<float>& velocity_array,
                    });
 }
 
-int main(int argc, char** argv) {
+auto main(int argc, char** argv) -> int {
     // Must have 3 arguments
     if (argc < 3) {
         std::cerr << "Usage: " << argv[0] << " time_limit vec_size\n";
@@ -258,7 +257,7 @@ int main(int argc, char** argv) {
     const auto time_calc_s{std::chrono::duration<double>(t2 - t1).count()};
     const auto time_cleanup_s{std::chrono::duration<double>(t3 - t2).count()};
     const auto time_total_s{std::chrono::duration<double>(t3 - t0).count()};
-    const auto time_per_iteration_s{time_calc_s / static_cast<double>(iters)};
+    const auto time_per_iteration_s{(iters > 0) ? (time_calc_s / static_cast<double>(iters)) : 0.0};
 
     const auto method{std::string("Serial STL Transform 32")};
     const auto comments{std::string("stopping_power")};

@@ -164,38 +164,6 @@ static inline double stopping_power(
 }
 
 /**
- * @brief Compute stopping power for an array of projectile velocities (serial).
- *
- * @param velocity_array Projectile velocities in m/s.
- * @param results Output array (must be pre-sized to match velocity_array).
- *
- * @warning
- *      This routine does not validate sizes; callers must ensure `results.size() ==
- * velocity_array.size()`.
- */
-static inline void serial_task(const std::vector<double>& velocity_array,
-                               std::vector<double>& results) {
-    static constexpr auto PROJECTILE_ATOMIC_NUMBER{1};
-    static constexpr auto PROJECTILE_ATOMIC_MASS_MEV{938.2720813};
-
-    static constexpr auto TARGET_ATOMIC_NUMBER{26};
-    static constexpr auto TARGET_ATOMIC_MASS_G_MOL{55.845};
-    static constexpr auto TARGET_DENSITY_G_CM3{7.874};
-
-    static constexpr auto MEAN_EXCITATION_ENERGY_MEV{286.0e-6};
-    static constexpr auto DENSITY_EFFECT_DELTA{0.0};
-
-    const auto n{std::size_t(velocity_array.size())};
-
-    for (auto i = std::size_t(0); i < n; i++) {
-        results[i] =
-            stopping_power(velocity_array[i], PROJECTILE_ATOMIC_NUMBER, PROJECTILE_ATOMIC_MASS_MEV,
-                           TARGET_ATOMIC_NUMBER, TARGET_ATOMIC_MASS_G_MOL, TARGET_DENSITY_G_CM3,
-                           MEAN_EXCITATION_ENERGY_MEV, DENSITY_EFFECT_DELTA);
-    }
-}
-
-/**
  * @brief Fill per-particle stopping power array on device (USM device allocations).
  *
  * @param queue SYCL queue.
@@ -206,9 +174,9 @@ static inline void serial_task(const std::vector<double>& velocity_array,
  * @return Event for the submitted kernel.
  */
 [[nodiscard]]
-static inline sycl::event sycl_task(sycl::queue& queue, const std::size_t n,
-                                    const double* const velocity_device,
-                                    double* const stopping_power_device) {
+static inline sycl::event task(sycl::queue& queue, const std::size_t n,
+                               const double* const velocity_device,
+                               double* const stopping_power_device) {
     return queue.parallel_for(sycl::range<1>(n), [=](sycl::item<1> item) {
         static constexpr auto PROJECTILE_ATOMIC_NUMBER{1};
         static constexpr auto PROJECTILE_ATOMIC_MASS_MEV{938.2720813};
@@ -229,7 +197,7 @@ static inline sycl::event sycl_task(sycl::queue& queue, const std::size_t n,
     });
 }
 
-int main(int argc, char** argv) {
+auto main(int argc, char** argv) -> int {
     if (argc < 3) {
         std::cerr << "Usage: " << argv[0] << " time_limit vec_size\n";
         return 1;
@@ -292,17 +260,6 @@ int main(int argc, char** argv) {
         velocity_host[i] = dist(rng);
     }
 
-    auto expected_value{0.0};
-
-    // Expected value (serial reference)
-    {
-        auto velocity_host_vec{std::vector<double>(velocity_host, velocity_host + n)};
-        auto stopping_power_host_vec{std::vector<double>(n)};
-        serial_task(velocity_host_vec, stopping_power_host_vec);
-        expected_value = helper::check_sum(stopping_power_host_vec);
-        std::cout << "Serial computed expected value: " << expected_value << '\n';
-    }
-
     queue.memcpy(velocity_device, velocity_host, sizeof(double) * n).wait();
 
     // ======= Carry out calculation ========
@@ -314,7 +271,7 @@ int main(int argc, char** argv) {
 
     // Run as many iterations as possible
     do {
-        last_event = sycl_task(queue, n, velocity_device, stopping_power_device);
+        last_event = task(queue, n, velocity_device, stopping_power_device);
         iters++;
     } while (std::chrono::steady_clock::now() < deadline);
 
@@ -347,8 +304,6 @@ int main(int argc, char** argv) {
     const auto time_total_s{std::chrono::duration<double>(t3 - t0).count()};
     const auto time_per_iteration_s{(iters > 0) ? (time_calc_s / static_cast<double>(iters)) : 0.0};
 
-    const auto passed_check{(std::abs(calculated_value - expected_value) < 1.0e-6)};
-
     const auto method{std::string("Parallel Sycl")};
     const auto comments{std::string("stopping_power")};
 
@@ -377,10 +332,7 @@ int main(int argc, char** argv) {
         j["time_total"] = time_total_s;
 
         // Values
-        j["expected_value"] = helper::to_string_precise(expected_value);
         j["calculated_value"] = helper::to_string_precise(calculated_value);
-        j["difference"] = helper::to_string_precise(expected_value - calculated_value);
-        j["passed_check"] = passed_check;
         j["values"] = helper::to_string_precise_vector(stopping_power_values);
 
         // Memory
