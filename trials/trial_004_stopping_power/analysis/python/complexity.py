@@ -125,7 +125,7 @@ def main():
     plot_horizontal_bar(
         labels=files,
         values=vals,
-        xlabel="Average Cyclomatic Complexity",
+        xlabel="Average Cyclomatic Complexity)",
         title="Average Cyclomatic Complexity per File",
         output_dir="analysis",
         output_file="complexity_avg_cc_per_file.png",
