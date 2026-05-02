@@ -1,4 +1,14 @@
-// serial.cpp
+/**
+ * @file serial.cpp
+ * @brief
+ *
+ * @author Ben Palmer
+ * @date 2026
+ *
+ * @copyright
+ * Copyright (c) 2026 Ben Palmer
+ * SPDX-License-Identifier: MIT
+ */
 
 #include <quadmath.h>
 
@@ -135,7 +145,7 @@ static inline __float128 stopping_power(
  * velocity_array.size()`.
  */
 static inline void task(const std::vector<__float128>& velocity_array,
-                               std::vector<__float128>& results) {
+                        std::vector<__float128>& results) {
     // Parameters
     static constexpr auto PROJECTILE_ATOMIC_NUMBER{1};
     static constexpr auto PROJECTILE_ATOMIC_MASS_MEV{
@@ -159,7 +169,7 @@ static inline void task(const std::vector<__float128>& velocity_array,
     }
 }
 
-int main(int argc, char** argv) {
+auto main(int argc, char** argv) -> int {
     // Must have 3 arguments
     if (argc < 3) {
         std::cerr << "Usage: " << argv[0] << " time_limit vec_size\n";
@@ -195,7 +205,7 @@ int main(int argc, char** argv) {
     // Do calculation
     const auto t1{std::chrono::steady_clock::now()};
     const auto deadline{t1 + std::chrono::duration<double>(test_time_s)};
-    auto iters{std::uint64_t(0)};
+    auto iters{static_cast<std::uint64_t>(0)};
 
     auto stopping_power_values{std::vector<__float128>(n)};
 
@@ -219,7 +229,7 @@ int main(int argc, char** argv) {
     const auto time_calc_s{std::chrono::duration<double>(t2 - t1).count()};
     const auto time_cleanup_s{std::chrono::duration<double>(t3 - t2).count()};
     const auto time_total_s{std::chrono::duration<double>(t3 - t0).count()};
-    const auto time_per_iteration_s{time_calc_s / static_cast<double>(iters)};
+    const auto time_per_iteration_s{(iters > 0) ? (time_calc_s / static_cast<double>(iters)) : 0.0};
 
     const auto method{std::string("Precise")};
     const auto comments{std::string("stopping_power")};

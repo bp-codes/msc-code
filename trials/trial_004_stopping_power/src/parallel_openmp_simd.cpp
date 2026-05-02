@@ -1,4 +1,15 @@
-// serial.cpp
+/**
+ * @file serial.cpp
+ * @brief
+ *
+ * @author Ben Palmer
+ * @date 2026
+ *
+ * @copyright
+ * Copyright (c) 2026 Ben Palmer
+ * SPDX-License-Identifier: MIT
+ */
+
 #include <omp.h>
 
 #include <algorithm>
@@ -122,40 +133,6 @@ static inline double stopping_power(
 }
 
 /**
- * @brief Compute stopping power for an array of projectile velocities (serial).
- *
- * @param velocity_array Projectile velocities in m/s.
- * @param results Output array (must be pre-sized to match velocity_array).
- *
- * @warning
- *      This routine does not validate sizes; callers must ensure `results.size() ==
- * velocity_array.size()`.
- */
-static inline void serial_task(const std::vector<double>& velocity_array,
-                               std::vector<double>& results) {
-    // Parameters
-    static constexpr auto PROJECTILE_ATOMIC_NUMBER{1};
-    static constexpr auto PROJECTILE_ATOMIC_MASS_MEV{938.2720813};  // proton rest mass energy [MeV]
-
-    static constexpr auto TARGET_ATOMIC_NUMBER{26};
-    static constexpr auto TARGET_ATOMIC_MASS_G_MOL{55.845};
-    static constexpr auto TARGET_DENSITY_G_CM3{7.874};
-
-    static constexpr auto MEAN_EXCITATION_ENERGY_MEV{286.0e-6};  // 286 eV = 286e-6 MeV
-    static constexpr auto DENSITY_EFFECT_DELTA{0.0};
-    static constexpr auto SHELL_CORRECTION_C_OVER_Z{0.0};
-
-    const auto n{std::size_t(velocity_array.size())};
-
-    for (auto i = std::size_t(0); i < n; i++) {
-        results[i] =
-            stopping_power(velocity_array[i], PROJECTILE_ATOMIC_NUMBER, PROJECTILE_ATOMIC_MASS_MEV,
-                           TARGET_ATOMIC_NUMBER, TARGET_ATOMIC_MASS_G_MOL, TARGET_DENSITY_G_CM3,
-                           MEAN_EXCITATION_ENERGY_MEV, DENSITY_EFFECT_DELTA);
-    }
-}
-
-/**
  * @brief Compute stopping power for an array of projectile velocities (parallel).
  *
  * @param velocity_array Projectile velocities in m/s.
@@ -165,8 +142,7 @@ static inline void serial_task(const std::vector<double>& velocity_array,
  *      This routine does not validate sizes; callers must ensure `results.size() ==
  * velocity_array.size()`.
  */
-static inline void parallel_task(const std::vector<double>& velocity_array,
-                                 std::vector<double>& results) {
+static inline void task(const std::vector<double>& velocity_array, std::vector<double>& results) {
     // Parameters
     static constexpr auto PROJECTILE_ATOMIC_NUMBER{1};
     static constexpr auto PROJECTILE_ATOMIC_MASS_MEV{938.2720813};  // proton rest mass energy [MeV]
@@ -190,7 +166,7 @@ static inline void parallel_task(const std::vector<double>& velocity_array,
     }
 }
 
-int main(int argc, char** argv) {
+auto main(int argc, char** argv) -> int {
     // Set threads
     omp_set_num_threads(helper::get_num_threads());
 
@@ -222,15 +198,6 @@ int main(int argc, char** argv) {
     // Populate vectors
     std::generate_n(std::back_inserter(velocity_array), n, [&]() { return dist(rng); });
 
-    auto expected_value{0.0};
-
-    // Expected value
-    {
-        auto stopping_power_values{std::vector<double>(n)};
-        serial_task(velocity_array, stopping_power_values);
-        expected_value = helper::check_sum(stopping_power_values);
-    }
-
     // ======= Calculation Starts ========
 
     const auto t0{std::chrono::steady_clock::now()};
@@ -238,13 +205,13 @@ int main(int argc, char** argv) {
     // Do calculation
     const auto t1{std::chrono::steady_clock::now()};
     const auto deadline{t1 + std::chrono::duration<double>(test_time_s)};
-    auto iters{std::uint64_t(0)};
+    auto iters{static_cast<std::uint64_t>(0)};
 
     auto stopping_power_values{std::vector<double>(n)};
 
     // Do as many times as possible before time runs out
     do {
-        parallel_task(velocity_array, stopping_power_values);
+        task(velocity_array, stopping_power_values);
         iters++;
     } while (std::chrono::steady_clock::now() < deadline);
 
@@ -262,11 +229,10 @@ int main(int argc, char** argv) {
     const auto time_calc_s{std::chrono::duration<double>(t2 - t1).count()};
     const auto time_cleanup_s{std::chrono::duration<double>(t3 - t2).count()};
     const auto time_total_s{std::chrono::duration<double>(t3 - t0).count()};
-    const auto time_per_iteration_s{time_calc_s / static_cast<double>(iters)};
+    const auto time_per_iteration_s{(iters > 0) ? (time_calc_s / static_cast<double>(iters)) : 0.0};
 
     const auto method{std::string("Parallel OpenMP SIMD")};
     const auto comments{std::string("stopping_power")};
-    const auto passed_check{(std::abs(calculated_value - expected_value) < 1.0e-9)};
 
     // Output
     {
@@ -293,11 +259,7 @@ int main(int argc, char** argv) {
         j["time_total"] = time_total_s;
 
         // Values
-        j["expected_value"] = helper::to_string_precise(expected_value);
         j["calculated_value"] = helper::to_string_precise(calculated_value);
-        ;
-        j["difference"] = helper::to_string_precise(expected_value - calculated_value);
-        j["passed_check"] = passed_check;
         j["values"] = helper::to_string_precise_vector(stopping_power_values);
 
         // Memory

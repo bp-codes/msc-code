@@ -1,428 +1,533 @@
 #!/usr/bin/env python3
-"""
-python3 analyze.py --results "results/*.json" --targets target_values.json
-"""
+
+from __future__ import annotations
 
 import argparse
-import glob
 import json
-import math
-import os
-import numpy
 import statistics
+from pathlib import Path
 from collections import defaultdict
-from typing import List, Dict, Any
-from typing import Any, Dict, Iterable, List, Tuple
+import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 
 
 
-class Analyze:
-
-    operations_list = []
-    precise = {}
-    results = { 
-                "results": [],
-                "sorted": {}, 
-                "collated": {}, 
-                "statistics": {} 
-              }
-    output_json = ""
-    output_dir = ""
-
-    @staticmethod
-    def load_file(file_path):
-        try:
-            with open(file_path, "r", encoding="utf-8") as fh:
-                data = json.load(fh)
-            if("expected_value" in data.keys()):
-                data["expected_value"] = float(data["expected_value"])
-            if("calculated_value" in data.keys()):
-                data["calculated_value"] = float(data["calculated_value"])
-            if("values" in data.keys()):
-                data["values"] = numpy.array(data["values"], dtype=numpy.float64)
-
-            return data
-        except:
-            return None
-
-
-    @staticmethod
-    def load_precise(directory):
-        pattern = os.path.join(directory, "precise*.json")
-        for file_path in glob.glob(pattern):
-            if not os.path.isfile(file_path):
-                continue
-            print(file_path)
-            file_data = Analyze.load_file(file_path)
-            print(file_data)
-            if(file_data is not None):
-                Analyze.precise[file_path] = file_data
-
-
-    @staticmethod
-    def process_files(directory):
-        pattern = os.path.join(directory, "*.json")
-        for file_path in glob.glob(pattern):
-            if not "precise" in file_path:
-                if not os.path.isfile(file_path):
-                    continue
-                file_data = Analyze.load_file(file_path)
-                if(file_data is not None):
-
-                    # Results
-                    operation = file_data["operation"]
-                    calculated_value = file_data["calculated_value"]
-                    method = file_data["method"]
-                    device = file_data["device"]
-                    id = method + " " + device + ": " + operation
-                    
-                    # Precise values
-                    precise = Analyze.get_precise(operation)
-                    expected_value = precise["expected_value"]
-
-                    result = {
-                        "file": file_path,
-                        "operation": operation,
-                        "expected_value": expected_value,
-                        "calculated_value": calculated_value,
-                        "difference": (calculated_value - expected_value),
-                        "iterations": file_data["iterations"],
-                        "time_per_iteration": file_data["time_per_iteration"],
-                        "method": method,
-                        "device": device,
-                        "id": id
-                    }
-                    Analyze.results["results"].append(result)
-
+def parse_float(value) -> float:
+    return float(value)
 
-    @staticmethod
-    def get_precise(operation):
-        for key in Analyze.precise.keys():
-            if(operation == Analyze.precise[key]["operation"]):
-                return Analyze.precise[key]
-            
 
-    @staticmethod
-    def save_data(args):       
-        with open(Analyze.output_json, "w") as f:
-            json.dump(Analyze.results, f, indent=4)
 
+def parse_float_list(values) -> list[float]:
+    if not isinstance(values, list):
+        raise TypeError("Expected a list of numeric values")
 
-    @staticmethod
-    def load_data():  
-        Analyze.results = Analyze.load_file(Analyze.output_json)
-            
-            
+    return [parse_float(value) for value in values]
 
-    @staticmethod
-    def sort_results():       
-      
-        for i in range(len(Analyze.results["results"])):
-            result = Analyze.results["results"][i]
-            operation = result["operation"]  
-            print(operation)
 
-            if(operation not in Analyze.operations_list):
-                Analyze.operations_list.append(operation)
-        print(Analyze.operations_list)
 
+def load_precise_data(results_dir: Path, selected_operation: str) -> tuple[float, list[float]]:
 
-    @staticmethod
-    def plot_time_per_iteration(): 
+    if(selected_operation == ""):
+        exit
 
-        for operation in Analyze.results["statistics"].keys():
-            plot_path = os.path.join(Analyze.output_dir, operation + ".png")
+    file_name = "precise_" + selected_operation + ".json"
+    precise_file = results_dir / file_name
 
-            x_labels = []
-            y_values = []
+    if not precise_file.exists():
+        raise FileNotFoundError(f"Precise reference file not found: {precise_file}")
 
-            for id in Analyze.results["statistics"][operation]["time_per_iteration"].keys():
-                x_labels.append(id)
-                y_values.append(Analyze.results["statistics"][operation]["time_per_iteration"][id]["min_value"])
+    with open(precise_file, "r", encoding="utf-8") as f:
+        data = json.load(f)
 
+    if not isinstance(data, dict):
+        raise ValueError(f"Invalid JSON root in {precise_file}")
 
-            plt.figure()
-            plt.bar(range(len(x_labels)), y_values)
-            plt.xticks(range(len(x_labels)), x_labels, rotation=45, ha="right")
-            #plt.ylabel(stat)
-            #plt.title(f"{op} — {stat}")
-            plt.tight_layout()
-            plt.savefig(plot_path, dpi=200)
-            plt.close()
+    if "expected_value" not in data:
+        raise KeyError(f"Missing 'expected_value' in {precise_file}")
 
-    
+    if "values" not in data:
+        raise KeyError(f"Missing 'values' in {precise_file}")
 
+    precise_value = parse_float(data["expected_value"])
+    precise_values = parse_float_list(data["values"])
 
+    return precise_value, precise_values
 
-    @staticmethod
-    def main():
 
-        # Arguments
-        ap = argparse.ArgumentParser()
-        ap.add_argument("--results", default="results", help="glob for result JSON files")
-        ap.add_argument("--outdir", default="analysis", help="output JSON summary file")
-        ap.add_argument("--outjson", default="summary.json", help="output JSON summary file")
-        args = ap.parse_args()
 
-        Analyze.output_dir = args.outdir
-        Analyze.output_json = os.path.join(args.outdir, args.outjson)
-        os.makedirs(args.outdir, exist_ok=True)
-        print("Output json: ", Analyze.output_json)
+def load_results(
+    results_dir: Path,
+    precise_value: float,
+    precise_values: list[float],
+    selected_operation: str
+) -> dict[str, dict[str, list[float]]]:
 
-        """
-        Analyze.load_precise(args.results)
-        Analyze.get_precise("add")
-        Analyze.process_files(args.results)
-        Analyze.save_data()
-        """
-        
-        Analyze.load_data()
-        Analyze.sort_results()
-        #Analyze.statistics()
-        #Analyze.plot_time_per_iteration()
+    grouped: dict[str, dict[str, list[float]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
 
-
-
-if(__name__ == "__main__"):
-    raise SystemExit(Analyze.main()) 
-
-
-
-
-
-
-
-
-
-
-
-"""
-
-
-
-    @staticmethod
-    def statistics():       
-        print("Statistics")
-        Analyze.results = Analyze.load_file(Analyze.output_json)
-
-        Analyze.results["collated"] = {}
-        for result in Analyze.results["results"]:
-            operation = result["operation"]
-            if(operation not in Analyze.results["collated"].keys()):
-                Analyze.results["collated"][operation] = {}
-            Analyze.results["collated"][operation]["time_per_iteration"] = {}
-
-        for result in Analyze.results["results"]:
-            operation = result["operation"]
-            id = result["method"] + " " + result["device"] + ": " + result["operation"]
-            if(id not in Analyze.results["collated"][operation]["time_per_iteration"].keys()):
-                Analyze.results["collated"][operation]["time_per_iteration"][id] = []
-
-
-        for result in Analyze.results["results"]:
-            operation = result["operation"]
-            id = result["method"] + " " + result["device"] + ": " + result["operation"]
-            
-            Analyze.results["collated"][operation]["time_per_iteration"][id].append(result["time_per_iteration"])    
-            
-        print(Analyze.results["collated"])
-
-
-        #Analyze.statistics
-
-        for operation in Analyze.results["collated"].keys():
-            if(operation not in Analyze.results["statistics"].keys()):
-                Analyze.results["statistics"][operation] = {"time_per_iteration": {}}
-
-            for id in Analyze.results["collated"][operation]["time_per_iteration"].keys():
-                Analyze.results["statistics"][operation]["time_per_iteration"][id] = {}
-
-                Analyze.results["statistics"][operation]["time_per_iteration"][id]["min_value"] = min(Analyze.results["collated"][operation]["time_per_iteration"][id])
-                Analyze.results["statistics"][operation]["time_per_iteration"][id]["max_value"] = max(Analyze.results["collated"][operation]["time_per_iteration"][id])
-
-
-
-def load_targets(directory):
-    target_values_json = os.path.join(directory, "target_values.json")
-    targets = {}
-
-    for op in operations_list:
-        targets[op] = {}
-        target_values_json = os.path.join(directory, "precise_values_" + op + ".json")
-        with open(target_values_json, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        targets[op]["expected_value"] = float(data["expected_value"])
-        try:
-            targets[op]["values"] = [float(v) for v in data.get("values", [])]
-        except (TypeError, ValueError):
-            continue
-
-
-    return targets
-
-
-
-def load_results(directory):
-    results = []
-    pattern = os.path.join(directory, "*.json")
-    for filepath in glob.glob(pattern):
-        if not os.path.isfile(filepath):
+    for json_file in sorted(results_dir.glob("*.json")):
+        if json_file.name == "precise.json":
             continue
 
         try:
-            with open(filepath, "r", encoding="utf-8") as f:
+            with open(json_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
-
-                try:
-                    calculated_value = float(data.get("calculated_value"))
-                    data["calculated_value"] = calculated_value
-                except (TypeError, ValueError):
-                    continue
-                try:
-                    values = [float(v) for v in data.get("values", [])]
-                    data["values"] = values
-                except (TypeError, ValueError):
-                    continue
-
-                results.append(data)
         except Exception as e:
-            print(f"Skipping {filepath}: {e}")
-
-    return results
-
-
-
-def process(
-    results: List[Dict[str, Any]],
-    target_values: Dict[str, float],
-) -> Dict[str, Dict[str, Dict[str, float]]]:
-
-    grouped_iters = defaultdict(lambda: defaultdict(list))
-    grouped_pct_err = defaultdict(lambda: defaultdict(list))
-
-    # --- group ---
-    for r in results:
-        operation = r.get("operation")
-        method = r.get("method")
-        iterations = r.get("iterations")
-        calculated_value = r.get("calculated_value")
-
-        if not isinstance(operation, str):
-            continue
-        if not isinstance(method, str):
-            continue
-        if not isinstance(iterations, int):
-            continue
-        if not isinstance(calculated_value, (int, float)):
-            continue
-        if operation not in target_values:
+            print(f"Warning: failed to read {json_file}: {e}")
             continue
 
-        expected_value = target_values[operation]["expected_value"]
-
-        # avoid divide-by-zero
-        if expected_value == 0:
+        if not isinstance(data, dict):
             continue
 
-        pct_error = ((calculated_value - expected_value) / expected_value) * 100.0
+        method = data.get("method")
+        if method is None:
+            continue
 
-        grouped_iters[operation][method].append(iterations)
-        grouped_pct_err[operation][method].append(pct_error)
+        method = str(method)
 
-    # --- compute stats ---
-    processed = {}
+        device = data.get("device")
+        method = method + " " + device
 
-    for operation, methods in grouped_iters.items():
-        processed[operation] = {}
+        if(selected_operation != ""):
+            operation = data.get("operation")
+            if(selected_operation != operation):
+                continue
 
-        for method, iters in methods.items():
-            pct_errors = grouped_pct_err[operation][method]
+        for field in ["iterations", "max_rss_kb", "time_per_iteration"]:
+            value = data.get(field)
 
-            processed[operation][method] = {
-                "min_iters": min(iters),
-                "max_iters": max(iters),
-                "mean_iters": statistics.fmean(iters),
-                "median_iters": statistics.median(iters),
-                "mean_percentage_error": statistics.fmean(pct_errors),
-                "max_abs_percentage_error": max(abs(e) for e in pct_errors),
-            }
+            if value is None:
+                continue
 
-    return processed
+            try:
+                grouped[method][field].append(parse_float(value))
+                if(field == "time_per_iteration"):
+                    grouped[method]["iterations_per_second"].append(1.0 / parse_float(value))
+            except (TypeError, ValueError):
+                pass
+
+        calculated_value = data.get("calculated_value")
+        if calculated_value is not None:
+            try:
+                calculated = parse_float(calculated_value)
+                difference = calculated - precise_value
+                abs_difference = abs(difference)
+
+                grouped[method]["calculated_value"].append(calculated)
+                grouped[method]["difference_vs_precise"].append(difference)
+                grouped[method]["abs_difference_vs_precise"].append(abs_difference)
+            except (TypeError, ValueError):
+                pass
+
+        values = data.get("values")
+        if values is not None:
+            try:
+                method_values = parse_float_list(values)
+
+                if len(method_values) != len(precise_values):
+                    print(
+                        f"Warning: length mismatch in {json_file}: "
+                        f"{len(method_values)} vs {len(precise_values)}"
+                    )
+                else:
+                    array_differences = [
+                        method_value - precise_value_element
+                        for method_value, precise_value_element in zip(
+                            method_values,
+                            precise_values
+                        )
+                    ]
+
+                    grouped[method]["values_difference_vs_precise"].extend(
+                        array_differences
+                    )
+                    grouped[method]["abs_values_difference_vs_precise"].extend(
+                        abs(value) for value in array_differences
+                    )
+
+            except (TypeError, ValueError) as e:
+                print(f"Warning: failed to parse 'values' in {json_file}: {e}")
+
+    return grouped
 
 
 
-def save_json(processed, output_file):
-    with open(output_file, "w", encoding="utf-8") as f:
-        json.dump(processed, f, indent=2)
+def summarise(values: list[float]) -> dict[str, float | int | None]:
 
+    values_sorted = sorted(values)
+    n = len(values_sorted)
 
+    result: dict[str, float | int | None] = {
+        "count": n,
+        "mean": statistics.mean(values_sorted),
+        "median": statistics.median(values_sorted),
+        "min": min(values_sorted),
+        "max": max(values_sorted),
+        "range": max(values_sorted) - min(values_sorted),
+    }
 
-
-def plot_iterations(
-    processed: Dict[str, Dict[str, Dict[str, float]]],
-    stat: str = "mean_iters",
-    operations: Iterable[str] | None = None,
-) -> None:
-
-    if operations is None:
-        ops = sorted(processed.keys())
+    if n > 1:
+        result["stdev"] = statistics.stdev(values_sorted)
     else:
-        ops = [op for op in operations if op in processed]
+        result["stdev"] = 0.0
 
-    for op in operations_list:
-        methods = processed.get(op, {})
-        if not methods:
+    return result
+
+
+
+def print_table(title: str, summary: dict[str, dict]) -> None:
+
+    print(f"\n{title}")
+    print("=" * len(title))
+
+    header = (
+        f"{'Method':<40}"
+        f"{'Count':>8}"
+        f"{'Mean':>15}"
+        f"{'Median':>15}"
+        f"{'Min':>15}"
+        f"{'Max':>15}"
+        f"{'StdDev':>15}"
+    )
+
+    print(header)
+    print("-" * len(header))
+
+    for method, stats in sorted(summary.items()):
+        print(
+            f"{method:<40}"
+            f"{stats['count']:>8}"
+            f"{stats['mean']:>15.6e}"
+            f"{stats['median']:>15.6e}"
+            f"{stats['min']:>15.6e}"
+            f"{stats['max']:>15.6e}"
+            f"{stats['stdev']:>15.6e}"
+        )
+
+
+
+def build_summary(grouped, metric):
+
+    summary = {}
+
+    for method, metrics in grouped.items():
+        values = metrics.get(metric)
+        if values:
+            summary[method] = summarise(values)
+
+    return summary
+
+
+def plot_difference_histograms(
+    trial : str,
+    grouped: dict[str, dict[str, list[float]]],
+    analysis_dir: Path,
+    selected_operation: str,
+    bins: int = 50,
+    use_greyscale: bool = False,
+    width=8,
+    height=6,
+) -> None:
+    analysis_dir.mkdir(parents=True, exist_ok=True)
+
+    for method, metrics in sorted(grouped.items()):
+        values = metrics.get("values_difference_vs_precise")
+
+        if not values:
             continue
 
-        x_labels = sorted(methods.keys())
-        y = [methods[m].get(stat) for m in x_labels]
+        values = np.asarray(values)
 
-        # drop missing
-        pairs = [(m, v) for m, v in zip(x_labels, y) if isinstance(v, (int, float))]
-        if not pairs:
-            continue
+        # --- Statistics ---
+        mean = np.mean(values)
+        std = np.std(values) if np.std(values) > 0 else 1e-12
 
-        x_labels, y = zip(*pairs)
+        safe_method = method.replace("/", "_").replace(" ", "_")
 
-        plt.figure()
-        plt.bar(range(len(x_labels)), y)
-        plt.xticks(range(len(x_labels)), x_labels, rotation=45, ha="right")
-        plt.ylabel(stat)
-        plt.title(f"{op} — {stat}")
+        # --- Colour logic ---
+        if use_greyscale:
+            colour = "0.6"
+            line_colour = "0.2"
+        else:
+            if "precise" in method.lower():
+                colour = "#f4a3a3"
+            elif any(k in method.lower() for k in ["cuda", "sycl", "opencl"]):
+                colour = "#a9d6a5"
+            elif "parallel" in method.lower():
+                colour = "#a8c9f0"
+            elif "serial" in method.lower():
+                colour = "#f6c28b"
+            else:
+                colour = "grey"
+
+            line_colour = "black"
+
+        # --- Hatch logic ---
+        hatch = "///" if "32" in method else None
+
+        # --- Plot ---
+        plt.figure(figsize=(width, height))
+
+        counts, bin_edges, patches = plt.hist(
+            values,
+            bins=bins,
+            density=True,
+            color=colour,
+            alpha=0.6,
+            edgecolor="black"
+        )
+
+        # Apply hatch to each bar
+        if hatch:
+            for p in patches:
+                p.set_hatch(hatch)
+
+        # --- Normal distribution curve ---
+        x = np.linspace(values.min(), values.max(), 500)
+        pdf = (1 / (std * np.sqrt(2 * np.pi))) * np.exp(
+            -0.5 * ((x - mean) / std) ** 2
+        )
+
+        plt.plot(x, pdf, color=line_colour, linewidth=2, label="Normal fit")
+
+        # --- Mean and std lines ---
+        plt.axvline(mean, linestyle="--", linewidth=2,
+                    color=line_colour,
+                    label=f"Mean = {mean:.4f}")
+
+        plt.axvline(mean + std, linestyle=":", linewidth=2,
+                    color=line_colour,
+                    label=f"+1σ = {mean + std:.4f}")
+
+        plt.axvline(mean - std, linestyle=":", linewidth=2,
+                    color=line_colour,
+                    label=f"-1σ = {mean - std:.4f}")
+
+        # --- Labels ---
+        plt.title(f"{trial} ({selected_operation}): Values Difference vs Precise ({method})")
+        plt.xlabel("Difference (value - precise_value)")
+        plt.ylabel("Density")
+
+        plt.legend()
+        plt.grid(True)
         plt.tight_layout()
-        plt.savefig(os.path.join("analysis", op + ".png"), dpi=200)
+
+        file_name = f"{trial}_{selected_operation}_{safe_method}.png".replace(" ", "_")
+        plt.savefig(analysis_dir / file_name)
         plt.close()
 
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--results", default="results", help="glob for result JSON files")
-    ap.add_argument("--targets", default="target_values", help="path to target_values")
-    ap.add_argument("--outdir", default="analysis", help="output JSON summary file")
-    ap.add_argument("--outjson", default="summary.json", help="output JSON summary file")
-    args = ap.parse_args()
+def plot_performance(
+    trial : str,
+    grouped: dict[str, dict[str, list[float]]],
+    analysis_dir: Path,
+    selected_operation: str
+) -> None:
+    import matplotlib.pyplot as plt
 
-    os.makedirs(args.outdir, exist_ok=True)
+    methods = []
+    means = []
+    maxs = []
 
-    target_values = load_targets(args.targets)
-    results = load_results(args.results)
-    processed = process(results, target_values)
+    for method, metrics in sorted(grouped.items()):
+        iterations_per_second = metrics.get("iterations_per_second")
 
-    out_path = os.path.join(args.outdir, args.outjson)
-    save_json(processed, out_path)
+        if not iterations_per_second:
+            continue
 
-    print(processed)
+        methods.append(method)
+        means.append(statistics.mean(iterations_per_second))
+        maxs.append(max(iterations_per_second))
 
-    plot_iterations(processed, stat="median_iters", operations=["add"])
+    if not methods:
+        print("No iteration data available for performance plot.")
+        return
 
-    return 0
+    plot_horizontal_bar(
+        labels=methods,
+        values=means,
+        xlabel="Mean Iterations/s",
+        title=f"{trial} ({selected_operation}): Mean Iterations/s by Method",
+        output_dir="analysis",
+        output_file = f"{trial}_{selected_operation}_performance_mean_iterations_per_second.png".replace(" ", "_"),
+        width=8,
+        height=6,
+        use_greyscale=False  # or False
+    )
+
+    plot_horizontal_bar(
+        labels=methods,
+        values=maxs,
+        xlabel="Max Iterations/s",
+        title=f"{trial} ({selected_operation}): Max Iterations/s by Method",
+        output_dir="analysis",
+        output_file = f"{trial}_{selected_operation}_performance_max_iterations_per_second.png".replace(" ", "_"),
+        width=8,
+        height=6,
+        use_greyscale=False  # or False
+    )
+
+
+
+def plot_horizontal_bar(labels,
+                        values,
+                        xlabel,
+                        title,
+                        output_dir,
+                        output_file,
+                        width=8,
+                        height=6,
+                        use_greyscale=False):
+
+    os.makedirs(output_dir, exist_ok=True)
+    plot_path = os.path.join(output_dir, output_file)
+
+    # Sort descending
+    pairs = sorted(zip(labels, values), key=lambda x: x[1], reverse=True)
+    labels_sorted, values_sorted = zip(*pairs)
+
+    # --- Build colours + hatches ---
+    colours = []
+    hatches = []
+
+    for label in labels_sorted:
+        l = label.lower()
+
+        # --- Colour logic ---
+        if use_greyscale:
+            colour = "0.6"
+        else:
+            if ("precise" in l):
+                colour = "#f4a3a3"
+            elif ("cuda" in l or "sycl" in l or "opencl" in l):
+                colour = "#a9d6a5"
+            elif "parallel" in l:
+                colour = "#a8c9f0"
+            elif "serial" in l:
+                colour = "#f6c28b"
+            else:
+                colour = "grey"
+
+        colours.append(colour)
+
+        # --- Hatch logic ---
+        if "32" in l:
+            hatch = "///"   # 'xx', '...', '\\\\'
+        else:
+            hatch = None
+
+        hatches.append(hatch)
+
+    # Create figure
+    plt.figure(figsize=(width, height))
+
+    bars = plt.barh(labels_sorted, values_sorted,
+                    color=colours,
+                    edgecolor="black")
+
+    # Apply hatches individually
+    for bar, hatch in zip(bars, hatches):
+        if hatch:
+            bar.set_hatch(hatch)
+
+    plt.xlabel(xlabel)
+    plt.title(title)
+
+    plt.gca().invert_yaxis()
+    plt.grid(axis='x', linestyle='--', alpha=0.5)
+
+    plt.tight_layout()
+    plt.savefig(plot_path)
+    plt.close()
+
+    print(f"Saved plot: {plot_path}")
+
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Analyse benchmark results")
+
+    parser.add_argument(
+        "--results",
+        type=Path,
+        default=Path("results"),
+        help="Directory containing result JSON files"
+    )
+
+    parser.add_argument(
+        "--analysis",
+        type=Path,
+        default=Path("analysis"),
+        help="Directory to store analysis outputs"
+    )
+
+    parser.add_argument(
+        "--trial",
+        type=str,
+        default=str("Trial"),
+        help="Trial Name"
+    )
+
+    parser.add_argument(
+        "--selected_operation",
+        type=str,
+        default=str(""),
+        help=""
+    )
+
+    args = parser.parse_args()
+
+    results_dir = args.results
+    analysis_dir = args.analysis
+    trial = args.trial
+    selected_operation = args.selected_operation
+
+    if not results_dir.exists():
+        raise FileNotFoundError(f"Directory not found: {results_dir}")
+
+    analysis_dir.mkdir(parents=True, exist_ok=True)
+
+    precise_value, precise_values = load_precise_data(results_dir, selected_operation)
+    grouped = load_results(results_dir, precise_value, precise_values, selected_operation)
+
+    if not grouped:
+        print("No valid results found.")
+        return
+
+    print(f"Precise reference value: {precise_value:.17g}")
+
+    iterations_summary = build_summary(grouped, "iterations")
+    rss_summary = build_summary(grouped, "max_rss_kb")
+    calculated_summary = build_summary(grouped, "calculated_value")
+    difference_summary = build_summary(grouped, "difference_vs_precise")
+    abs_difference_summary = build_summary(grouped, "abs_difference_vs_precise")
+    values_difference_summary = build_summary(grouped, "values_difference_vs_precise")
+    abs_values_difference_summary = build_summary(
+        grouped,
+        "abs_values_difference_vs_precise"
+    )
+
+    print_table("Iterations Statistics", iterations_summary)
+    print_table("Max RSS (KB) Statistics", rss_summary)
+    print_table("Calculated Value Statistics", calculated_summary)
+    print_table("Difference vs Precise Statistics", difference_summary)
+    print_table("Absolute Difference vs Precise Statistics", abs_difference_summary)
+    print_table(
+        "Values Difference vs Precise Statistics",
+        values_difference_summary
+    )
+    print_table(
+        "Absolute Values Difference vs Precise Statistics",
+        abs_values_difference_summary
+    )
+
+    plot_difference_histograms(trial, grouped, analysis_dir, selected_operation)
+    plot_performance(trial, grouped, analysis_dir, selected_operation)
 
 
 if __name__ == "__main__":
-    raise SystemExit(main()) 
-
-"""
-
+    main()

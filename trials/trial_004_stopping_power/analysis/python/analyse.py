@@ -7,6 +7,10 @@ import json
 import statistics
 from pathlib import Path
 from collections import defaultdict
+import numpy as np
+import matplotlib.pyplot as plt
+import os
+
 
 
 
@@ -35,13 +39,13 @@ def load_precise_data(results_dir: Path) -> tuple[float, list[float]]:
     if not isinstance(data, dict):
         raise ValueError(f"Invalid JSON root in {precise_file}")
 
-    if "calculated_value" not in data:
-        raise KeyError(f"Missing 'calculated_value' in {precise_file}")
+    if "expected_value" not in data:
+        raise KeyError(f"Missing 'expected_value' in {precise_file}")
 
     if "values" not in data:
         raise KeyError(f"Missing 'values' in {precise_file}")
 
-    precise_value = parse_float(data["calculated_value"])
+    precise_value = parse_float(data["expected_value"])
     precise_values = parse_float_list(data["values"])
 
     return precise_value, precise_values
@@ -77,6 +81,9 @@ def load_results(
             continue
 
         method = str(method)
+
+        device = data.get("device")
+        method = method + " " + device
 
         for field in ["iterations", "max_rss_kb"]:
             value = data.get(field)
@@ -201,14 +208,13 @@ def build_summary(grouped, metric):
     return summary
 
 
-
 def plot_difference_histograms(
+    trial : str,
     grouped: dict[str, dict[str, list[float]]],
     analysis_dir: Path,
-    bins: int = 50
+    bins: int = 50,
+    use_greyscale: bool = False
 ) -> None:
-    import matplotlib.pyplot as plt
-
     analysis_dir.mkdir(parents=True, exist_ok=True)
 
     for method, metrics in sorted(grouped.items()):
@@ -217,23 +223,89 @@ def plot_difference_histograms(
         if not values:
             continue
 
+        values = np.asarray(values)
+
+        # --- Statistics ---
+        mean = np.mean(values)
+        std = np.std(values) if np.std(values) > 0 else 1e-12
+
         safe_method = method.replace("/", "_").replace(" ", "_")
 
+        # --- Colour logic ---
+        if use_greyscale:
+            colour = "0.6"
+            line_colour = "0.2"
+        else:
+            if "precise" in method.lower():
+                colour = "#f4a3a3"
+            elif any(k in method.lower() for k in ["cuda", "sycl", "opencl"]):
+                colour = "#a9d6a5"
+            elif "parallel" in method.lower():
+                colour = "#a8c9f0"
+            elif "serial" in method.lower():
+                colour = "#f6c28b"
+            else:
+                colour = "grey"
+
+            line_colour = "black"
+
+        # --- Hatch logic ---
+        hatch = "///" if "32" in method else None
+
+        # --- Plot ---
         plt.figure()
-        plt.hist(values, bins=bins)
 
-        plt.title(f"Values Difference vs Precise ({method})")
+        counts, bin_edges, patches = plt.hist(
+            values,
+            bins=bins,
+            density=True,
+            color=colour,
+            alpha=0.6,
+            edgecolor="black"
+        )
+
+        # Apply hatch to each bar
+        if hatch:
+            for p in patches:
+                p.set_hatch(hatch)
+
+        # --- Normal distribution curve ---
+        x = np.linspace(values.min(), values.max(), 500)
+        pdf = (1 / (std * np.sqrt(2 * np.pi))) * np.exp(
+            -0.5 * ((x - mean) / std) ** 2
+        )
+
+        plt.plot(x, pdf, color=line_colour, linewidth=2, label="Normal fit")
+
+        # --- Mean and std lines ---
+        plt.axvline(mean, linestyle="--", linewidth=2,
+                    color=line_colour,
+                    label=f"Mean = {mean:.4f}")
+
+        plt.axvline(mean + std, linestyle=":", linewidth=2,
+                    color=line_colour,
+                    label=f"+1σ = {mean + std:.4f}")
+
+        plt.axvline(mean - std, linestyle=":", linewidth=2,
+                    color=line_colour,
+                    label=f"-1σ = {mean - std:.4f}")
+
+        # --- Labels ---
+        plt.title(f"{trial}: Values Difference vs Precise ({method})")
         plt.xlabel("Difference (value - precise_value)")
-        plt.ylabel("Frequency")
+        plt.ylabel("Density")
 
+        plt.legend()
         plt.grid(True)
         plt.tight_layout()
+
         plt.savefig(analysis_dir / f"hist_{safe_method}.png")
         plt.close()
 
 
 
 def plot_performance(
+    trial : str,
     grouped: dict[str, dict[str, list[float]]],
     analysis_dir: Path
 ) -> None:
@@ -255,24 +327,92 @@ def plot_performance(
         print("No iteration data available for performance plot.")
         return
 
-    plt.figure()
+    plot_horizontal_bar(
+        labels=methods,
+        values=means,
+        xlabel="Mean Iterations",
+        title=f"{trial}: Mean Iterations by Method",
+        output_dir="analysis",
+        output_file="performance_iterations.png",
+        width=8,
+        height=6,
+        use_greyscale=False  # or False
+    )
 
-    plt.bar(methods, means)
 
-    plt.title("Mean Iterations by Method")
-    plt.xlabel("Method")
-    plt.ylabel("Mean Iterations")
 
-    plt.xticks(rotation=45, ha="right")
+def plot_horizontal_bar(labels,
+                        values,
+                        xlabel,
+                        title,
+                        output_dir,
+                        output_file,
+                        width=8,
+                        height=6,
+                        use_greyscale=False):
 
-    plt.grid(True)
+    os.makedirs(output_dir, exist_ok=True)
+    plot_path = os.path.join(output_dir, output_file)
+
+    # Sort descending
+    pairs = sorted(zip(labels, values), key=lambda x: x[1], reverse=True)
+    labels_sorted, values_sorted = zip(*pairs)
+
+    # --- Build colours + hatches ---
+    colours = []
+    hatches = []
+
+    for label in labels_sorted:
+        l = label.lower()
+
+        # --- Colour logic ---
+        if use_greyscale:
+            colour = "0.6"
+        else:
+            if ("precise" in l):
+                colour = "#f4a3a3"
+            elif ("cuda" in l or "sycl" in l or "opencl" in l):
+                colour = "#a9d6a5"
+            elif "parallel" in l:
+                colour = "#a8c9f0"
+            elif "serial" in l:
+                colour = "#f6c28b"
+            else:
+                colour = "grey"
+
+        colours.append(colour)
+
+        # --- Hatch logic ---
+        if "32" in l:
+            hatch = "///"   # 'xx', '...', '\\\\'
+        else:
+            hatch = None
+
+        hatches.append(hatch)
+
+    # Create figure
+    plt.figure(figsize=(width, height))
+
+    bars = plt.barh(labels_sorted, values_sorted,
+                    color=colours,
+                    edgecolor="black")
+
+    # Apply hatches individually
+    for bar, hatch in zip(bars, hatches):
+        if hatch:
+            bar.set_hatch(hatch)
+
+    plt.xlabel(xlabel)
+    plt.title(title)
+
+    plt.gca().invert_yaxis()
+    plt.grid(axis='x', linestyle='--', alpha=0.5)
+
     plt.tight_layout()
-
-    output_file = analysis_dir / "performance_iterations.png"
-    plt.savefig(output_file)
+    plt.savefig(plot_path)
     plt.close()
 
-    print(f"Saved performance plot to {output_file}")
+    print(f"Saved plot: {plot_path}")
 
 
 
@@ -293,10 +433,18 @@ def main() -> None:
         help="Directory to store analysis outputs"
     )
 
+    parser.add_argument(
+        "--trial",
+        type=str,
+        default=str("Trial"),
+        help="Trial Name"
+    )
+
     args = parser.parse_args()
 
     results_dir = args.results
     analysis_dir = args.analysis
+    trial = args.trial
 
     if not results_dir.exists():
         raise FileNotFoundError(f"Directory not found: {results_dir}")
@@ -337,8 +485,8 @@ def main() -> None:
         abs_values_difference_summary
     )
 
-    plot_difference_histograms(grouped, analysis_dir)
-    plot_performance(grouped, analysis_dir)
+    plot_difference_histograms(trial, grouped, analysis_dir)
+    plot_performance(trial, grouped, analysis_dir)
 
 
 if __name__ == "__main__":

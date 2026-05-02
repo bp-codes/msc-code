@@ -11,7 +11,8 @@ trap 'echo "Error on line $LINENO (exit code $?)" >&2' ERR
         --quiet \
         --suppress=syntaxError:src/json.hpp \
         --suppress=missingIncludeSystem \
-        --suppress=toomanyconfigs
+        --suppress=toomanyconfigs \
+        --suppress=shiftTooManyBits:src/*.cu
 
 } 2>&1 | tee cppcheck.log
 
