@@ -30,7 +30,7 @@
 #include <string>
 #include <vector>
 
-#include "nlohmann/json.hpp"
+#include <nlohmann/json.hpp>
 
 struct Grid {
     std::size_t nx{};
@@ -178,13 +178,13 @@ struct Grid {
      */
     static void dirichlet_boundaries(Grid& model_grid) {
         for (auto i{std::size_t(0)}; i < model_grid.nx; i++) {
-            if(model_grid.ny - 1 > 0) {
+            if (model_grid.ny - 1 > 0) {
                 model_grid.at(i, 0) = 0;
                 model_grid.at(i, model_grid.ny - 1) = 0.0;
             }
         }
         for (auto j{std::size_t(0)}; j < model_grid.ny; j++) {
-            if(model_grid.nx - 1 > 0) {
+            if (model_grid.nx - 1 > 0) {
                 model_grid.at(0, j) = 0;
                 model_grid.at(model_grid.nx - 1, j) = 0.0;
             }

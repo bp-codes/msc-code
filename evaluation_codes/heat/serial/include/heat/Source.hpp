@@ -25,7 +25,8 @@
 #include <vector>
 
 #include "heat/Grid.hpp"
-#include "nlohmann/json.hpp"
+
+#include <nlohmann/json.hpp>
 
 /**
  * @brief Describes a heat source with spatial and temporal behaviour.

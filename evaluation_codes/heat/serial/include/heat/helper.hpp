@@ -15,6 +15,7 @@
 
 #include <sys/resource.h>
 
+#include <algorithm>
 #include <charconv>
 #include <chrono>
 #include <concepts>
@@ -22,11 +23,11 @@
 #include <random>
 #include <ranges>
 #include <string>
-#include <algorithm>
 #include <vector>
 
 #include "heat/Error.hpp"
-#include "nlohmann/json.hpp"
+
+#include <nlohmann/json.hpp>
 
 namespace helper {
 

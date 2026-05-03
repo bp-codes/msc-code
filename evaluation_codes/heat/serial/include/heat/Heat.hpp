@@ -32,7 +32,8 @@
 #include "heat/Grid.hpp"
 #include "heat/Source.hpp"
 #include "heat/Writer.hpp"
-#include "nlohmann/json.hpp"
+
+#include <nlohmann/json.hpp>
 
 class Heat {
 public:

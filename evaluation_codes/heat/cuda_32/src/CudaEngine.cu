@@ -8,7 +8,7 @@
  * - host<->device upload/download of Grid state and Source list
  */
 
-#include "CudaEngine.hpp"
+#include "heat/CudaEngine.hpp"
 
 #include <cstddef>
 #include <stdexcept>

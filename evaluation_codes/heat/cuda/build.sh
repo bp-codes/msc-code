@@ -5,4 +5,6 @@ nvcc -O3 -std=c++20 \
     -Xcompiler "-fno-fast-math -fno-unsafe-math-optimizations -ffp-contract=off" \
     src/CudaEngine.cu \
     src/main.cpp \
+    -Iinclude \
+    -isystem include/nlohmann \
     -o bin/main.x
