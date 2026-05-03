@@ -1,24 +1,39 @@
+/**
+ * @file Writer.hpp
+ * @brief Background writer for saving Grid snapshots to CSV.
+ *
+ * Writer maintains a thread-safe queue of snapshot items. A worker thread drains the queue and
+ * writes each snapshot to disk, allowing simulation code to continue without blocking on I/O.
+ *
+ * @author Ben Palmer
+ * @date 2026
+ *
+ * @copyright
+ * Copyright (c) 2026 Ben Palmer
+ * SPDX-License-Identifier: MIT
+ */
+
 #ifndef WRITER_HPP
 #define WRITER_HPP
 
-#include <cstddef>
-#include <iostream>
-#include <iomanip>
-#include <fstream>
-#include <string>
-#include <queue>
-#include <thread>
-#include <mutex>
-#include <filesystem>
-#include <condition_variable>
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
+#include <cstddef>
+#include <exception>
+#include <filesystem>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <mutex>
+#include <queue>
 #include <sstream>
 #include <stdexcept>
+#include <string>
+#include <thread>
 #include <utility>
-#include <exception>
 
-#include "Grid.hpp"
+#include "heat/Grid.hpp"
 
 /**
  * @file Writer.hpp
@@ -27,14 +42,12 @@
  * Writer maintains a thread-safe queue of snapshot items. A worker thread drains the queue and
  * writes each snapshot to disk, allowing simulation code to continue without blocking on I/O.
  */
-class Writer
-{
+class Writer {
 private:
     /**
      * @brief Work item queued for output.
      */
-    struct Item
-    {
+    struct Item {
         float t{};
         Grid grid_data{};
         std::filesystem::path file_path{};
@@ -50,11 +63,7 @@ public:
     /**
      * @brief Construct a Writer and start the worker thread.
      */
-    Writer()
-        : _done(false),
-          _worker_thread([this]{ this->run(); })
-    {
-    }
+    Writer() : _done(false), _worker_thread([this] { this->run(); }) {}
 
     // Non-copyable
     Writer(const Writer&) = delete;
@@ -69,12 +78,8 @@ public:
      * @param step Time step index.
      * @param grid Grid snapshot (copied internally).
      */
-    void enqueue(std::string prefix,
-                 std::filesystem::path outdir,
-                 float t,
-                 std::size_t step,
-                 const Grid& grid)
-    {
+    void enqueue(std::string prefix, std::filesystem::path outdir, float t, std::size_t step,
+                 const Grid& grid) {
         enqueue(std::move(prefix), std::move(outdir), t, step, Grid(grid));
     }
 
@@ -87,20 +92,16 @@ public:
      * @param step Time step index.
      * @param grid Grid snapshot (moved into the queue).
      */
-    void enqueue(std::string prefix,
-                 std::filesystem::path outdir,
-                 const float t,
-                 const std::size_t step,
-                 Grid&& grid)
-    {
+    void enqueue(std::string prefix, std::filesystem::path outdir, const float t,
+                 const std::size_t step, Grid&& grid) {
         {
             std::lock_guard<std::mutex> lk(_mutex);
 
             std::ostringstream oss;
             oss << prefix << "_" << std::setw(6) << std::setfill('0') << step << ".csv";
 
-            const auto fname {oss.str()};
-            auto file_path {outdir / fname};
+            const auto fname{oss.str()};
+            auto file_path{outdir / fname};
 
             _queue_items.push(Item{t, std::move(grid), std::move(file_path)});
         }
@@ -113,8 +114,7 @@ public:
      *
      * Safe to call multiple times.
      */
-    void stop()
-    {
+    void stop() {
         {
             std::lock_guard<std::mutex> lk(_mutex);
             _done = true;
@@ -122,8 +122,7 @@ public:
 
         _condition_variable.notify_one();
 
-        if (_worker_thread.joinable())
-        {
+        if (_worker_thread.joinable()) {
             _worker_thread.join();
         }
     }
@@ -131,8 +130,7 @@ public:
     /**
      * @brief Destructor: calls stop().
      */
-    ~Writer()
-    {
+    ~Writer() {
         stop();
     }
 
@@ -140,24 +138,16 @@ private:
     /**
      * @brief Worker loop: drains the queue and writes snapshots to disk.
      */
-    void run()
-    {
-        while (true)
-        {
-            auto item {Item{}};
+    void run() {
+        while (true) {
+            auto item{Item{}};
 
             {
                 std::unique_lock<std::mutex> lock(_mutex);
 
-                _condition_variable.wait(
-                    lock,
-                    [this]
-                    {
-                        return _done || !_queue_items.empty();
-                    });
+                _condition_variable.wait(lock, [this] { return _done || !_queue_items.empty(); });
 
-                if (_done && _queue_items.empty())
-                {
+                if (_done && _queue_items.empty()) {
                     break;
                 }
 
@@ -165,14 +155,10 @@ private:
                 _queue_items.pop();
             }
 
-            try
-            {
+            try {
                 grid_to_csv(item.t, item.grid_data, item.file_path);
-            }
-            catch (const std::exception& e)
-            {
-                std::cerr << "Writer error for '" << item.file_path
-                          << "': " << e.what() << "\n";
+            } catch (const std::exception& e) {
+                std::cerr << "Writer error for '" << item.file_path << "': " << e.what() << "\n";
             }
         }
     }
@@ -187,17 +173,13 @@ public:
      * @param step Time step index.
      * @param grid_data Grid snapshot to write.
      */
-    static void grid_to_csv(std::string prefix,
-                            std::filesystem::path outdir,
-                            float t,
-                            std::size_t step,
-                            const Grid& grid_data)
-    {
+    static void grid_to_csv(std::string prefix, std::filesystem::path outdir, float t,
+                            std::size_t step, const Grid& grid_data) {
         std::ostringstream oss;
         oss << prefix << "_" << std::setw(6) << std::setfill('0') << step << ".csv";
 
-        const auto fname {oss.str()};
-        const auto file_path {outdir / fname};
+        const auto fname{oss.str()};
+        const auto file_path{outdir / fname};
 
         grid_to_csv(t, grid_data, file_path);
     }
@@ -211,15 +193,12 @@ public:
      *
      * @throws std::runtime_error If the output file cannot be opened.
      */
-    static void grid_to_csv(float t,
-                            const Grid& grid_data,
-                            const std::filesystem::path& file_path)
-    {
-        const auto start {std::chrono::high_resolution_clock::now()};
+    static void grid_to_csv(float t, const Grid& grid_data,
+                            const std::filesystem::path& file_path) {
+        const auto start{std::chrono::high_resolution_clock::now()};
 
         std::ofstream f(file_path);
-        if (!f)
-        {
+        if (!f) {
             throw std::runtime_error("Cannot open output file: " + file_path.string());
         }
 
@@ -228,23 +207,21 @@ public:
         f << "# t=" << t << ", nx=" << grid_data.nx << ", ny=" << grid_data.ny
           << ", length_x=" << grid_data.length_x << ", length_y=" << grid_data.length_y << "\n";
 
-        for (auto j {std::size_t(0)}; j < grid_data.ny; j++)
-        {
-            for (auto i {std::size_t(0)}; i < grid_data.nx; i++)
-            {
+        for (auto j{std::size_t(0)}; j < grid_data.ny; j++) {
+            for (auto i{std::size_t(0)}; i < grid_data.nx; i++) {
                 f << grid_data.at(i, j);
-                if (i + 1 < grid_data.nx)
-                {
+                if (i + 1 < grid_data.nx) {
                     f << ",";
                 }
             }
             f << "\n";
         }
 
-        const auto end {std::chrono::high_resolution_clock::now()};
+        const auto end{std::chrono::high_resolution_clock::now()};
         const std::chrono::duration<float, std::milli> duration = end - start;
-        std::cout << "Saved " << file_path.string() << " (" << duration.count() << " ms)" << std::endl;
+        std::cout << "Saved " << file_path.string() << " (" << duration.count() << " ms)"
+                  << std::endl;
     }
 };
 
-#endif
+#endif  // WRITER_HPP
