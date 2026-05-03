@@ -12,6 +12,7 @@ output/*
 *.mp4
 *.png
 *.xyz
+*.zip
 *.xml
 **/results/*
 **/target_values/*
