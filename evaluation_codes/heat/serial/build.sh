@@ -1,2 +1,9 @@
 #!/bin/bash
-g++ -O3 -ffast-math -march=native -std=c++23 src/main.cpp -o bin/main.x
+
+mkdir -p bin
+g++ -std=c++23 -O3 -march=native -ffast-math \
+    src/main.cpp \
+    -Iinclude \
+    -isystem include/nlohmann \
+    -o bin/main.x
+
