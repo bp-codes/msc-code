@@ -55,7 +55,8 @@ def load_precise_data(results_dir: Path) -> tuple[float, list[float]]:
 def load_results(
     results_dir: Path,
     precise_value: float,
-    precise_values: list[float]
+    precise_values: list[float],
+    selected_operation: str
 ) -> dict[str, dict[str, list[float]]]:
 
     grouped: dict[str, dict[str, list[float]]] = defaultdict(
@@ -84,6 +85,11 @@ def load_results(
 
         device = data.get("device")
         method = method + " " + device
+
+        if(selected_operation != ""):
+            operation = data.get("operation")
+            if(selected_operation != operation):
+                continue
 
         for field in ["iterations", "max_rss_kb"]:
             value = data.get(field)
@@ -213,7 +219,9 @@ def plot_difference_histograms(
     grouped: dict[str, dict[str, list[float]]],
     analysis_dir: Path,
     bins: int = 50,
-    use_greyscale: bool = False
+    use_greyscale: bool = False,
+    width=8,
+    height=6,
 ) -> None:
     analysis_dir.mkdir(parents=True, exist_ok=True)
 
@@ -253,7 +261,7 @@ def plot_difference_histograms(
         hatch = "///" if "32" in method else None
 
         # --- Plot ---
-        plt.figure()
+        plt.figure(figsize=(width, height))
 
         counts, bin_edges, patches = plt.hist(
             values,
@@ -307,7 +315,9 @@ def plot_difference_histograms(
 def plot_performance(
     trial : str,
     grouped: dict[str, dict[str, list[float]]],
-    analysis_dir: Path
+    analysis_dir: Path,
+    width=8,
+    height=6
 ) -> None:
     import matplotlib.pyplot as plt
 
@@ -334,8 +344,8 @@ def plot_performance(
         title=f"{trial}: Mean Iterations by Method",
         output_dir="analysis",
         output_file="performance_iterations.png",
-        width=8,
-        height=6,
+        width=width,
+        height=height,
         use_greyscale=False  # or False
     )
 
@@ -440,11 +450,19 @@ def main() -> None:
         help="Trial Name"
     )
 
+    parser.add_argument(
+        "--selected_operation",
+        type=str,
+        default=str(""),
+        help=""
+    )
+
     args = parser.parse_args()
 
     results_dir = args.results
     analysis_dir = args.analysis
     trial = args.trial
+    selected_operation = args.selected_operation
 
     if not results_dir.exists():
         raise FileNotFoundError(f"Directory not found: {results_dir}")
@@ -452,7 +470,7 @@ def main() -> None:
     analysis_dir.mkdir(parents=True, exist_ok=True)
 
     precise_value, precise_values = load_precise_data(results_dir)
-    grouped = load_results(results_dir, precise_value, precise_values)
+    grouped = load_results(results_dir, precise_value, precise_values, selected_operation)
 
     if not grouped:
         print("No valid results found.")

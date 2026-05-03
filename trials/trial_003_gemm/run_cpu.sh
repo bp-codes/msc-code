@@ -24,7 +24,7 @@ sizes=(
 )
 
 for size in "${sizes[@]}"; do
-    CMD="./bin/precise.x $TIMER $size"
+    CMD="./bin/precise.x $RUN_TIME $size"
     eval $CMD
     echo $CMD
 done
@@ -34,15 +34,10 @@ for ((i=1; i<=RUNS; i++))
 do
     for size in "${sizes[@]}"; do
         for exe in "${executables[@]}"; do
-            CMD="$exe $TIMER $size"
+            CMD="$exe $RUN_TIME $size"
             echo $CMD
             eval $CMD
         done
         echo
     done
 done
-
-
-
-
-

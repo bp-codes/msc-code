@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
         const auto operation_string = std::string("sum");
         const auto comments{std::string("operation:") + std::string(operation_string)};
 
-        const std::string base_file_name = "results/precise_" + operation_string;
+        const std::string base_file_name = "results/precise";
         const std::string json_file = base_file_name + ".json";
 
         nlohmann::json j;
