@@ -213,13 +213,13 @@ auto main(int argc, char** argv) -> int {
 
         std::cout << "Precise computed expected value: " << expected_value << "\n";
 
-        const auto method{std::string("Precise Values")};
+        const auto method{std::string("Precise")};
         const auto comments{std::string("operation:") + std::string(operation_string)};
 
         // Output
         {
             const std::string base_file_name =
-                "results/precise_values_" + std::string(operation_string);
+                "results/precise_" + std::string(operation_string);
             const std::string json_file = base_file_name + ".json";
 
             nlohmann::json j;

@@ -139,7 +139,7 @@ int main(int argc, char** argv) {
 
     const auto matrix_size{std::to_string(M) + "x" + std::to_string(K) + "_by_" +
                            std::to_string(K) + "x" + std::to_string(N)};
-    const auto method{std::string("Precise " + matrix_size)};
+    const auto method{std::string("Precise")};
     const auto comments{std::string("operation:") + std::string(operation_string)};
 
     // Output
@@ -153,7 +153,7 @@ int main(int argc, char** argv) {
         // Metadata / identity
         j["file"] = json_file;
         j["method"] = method;
-        j["operation"] = operation_string;
+        j["operation"] = matrix_size;
         j["comments"] = comments;
         j["threads"] = 1;
         j["precision"] = "128";

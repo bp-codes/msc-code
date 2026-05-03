@@ -16,9 +16,10 @@
 #include <string>
 #include <filesystem>
 
-#include "json.hpp"
-#include "Heat.hpp"
-#include "helper_cuda.hpp"
+#include "heat/Heat.hpp"
+#include "heat/helper_cuda.hpp"
+
+#include <nlohmann/json.hpp>
 
 /**
  * @brief Program entry point.
@@ -37,30 +38,38 @@ int main(int argc, char** argv)
         const auto t0 {std::chrono::steady_clock::now()};
 
         // Read in path to configuration file
-        if (argc != 2)
-        {
+        if (argc != 2) {
             std::cerr << "Usage: " << argv[0] << " config.json\n";
             return 1;
         }
 
-        auto input_file {std::string{argv[1]}};
+        auto input_file{std::string{argv[1]}};
 
-        // Run heat solver
+        // Run heat
         Heat::run(input_file);
 
         // End timer and save
-        const auto t1 {std::chrono::steady_clock::now()};
+        const auto t1{std::chrono::steady_clock::now()};
         std::filesystem::create_directory("../results");
 
-        const std::string base_file_name = "../results/cuda_32_heat";
-        const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
-        const auto time_total {std::chrono::duration<double>(t1 - t0).count()};
-        nlohmann::json j;
-        j["time_total"] = time_total;
-        std::ofstream out(json_file);
-        if (!out) throw std::runtime_error("Failed to open output JSON file.");
-        out << std::setw(2) << j << '\n';
+        // Read input file
+        nlohmann::json input{};
+        std::ifstream in(input_file);
+        if (!in)
+            throw std::runtime_error("Failed to open input json");
+        in >> input;
 
+        const std::string base_file_name = "../results/serial_heat";
+        const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
+        const auto time_total{std::chrono::duration<double>(t1 - t0).count()};
+        nlohmann::json output;
+        output["type"] = "serial";
+        output["time_total"] = time_total;
+        output["input"] = input;
+        std::ofstream out(json_file);
+        if (!out)
+            throw std::runtime_error("Failed to open output JSON file.");
+        out << output.dump(4);
 
         return 0;
     }
