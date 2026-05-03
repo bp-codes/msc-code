@@ -109,10 +109,6 @@ int main(int argc, char** argv) {
     B.random_fill(rng, dist);
     C.random_fill(rng, dist);
 
-    const auto X_expected = dgemm_cblas(k, A, B, l, C);
-    const auto expected_value = helper::check_sum(X_expected.vector());
-    std::cout << expected_value << std::endl;
-
     // ======= Calculation Starts ========
 
     // Setup
@@ -152,7 +148,7 @@ int main(int argc, char** argv) {
 
     const auto matrix_size{std::to_string(M) + "x" + std::to_string(K) + "_by_" +
                            std::to_string(K) + "x" + std::to_string(N)};
-    const auto method{std::string("Parallel OpenMP 32 " + matrix_size)};
+    const auto method{std::string("Parallel OpenMP 32")};
     const auto comments{std::string("operation:") + std::string(operation_string)};
 
     // Output
@@ -166,7 +162,7 @@ int main(int argc, char** argv) {
         // Metadata / identity
         j["file"] = json_file;
         j["method"] = method;
-        j["operation"] = operation_string;
+        j["operation"] = matrix_size;
         j["comments"] = comments;
         j["threads"] = 1;
         j["precision"] = "64";

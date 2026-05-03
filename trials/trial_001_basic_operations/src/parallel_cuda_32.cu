@@ -245,13 +245,13 @@ auto main(int argc, char** argv) -> int {
         const auto time_total{std::chrono::duration<double>(t3 - t0).count()};
         const auto time_per_iteration{time_calc / static_cast<double>(iters)};
 
-        const auto method{std::string("Parallel CUDA")};
+        const auto method{std::string("Parallel CUDA 32")};
         const auto comments{std::string("operation:") + std::string(operation_string)};
 
         // Output
         {
             const std::string base_file_name =
-                "results/parallel_cuda_" + std::string(operation_string);
+                "results/parallel_cuda_32_" + std::string(operation_string);
             const std::string json_file =
                 base_file_name + "_" + helper::random_suffix(12) + ".json";
 

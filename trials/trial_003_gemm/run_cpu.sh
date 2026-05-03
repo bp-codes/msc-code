@@ -9,10 +9,10 @@ RUN_TIME=10.0
 
 
 executables=(
-    ./bin/serial_naive.x
-    ./bin/serial_optimized.x
-    ./bin/parallel_openmp.x
-    ./bin/parallel_blas.x
+    ./bin/serial_naive_32.x
+    ./bin/serial_optimized_32.x
+    ./bin/parallel_openmp_32.x
+    ./bin/parallel_blas_32.x
 )
 
 sizes=(
@@ -23,12 +23,12 @@ sizes=(
     "4096 4096 4096"
 )
 
-for size in "${sizes[@]}"; do
-    CMD="./bin/precise.x $RUN_TIME $size"
-    eval $CMD
-    echo $CMD
-done
-echo
+#for size in "${sizes[@]}"; do
+#    CMD="./bin/precise.x $RUN_TIME $size"
+#    eval $CMD
+#    echo $CMD
+#done
+#echo
 
 for ((i=1; i<=RUNS; i++))
 do
