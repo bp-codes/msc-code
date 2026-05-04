@@ -3,11 +3,22 @@
 
 
 /*********************************************************************************************************************************/
+#include <array>       // std::array
+#include <chrono>      // std::chrono::steady_clock
+#include <cstddef>     // std::size_t
+#include <filesystem>  // std::filesystem::path
+#include <fstream>     // std::ifstream
+#include <iostream>    // std::cout, std::endl
+#include <string>      // std::string
+#include <vector>      // std::vector
+
+#include "Helper/_helper.hpp"
+#include "Maths/_maths.hpp"
+#include "SimpleMD/VerletEngine.hpp"
+#include "SimpleMD/Configuration.hpp"
+#include "SimpleMD/ConfigurationEngine.hpp"
+
 #include <json.hpp>
-#include <omp.h>
-#include "../Helper/_helper.hpp"
-#include "../Maths/_maths.hpp"
-#include "_simplemd.hpp"
 /*********************************************************************************************************************************/
 namespace SimpleMD
 {

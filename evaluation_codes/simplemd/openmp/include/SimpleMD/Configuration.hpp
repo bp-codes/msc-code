@@ -4,10 +4,10 @@
 
 /*********************************************************************************************************************************/
 #include <array>
-#include "../Helper/_helper.hpp"
-#include "../Maths/_maths.hpp"
-#include "Atom.hpp"
-#include "Morse.hpp"
+#include "Helper/_helper.hpp"
+#include "Maths/_maths.hpp"
+#include "SimpleMD/Atom.hpp"
+#include "SimpleMD/Morse.hpp"
 /*********************************************************************************************************************************/
 namespace SimpleMD
 {
