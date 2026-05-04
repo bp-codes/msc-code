@@ -2,21 +2,15 @@
 #define _SIMPLE_MD_HPP
 
 // Include standard modules
-#include "Timer.hpp"
 #include "Atom.hpp"
-#include "GhostAtom.hpp"
 #include "AtomPair.hpp"
 #include "Bcc.hpp"
-#include "Fcc.hpp"
 #include "Configuration.hpp"
 #include "ConfigurationEngine.hpp"
-#include "VerletEngine.hpp"
+#include "Fcc.hpp"
+#include "GhostAtom.hpp"
 #include "Run.hpp"
-
-
-
-
-
-
+#include "Timer.hpp"
+#include "VerletEngine.hpp"
 
 #endif

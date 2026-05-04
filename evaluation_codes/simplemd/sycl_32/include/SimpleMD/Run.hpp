@@ -1,36 +1,31 @@
 #ifndef SIMPLE_MD_HPP
 #define SIMPLE_MD_HPP
 
-
 /*********************************************************************************************************************************/
-#include <json.hpp>
 #include <omp.h>
+
 #include "Helper/_helper.hpp"
 #include "Maths/_maths.hpp"
-#include "SimpleMD/Timer.hpp"
 #include "SimpleMD/Atom.hpp"
-#include "SimpleMD/GhostAtom.hpp"
 #include "SimpleMD/AtomPair.hpp"
 #include "SimpleMD/Bcc.hpp"
-#include "SimpleMD/Fcc.hpp"
 #include "SimpleMD/Configuration.hpp"
 #include "SimpleMD/ConfigurationEngine.hpp"
+#include "SimpleMD/Fcc.hpp"
+#include "SimpleMD/GhostAtom.hpp"
+#include "SimpleMD/Timer.hpp"
 #include "SimpleMD/VerletEngine.hpp"
+
+#include <json.hpp>
+
 /*********************************************************************************************************************************/
-namespace SimpleMD
-{
+namespace SimpleMD {
 
-
-
-class Run
-{
-
+class Run {
 public:
-
-    static void run(const std::filesystem::path& input_file)
-    {
+    static void run(const std::filesystem::path& input_file) {
         std::cout << "Simple MD" << std::endl;
-        
+
         // Start config
         Configuration& configuration = SimpleMD::ConfigurationOnce::get();
         auto& timer = TimerOnce::get();
@@ -43,7 +38,7 @@ public:
 
         // Display
         configuration.display();
-        
+
         ConfigurationEngine::perturb(configuration.get_crystal_size(), 0.01, configuration);
 
         // Timed section - time steps in simulation
@@ -52,47 +47,39 @@ public:
         ConfigurationEngine::upload_to_device(configuration);
 
         auto t0 = std::chrono::steady_clock::now();
-        for(int i=0; i<configuration.get_time_steps(); i++)
-        {
-            if(i%configuration.get_rebuild_every() == 0) ConfigurationEngine::make_neighbour_list_sycl(configuration);
-            
+        for (int i = 0; i < configuration.get_time_steps(); i++) {
+            if (i % configuration.get_rebuild_every() == 0)
+                ConfigurationEngine::make_neighbour_list_sycl(configuration);
+
             VerletEngine::vertlet_step_sycl(configuration);
 
-            if(i%configuration.get_xyz_every() == 0) ConfigurationEngine::record_to_xyz_sycl(i, std::filesystem::path("results/out.xyz"), configuration);
-
+            if (i % configuration.get_xyz_every() == 0)
+                ConfigurationEngine::record_to_xyz_sycl(i, std::filesystem::path("results/out.xyz"),
+                                                        configuration);
         }
         auto t1 = std::chrono::steady_clock::now();
 
         timer.update_overall_time(t1 - t0);
         timer.print_times();
-
     }
 
-
-    void static load_json(const std::filesystem::path& input_file, Configuration& configuration)
-    {
-
+    void static load_json(const std::filesystem::path& input_file, Configuration& configuration) {
         // Load JSON
-        if (!std::filesystem::exists(input_file)) 
-        {
+        if (!std::filesystem::exists(input_file)) {
             THROW_RUNTIME_ERROR("JSON file does not exist: " + input_file.string());
         }
 
         // Try to open the file
         std::ifstream ifs(input_file);
-        if (!ifs.is_open()) 
-        {
+        if (!ifs.is_open()) {
             THROW_RUNTIME_ERROR("Could not open JSON file for reading: " + input_file.string());
         }
 
         nlohmann::json config;
 
-        try 
-        {
-            ifs >> config;      // may throw json::parse_error
-        }
-        catch (const nlohmann::json::parse_error& e) 
-        {
+        try {
+            ifs >> config;  // may throw json::parse_error
+        } catch (const nlohmann::json::parse_error& e) {
             THROW_RUNTIME_ERROR("Failed to parse JSON file \"" + input_file.string() + "\"");
         }
 
@@ -117,24 +104,15 @@ public:
         std::size_t xyz_every = Run::load<std::size_t>(config, {"simulation", "xyz_every"});
 
         // Basis
-        std::array<float, 9> basis {
-                            ux[0], ux[1], ux[2],
-                            uy[0], uy[1], uy[2],
-                            uz[0], uz[1], uz[2]
-                        };
+        std::array<float, 9> basis{ux[0], ux[1], ux[2], uy[0], uy[1], uy[2], uz[0], uz[1], uz[2]};
 
         // Build atoms
-        std::vector<Atom> atoms {};
-        if(crystal_structure == "fcc")
-        {
+        std::vector<Atom> atoms{};
+        if (crystal_structure == "fcc") {
             atoms = SimpleMD::Fcc::make("Al", n, n, n);
-        }
-        else if(crystal_structure == "bcc")
-        {
+        } else if (crystal_structure == "bcc") {
             atoms = SimpleMD::Bcc::make("Al", n, n, n);
-        }
-        else
-        {
+        } else {
             THROW_RUNTIME_ERROR("Crystal structure must be bcc or fcc.");
         }
 
@@ -150,44 +128,29 @@ public:
         configuration.set_time_steps(time_steps);
         configuration.set_rebuild_every(rebuild_every);
         configuration.set_xyz_every(xyz_every);
-
     }
 
-
-
-    template<typename T>
-    static T load(const nlohmann::json& j, const std::vector<std::string>& keys)
-    {
+    template <typename T>
+    static T load(const nlohmann::json& j, const std::vector<std::string>& keys) {
         const nlohmann::json* current = &j;
 
-        for (size_t i = 0; i < keys.size(); ++i) 
-        {
+        for (size_t i = 0; i < keys.size(); ++i) {
             const std::string& key = keys[i];
 
-            if (!current->contains(key)) 
-            {
+            if (!current->contains(key)) {
                 THROW_RUNTIME_ERROR("Missing key in JSON path: \"" + key + "\"");
             }
 
             current = &((*current)[key]);  // next
         }
 
-        try 
-        {
+        try {
             return current->get<T>();
-        }
-        catch (const nlohmann::json::type_error& e) 
-        {
+        } catch (const nlohmann::json::type_error& e) {
             THROW_RUNTIME_ERROR("Type error at final key: \"" + keys.back() + "\"");
         }
     }
-
 };
 
-
-
-
-
-
-}
+}  // namespace SimpleMD
 #endif

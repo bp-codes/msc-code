@@ -2,17 +2,16 @@
 #define MAIN_CPP
 
 /*********************************************************************************************************************************/
-#include <iostream>
-#include <iomanip>
-#include <fstream>
-#include <string>
 #include <filesystem>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <string>
 
-
-#include "SimpleMD/_simplemd.hpp"
 #include "Helper/_helper.hpp"
-/*********************************************************************************************************************************/
+#include "SimpleMD/_simplemd.hpp"
 
+/*********************************************************************************************************************************/
 
 /**
  * @brief Entry point for the SimpleMD executable.
@@ -26,25 +25,20 @@
  *
  * @throws std::runtime_error Via THROW_RUNTIME_ERROR if input file is not provided.
  */
-int main(int argc, char* argv[])
-{
-    
+int main(int argc, char* argv[]) {
     // Start timer
-    const auto t0 {std::chrono::steady_clock::now()};
+    const auto t0{std::chrono::steady_clock::now()};
 
-    if (argc != 2)
-    {
+    if (argc != 2) {
         THROW_RUNTIME_ERROR("must give an input file e.g. ./SimpleMD.x input.json");
     }
 
-
     // Run SimpleMD
-    const std::filesystem::path input_file {argv[1]};
+    const std::filesystem::path input_file{argv[1]};
     SimpleMD::Run::run(input_file);
 
-
     // End timer and save
-    const auto t1 {std::chrono::steady_clock::now()};
+    const auto t1{std::chrono::steady_clock::now()};
     std::filesystem::create_directory("../results");
     auto& timer = TimerOnce::get();
 
@@ -57,7 +51,7 @@ int main(int argc, char* argv[])
 
     const std::string base_file_name = "../results/openmp";
     const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
-    const auto time_total {std::chrono::duration<double>(t1 - t0).count()};
+    const auto time_total{std::chrono::duration<double>(t1 - t0).count()};
     nlohmann::json output;
     output["type"] = "openmp";
     output["time"]["total"] = time_total;
@@ -67,12 +61,11 @@ int main(int argc, char* argv[])
     output["time"]["overall_time"] = timer.get_overall_time_seconds();
     output["input"] = input;
     std::ofstream out(json_file);
-    if (!out) throw std::runtime_error("Failed to open output JSON file.");
+    if (!out)
+        throw std::runtime_error("Failed to open output JSON file.");
     out << output.dump(4);
 
     return 0;
-
 }
 
 #endif
-

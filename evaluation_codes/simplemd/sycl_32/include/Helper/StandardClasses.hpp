@@ -2,20 +2,18 @@
 #define STANDARD_CLASSES_HPP
 
 // Include standard modules
-#include <iostream>
-#include <iomanip>
-#include <fstream>
-#include <vector>
-#include <string>
-#include <cmath>
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <filesystem>
-#include <stdexcept>
-#include <random>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
 #include <numeric>
 #include <optional>
-
-
+#include <random>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 #endif
