@@ -1,9 +1,16 @@
 #ifndef MAIN_CPP
 #define MAIN_CPP
 
-#include "lib/SimpleMD/_simplemd.hpp"
-#include "lib/Helper/_helper.hpp"
+/*********************************************************************************************************************************/
+#include <iostream>
+#include <iomanip>
+#include <fstream>
+#include <string>
+#include <filesystem>
 
+#include "SimpleMD/_simplemd.hpp"
+#include "Helper/_helper.hpp"
+/*********************************************************************************************************************************/
 
 
 /**
