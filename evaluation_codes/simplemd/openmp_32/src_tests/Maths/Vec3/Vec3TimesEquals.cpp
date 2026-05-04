@@ -1,138 +1,126 @@
 #include <gtest/gtest.h>
+
 #include "Maths/Vec3.hpp"
 
 // ======================= Vec3::operator*= Test Suite =======================
 
 // ---- Multiply by zero ----
-TEST(Vec3TimesEquals, MultiplyByZeroX)
-{
+TEST(Vec3TimesEquals, MultiplyByZeroX) {
     Maths::Vec3 a(1.0, -2.0, 3.0);
     a *= 0.0;
-    const float found {a.x};
-    const float expected {0.0};
-    const float tolerance {1.0e-9};
+    const float found{a.x};
+    const float expected{0.0};
+    const float tolerance{1.0e-9};
     EXPECT_NEAR(found, expected, tolerance);
 }
 
-TEST(Vec3TimesEquals, MultiplyByZeroY)
-{
+TEST(Vec3TimesEquals, MultiplyByZeroY) {
     Maths::Vec3 a(1.0, -2.0, 3.0);
     a *= 0.0;
-    const float found {a.y};
-    const float expected {0.0};
-    const float tolerance {1.0e-9};
+    const float found{a.y};
+    const float expected{0.0};
+    const float tolerance{1.0e-9};
     EXPECT_NEAR(found, expected, tolerance);
 }
 
-TEST(Vec3TimesEquals, MultiplyByZeroZ)
-{
+TEST(Vec3TimesEquals, MultiplyByZeroZ) {
     Maths::Vec3 a(1.0, -2.0, 3.0);
     a *= 0.0;
-    const float found {a.z};
-    const float expected {0.0};
-    const float tolerance {1.0e-9};
+    const float found{a.z};
+    const float expected{0.0};
+    const float tolerance{1.0e-9};
     EXPECT_NEAR(found, expected, tolerance);
 }
 
 // ---- Multiply by positive scalar ----
-TEST(Vec3TimesEquals, MultiplyByPositiveX)
-{
+TEST(Vec3TimesEquals, MultiplyByPositiveX) {
     Maths::Vec3 a(1.0, -2.0, 3.0);
     a *= 2.0;
-    const float found {a.x};
-    const float expected {2.0};
-    const float tolerance {1.0e-9};
+    const float found{a.x};
+    const float expected{2.0};
+    const float tolerance{1.0e-9};
     EXPECT_NEAR(found, expected, tolerance);
 }
 
-TEST(Vec3TimesEquals, MultiplyByPositiveY)
-{
+TEST(Vec3TimesEquals, MultiplyByPositiveY) {
     Maths::Vec3 a(1.0, -2.0, 3.0);
     a *= 2.0;
-    const float found {a.y};
-    const float expected {-4.0};
-    const float tolerance {1.0e-9};
+    const float found{a.y};
+    const float expected{-4.0};
+    const float tolerance{1.0e-9};
     EXPECT_NEAR(found, expected, tolerance);
 }
 
-TEST(Vec3TimesEquals, MultiplyByPositiveZ)
-{
+TEST(Vec3TimesEquals, MultiplyByPositiveZ) {
     Maths::Vec3 a(1.0, -2.0, 3.0);
     a *= 2.0;
-    const float found {a.z};
-    const float expected {6.0};
-    const float tolerance {1.0e-9};
+    const float found{a.z};
+    const float expected{6.0};
+    const float tolerance{1.0e-9};
     EXPECT_NEAR(found, expected, tolerance);
 }
 
 // ---- Multiply by negative scalar ----
-TEST(Vec3TimesEquals, MultiplyByNegativeX)
-{
+TEST(Vec3TimesEquals, MultiplyByNegativeX) {
     Maths::Vec3 a(1.0, -2.0, 3.0);
     a *= -1.5;
-    const float found {a.x};
-    const float expected {-1.5};
-    const float tolerance {1.0e-9};
+    const float found{a.x};
+    const float expected{-1.5};
+    const float tolerance{1.0e-9};
     EXPECT_NEAR(found, expected, tolerance);
 }
 
-TEST(Vec3TimesEquals, MultiplyByNegativeY)
-{
+TEST(Vec3TimesEquals, MultiplyByNegativeY) {
     Maths::Vec3 a(1.0, -2.0, 3.0);
     a *= -1.5;
-    const float found {a.y};
-    const float expected {3.0};
-    const float tolerance {1.0e-9};
+    const float found{a.y};
+    const float expected{3.0};
+    const float tolerance{1.0e-9};
     EXPECT_NEAR(found, expected, tolerance);
 }
 
-TEST(Vec3TimesEquals, MultiplyByNegativeZ)
-{
+TEST(Vec3TimesEquals, MultiplyByNegativeZ) {
     Maths::Vec3 a(1.0, -2.0, 3.0);
     a *= -1.5;
-    const float found {a.z};
-    const float expected {-4.5};
-    const float tolerance {1.0e-9};
+    const float found{a.z};
+    const float expected{-4.5};
+    const float tolerance{1.0e-9};
     EXPECT_NEAR(found, expected, tolerance);
 }
 
 // ---- Large magnitude scalar ----
-TEST(Vec3TimesEquals, MultiplyByLargeScalarX)
-{
+TEST(Vec3TimesEquals, MultiplyByLargeScalarX) {
     const float S = 1.0e12;
     Maths::Vec3 a(1.0, 2.0, 3.0);
     a *= S;
-    const float found {a.x};
-    const float expected {1.0e12};
-    const float tolerance {1.0e3}; // ~1e-9 relative
+    const float found{a.x};
+    const float expected{1.0e12};
+    const float tolerance{1.0e3};  // ~1e-9 relative
     EXPECT_NEAR(found, expected, tolerance);
 }
 
-TEST(Vec3TimesEquals, MultiplyByLargeScalarY)
-{
+TEST(Vec3TimesEquals, MultiplyByLargeScalarY) {
     const float S = 1.0e12;
     Maths::Vec3 a(1.0, 2.0, 3.0);
     a *= S;
-    const float found {a.y};
-    const float expected {2.0e12};
-    const float tolerance {1.0e3};
+    const float found{a.y};
+    const float expected{2.0e12};
+    const float tolerance{1.0e3};
     EXPECT_NEAR(found, expected, tolerance);
 }
 
-TEST(Vec3TimesEquals, MultiplyByLargeScalarZ)
-{
+TEST(Vec3TimesEquals, MultiplyByLargeScalarZ) {
     const float S = 1.0e12;
     Maths::Vec3 a(1.0, 2.0, 3.0);
     a *= S;
-    const float found {a.z};
-    const float expected {3.0e12};
-    const float tolerance {1.0e3};
+    const float found{a.z};
+    const float expected{3.0e12};
+    const float tolerance{1.0e3};
     EXPECT_NEAR(found, expected, tolerance);
 }
 
 // ---- Returns reference to self ----
-TEST(Vec3TimesEquals, ReturnsReferenceToSelf)
-{
+TEST(Vec3TimesEquals, ReturnsReferenceToSelf) {
     Maths::Vec3 a(1.0, 2.0, 3.0);
     Maths::Vec3& ref = (a *= 2.0);
     EXPECT_EQ(&ref, &a);

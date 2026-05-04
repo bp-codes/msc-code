@@ -2,13 +2,7 @@
 #define _MATHS_HPP
 
 // Include standard modules
-#include "Vec3.hpp"
 #include "SyclFunctions.hpp"
-
-
-
-
-
-
+#include "Vec3.hpp"
 
 #endif

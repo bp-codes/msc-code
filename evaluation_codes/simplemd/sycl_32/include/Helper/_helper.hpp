@@ -2,15 +2,9 @@
 #define _HELPER_HPP
 
 // Include standard modules
-#include "Helper/StandardClasses.hpp"
 #include "Helper/Error.hpp"
-#include "Helper/Macros.hpp"
 #include "Helper/Helper.hpp"
-
-
-
-
-
-
+#include "Helper/Macros.hpp"
+#include "Helper/StandardClasses.hpp"
 
 #endif

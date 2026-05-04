@@ -3,17 +3,16 @@
 
 #include <cmath>
 #include <concepts>
+
 #include <sycl/sycl.hpp>
 
-namespace Maths
-{
+namespace Maths {
 
 // -----------------------------
 // pow
 // -----------------------------
-template<std::floating_point T>
-[[nodiscard]] inline T pow(T x, T y)
-{
+template <std::floating_point T>
+[[nodiscard]] inline T pow(T x, T y) {
 #ifdef __SYCL_DEVICE_ONLY__
     return sycl::pow(x, y);
 #else
@@ -24,9 +23,8 @@ template<std::floating_point T>
 // -----------------------------
 // exp
 // -----------------------------
-template<std::floating_point T>
-[[nodiscard]] inline T exp(T x)
-{
+template <std::floating_point T>
+[[nodiscard]] inline T exp(T x) {
 #ifdef __SYCL_DEVICE_ONLY__
     return sycl::exp(x);
 #else
@@ -37,9 +35,8 @@ template<std::floating_point T>
 // -----------------------------
 // log
 // -----------------------------
-template<std::floating_point T>
-[[nodiscard]] inline T log(T x)
-{
+template <std::floating_point T>
+[[nodiscard]] inline T log(T x) {
 #ifdef __SYCL_DEVICE_ONLY__
     return sycl::log(x);
 #else
@@ -50,9 +47,8 @@ template<std::floating_point T>
 // -----------------------------
 // sqrt
 // -----------------------------
-template<std::floating_point T>
-[[nodiscard]] inline T sqrt(T x)
-{
+template <std::floating_point T>
+[[nodiscard]] inline T sqrt(T x) {
 #ifdef __SYCL_DEVICE_ONLY__
     return sycl::sqrt(x);
 #else
@@ -63,9 +59,8 @@ template<std::floating_point T>
 // -----------------------------
 // fmod
 // -----------------------------
-template<std::floating_point T>
-[[nodiscard]] inline T fmod(T x, T y)
-{
+template <std::floating_point T>
+[[nodiscard]] inline T fmod(T x, T y) {
 #ifdef __SYCL_DEVICE_ONLY__
     return sycl::fmod(x, y);
 #else
@@ -76,9 +71,8 @@ template<std::floating_point T>
 // -----------------------------
 // max
 // -----------------------------
-template<std::floating_point T>
-[[nodiscard]] inline T fmax(T x, T y)
-{
+template <std::floating_point T>
+[[nodiscard]] inline T fmax(T x, T y) {
 #ifdef __SYCL_DEVICE_ONLY__
     return sycl::fmax(x, y);
 #else
@@ -89,9 +83,8 @@ template<std::floating_point T>
 // -----------------------------
 // min
 // -----------------------------
-template<std::floating_point T>
-[[nodiscard]] inline T fmin(T x, T y)
-{
+template <std::floating_point T>
+[[nodiscard]] inline T fmin(T x, T y) {
 #ifdef __SYCL_DEVICE_ONLY__
     return sycl::fmin(x, y);
 #else
@@ -102,9 +95,8 @@ template<std::floating_point T>
 // -----------------------------
 // clamp
 // -----------------------------
-template<std::floating_point T>
-[[nodiscard]] inline T clamp(T x, T lo, T hi)
-{
+template <std::floating_point T>
+[[nodiscard]] inline T clamp(T x, T lo, T hi) {
 #ifdef __SYCL_DEVICE_ONLY__
     return sycl::fmin(sycl::fmax(x, lo), hi);
 #else
@@ -112,6 +104,6 @@ template<std::floating_point T>
 #endif
 }
 
-}
+}  // namespace Maths
 
 #endif

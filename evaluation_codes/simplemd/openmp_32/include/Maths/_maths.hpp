@@ -4,10 +4,4 @@
 // Include standard modules
 #include "Vec3.hpp"
 
-
-
-
-
-
-
 #endif

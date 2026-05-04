@@ -13,11 +13,12 @@
 
 #include "Helper/_helper.hpp"
 #include "Maths/_maths.hpp"
-#include "SimpleMD/VerletEngine.hpp"
 #include "SimpleMD/Configuration.hpp"
 #include "SimpleMD/ConfigurationEngine.hpp"
+#include "SimpleMD/VerletEngine.hpp"
 
 #include <json.hpp>
+
 /*********************************************************************************************************************************/
 
 namespace SimpleMD {
