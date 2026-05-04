@@ -1,5 +1,5 @@
 /**
- * @file heat_solver_json.cpp
+ * @file main.cpp
  * @brief Entry point for the 2D heat equation solver using a JSON configuration file.
  *
  * Solves:
@@ -8,14 +8,15 @@
  *
  * Reads all inputs from a JSON configuration file and runs the solver.
  *
- * Build (single header):
- *   g++ -O3 -std=c++17 heat_solver_json.cpp -o heat
+ * @author Ben Palmer
+ * @date 2026
  *
- * Build (system nlohmann-json package):
- *   sudo apt-get install nlohmann-json3-dev
- *   g++ -O3 -std=c++17 heat_solver_json.cpp -o heat -I/usr/include
+ * @copyright
+ * Copyright (c) 2026 Ben Palmer
+ * SPDX-License-Identifier: MIT
  */
 
+#include <quadmath.h>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -63,11 +64,11 @@ int main(int argc, char** argv) {
             throw std::runtime_error("Failed to open input json");
         in >> input;
 
-        const std::string base_file_name = "../results/sycl_heat";
+        const std::string base_file_name = "../results/precise_heat";
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
         const auto time_total{std::chrono::duration<double>(t1 - t0).count()};
         nlohmann::json output;
-        output["type"] = "sycl";
+        output["type"] = "precise";
         output["time_total"] = time_total;
         output["input"] = input;
         std::ofstream out(json_file);

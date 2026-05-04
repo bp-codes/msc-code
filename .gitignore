@@ -5,6 +5,8 @@ build/*
 output
 output/*
 **/output
+**/output_cpu
+**/output_gpu
 *.log
 *.exe
 *.out

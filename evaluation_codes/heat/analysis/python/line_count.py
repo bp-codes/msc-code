@@ -5,7 +5,9 @@ import matplotlib.pyplot as plt
 import os
 import matplotlib.pyplot as plt
 
-SRC_DIR = "../src"
+FRAMEWORKS = ["cuda", "cuda_32", "openmp", "openmp_32", "serial", "serial_32", "sycl", "sycl_32"]
+SRC_DIR = "src"
+INCLUDE_DIR = "include/heat"
 EXTENSIONS = (".cpp", ".hpp", ".cu", ".c", ".h")
 
 
@@ -59,14 +61,25 @@ def count_file(path):
 
 
 def main():
-    files = []
-    for ext in EXTENSIONS:
-        files.extend(glob.glob(os.path.join(SRC_DIR, f"*{ext}")))
 
     results = {}
 
-    for file in files:
-        results[file] = count_file(file)
+    for framework in FRAMEWORKS:
+        files = []
+        for ext in EXTENSIONS:
+            search_path = os.path.join("../" + framework, os.path.join(SRC_DIR, f"*{ext}"))
+            files.extend(glob.glob(search_path))
+            search_path = os.path.join("../" + framework, os.path.join(INCLUDE_DIR, f"*{ext}"))
+            files.extend(glob.glob(search_path))
+
+        loc = {"total": 0, "blank": 0, "comment": 0, "code": 0}
+        for file in files:
+            file_loc = count_file(file)
+            loc["total"] += file_loc["total"]
+            loc["blank"] += file_loc["blank"]
+            loc["comment"] += file_loc["comment"]
+            loc["code"] += file_loc["code"]
+        results[framework] = loc
 
     # --- Print summary ---
     print("\nPer-file LOC:\n")
