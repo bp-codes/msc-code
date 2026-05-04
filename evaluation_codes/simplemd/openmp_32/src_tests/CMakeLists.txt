@@ -16,9 +16,15 @@ foreach(TEST_SRC IN LISTS TEST_FILES)
     set(TEST_TARGET "${TEST_NAME}.x")
 
     add_executable(${TEST_TARGET} ${TEST_SRC})
-    target_link_libraries(${TEST_TARGET} PRIVATE
-      SimpleMD::simplemd
-      GTest::gtest_main
+    target_link_libraries(${TEST_TARGET} 
+    PRIVATE
+        GTest::gtest_main
+    )
+    target_include_directories(${TEST_TARGET}
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/include     
+    SYSTEM PRIVATE  
+        ${CMAKE_SOURCE_DIR}/external/json     # NLohmann JSON
     )
     gtest_discover_tests(${TEST_TARGET})
 endforeach()
