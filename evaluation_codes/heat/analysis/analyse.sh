@@ -1,6 +1,14 @@
 #!/bin/bash
 
 source ~/venv.sh
+python3 python/performance.py  --results ../results
+
+
+
+
+
+
+exit 0
 
 targets=(
     serial

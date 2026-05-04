@@ -60,11 +60,11 @@ int main(int argc, char** argv) {
             throw std::runtime_error("Failed to open input json");
         in >> input;
 
-        const std::string base_file_name = "../results/serial_heat";
+        const std::string base_file_name = "../results/openmp_32_heat";
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
         const auto time_total{std::chrono::duration<double>(t1 - t0).count()};
         nlohmann::json output;
-        output["type"] = "serial";
+        output["type"] = "openmp_32";
         output["time_total"] = time_total;
         output["input"] = input;
         std::ofstream out(json_file);
