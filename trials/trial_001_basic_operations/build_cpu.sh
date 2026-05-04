@@ -12,7 +12,8 @@ trap 'echo "Error on line $LINENO (exit code $?)" >&2' ERR
          src/precise.cpp \
         -Iinclude \
         -isystem include/nlohmann \
-        -o bin/precise.x -lquadmath
+        -o bin/precise.x \
+        -lquadmath
 
     # CPU Serial
     g++ -std=c++23 -O3 -march=native -ffast-math \
