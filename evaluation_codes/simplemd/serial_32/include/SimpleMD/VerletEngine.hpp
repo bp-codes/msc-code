@@ -2,12 +2,12 @@
 #define VERLET_ENGINE_HPP
 
 /*********************************************************************************************************************************/
-#include "../Helper/_helper.hpp"
-#include "../Maths/_maths.hpp"
-#include "Atom.hpp"
-#include "Configuration.hpp"
-#include "ConfigurationEngine.hpp"
-#include "Morse.hpp"
+#include "Helper/_helper.hpp"
+#include "Maths/_maths.hpp"
+#include "SimpleMD/Atom.hpp"
+#include "SimpleMD/Configuration.hpp"
+#include "SimpleMD/ConfigurationEngine.hpp"
+#include "SimpleMD/Morse.hpp"
 /*********************************************************************************************************************************/
 
 #include <chrono>    // std::chrono::steady_clock

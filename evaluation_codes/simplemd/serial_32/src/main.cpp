@@ -9,8 +9,8 @@
 #include <filesystem>
 
 
-#include "lib/SimpleMD/_simplemd.hpp"
-#include "lib/Helper/_helper.hpp"
+#include "SimpleMD/_simplemd.hpp"
+#include "Helper/_helper.hpp"
 /*********************************************************************************************************************************/
 
 

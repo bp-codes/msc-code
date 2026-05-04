@@ -15,12 +15,12 @@
 #include <random>        // std::mt19937, std::normal_distribution, std::random_device
 #include <stdexcept>     // std::runtime_error
 #include <system_error>  // std::error_code
-#include "../Helper/_helper.hpp"
-#include "../Maths/_maths.hpp"
-#include "Atom.hpp"
-#include "Configuration.hpp"
-#include "Morse.hpp"
-#include "Timer.hpp"
+#include "Helper/_helper.hpp"
+#include "Maths/_maths.hpp"
+#include "SimpleMD/Atom.hpp"
+#include "SimpleMD/Configuration.hpp"
+#include "SimpleMD/Morse.hpp"
+#include "SimpleMD/Timer.hpp"
 /*********************************************************************************************************************************/
 
 

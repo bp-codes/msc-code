@@ -11,9 +11,14 @@
 #include <string>       // std::string
 #include <vector>       // std::vector
 #include <json.hpp>
-#include "../Helper/_helper.hpp"
-#include "../Maths/_maths.hpp"
-#include "_simplemd.hpp"
+#include "Helper/_helper.hpp"
+#include "Maths/_maths.hpp"
+#include "SimpleMD/VerletEngine.hpp"
+#include "SimpleMD/Configuration.hpp"
+#include "SimpleMD/ConfigurationEngine.hpp"
+
+#include <json.hpp>
+
 /*********************************************************************************************************************************/
 
 
