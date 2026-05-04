@@ -18,3 +18,5 @@ output/*
 *.xml
 **/results/*
 **/target_values/*
+**/analysis/*.json
+**/analysis/**/*.json
