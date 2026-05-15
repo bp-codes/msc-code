@@ -15,6 +15,7 @@
 
 #include "heat/Grid.hpp"
 #include "heat/Source.hpp"
+#include "heat/SyclFunctions.hpp"
 
 #include <nlohmann/json.hpp>
 #include <sycl/sycl.hpp>
@@ -45,7 +46,7 @@ inline float source_value_at_device(const Source& s, float t, float x, float y, 
             const float dx0 = x - s.x0;
             const float dy0 = y - s.y0;
             const float two_sigma2 = 2.0f * s.sigma * s.sigma + 1.0e-38f;
-            spatial = sycl::exp(-(dx0 * dx0 + dy0 * dy0) / two_sigma2);
+            spatial = Maths::exp(-(dx0 * dx0 + dy0 * dy0) / two_sigma2);
             break;
         }
         case Source::SpatialKind::Block: {
@@ -56,7 +57,7 @@ inline float source_value_at_device(const Source& s, float t, float x, float y, 
             // Act only on the cell that contains (x0, y0)
             const float hx = 0.5f * dx;
             const float hy = 0.5f * dy;
-            spatial = (sycl::fabs(x - s.x0) <= hx && sycl::fabs(y - s.y0) <= hy) ? 1.0f : 0.0f;
+            spatial = (Maths::abs(x - s.x0) <= hx && Maths::abs(y - s.y0) <= hy) ? 1.0f : 0.0f;
             break;
         }
     }

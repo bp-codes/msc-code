@@ -264,6 +264,7 @@ auto main(int argc, char** argv) -> int {
         j["operation"] = "Bethe-Bloch Stopping Power";
         j["comments"] = comments;
         j["threads"] = helper::get_num_threads();
+        j["precision"] = "64";
         j["device"] = "CPU";
 
         // Iteration/timing

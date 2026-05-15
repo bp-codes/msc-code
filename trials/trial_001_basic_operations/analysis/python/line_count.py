@@ -1,15 +1,13 @@
 import os
 import glob
 import matplotlib.pyplot as plt
-
-import os
-import matplotlib.pyplot as plt
+import re
 
 SRC_DIR = "../src"
 EXTENSIONS = (".cpp", ".hpp", ".cu", ".c", ".h")
 
 
-def count_file(path):
+def line_count_file(path):
     total = 0
     blank = 0
     comment = 0
@@ -58,7 +56,8 @@ def count_file(path):
     }
 
 
-def main():
+def line_count():
+
     files = []
     for ext in EXTENSIONS:
         files.extend(glob.glob(os.path.join(SRC_DIR, f"*{ext}")))
@@ -66,7 +65,7 @@ def main():
     results = {}
 
     for file in files:
-        results[file] = count_file(file)
+        results[file] = line_count_file(file)
 
     # --- Print summary ---
     print("\nPer-file LOC:\n")
@@ -173,6 +172,9 @@ def plot_horizontal_bar(labels,
 
     print(f"Saved plot: {plot_path}")
 
+
+def main():
+    line_count()
 
 
 if __name__ == "__main__":

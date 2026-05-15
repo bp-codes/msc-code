@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "heat/Grid.hpp"
+#include "heat/SyclFunctions.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -223,7 +224,7 @@ static inline double source_value_at(const Source& s, const double t, const doub
 
     if (s.spatial_kind == Source::SpatialKind::Gaussian) {
         const auto r2{(x - s.x0) * (x - s.x0) + (y - s.y0) * (y - s.y0)};
-        return s.amplitude * std::exp(-r2 / (2.0 * s.sigma * s.sigma));
+        return s.amplitude * Maths::exp(-r2 / (2.0 * s.sigma * s.sigma));
     } else if (s.spatial_kind == Source::SpatialKind::Point) {
         if (x >= s.x0 && x < (s.x0 + dx) && y >= s.y0 && y < (s.y0 + dy)) {
             return s.amplitude;

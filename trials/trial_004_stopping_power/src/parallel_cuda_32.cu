@@ -214,7 +214,7 @@ static inline void task(const std::size_t n, const float* velocity_device,
     const int blocks_for_n = static_cast<int>((n + static_cast<std::size_t>(block_size) - 1) /
                                               static_cast<std::size_t>(block_size));
 
-    int blocks = prop.multiProcessorCount * 8;
+    int blocks = prop.multiProcessorCount * 32;
     blocks = std::min(blocks, blocks_for_n);
     blocks = std::max(blocks, 1);
 
@@ -337,7 +337,8 @@ auto main(int argc, char** argv) -> int {
         j["method"] = method;
         j["operation"] = "Bethe-Bloch Stopping Power";
         j["comments"] = comments;
-        j["threads"] = 1;
+        j["threads"] = helper::get_num_threads();
+        j["precision"] = "32";
         j["device"] = "GPU";
 
         // Iteration/timing

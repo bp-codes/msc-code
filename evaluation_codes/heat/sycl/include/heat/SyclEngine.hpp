@@ -45,7 +45,7 @@ inline double source_value_at_device(const Source& s, double t, double x, double
             const double dx0 = x - s.x0;
             const double dy0 = y - s.y0;
             const double two_sigma2 = 2.0 * s.sigma * s.sigma + 1e-300;
-            spatial = sycl::exp(-(dx0 * dx0 + dy0 * dy0) / two_sigma2);
+            spatial = Maths::exp(-(dx0 * dx0 + dy0 * dy0) / two_sigma2);
             break;
         }
         case Source::SpatialKind::Block: {
@@ -56,7 +56,7 @@ inline double source_value_at_device(const Source& s, double t, double x, double
             // Act only on the cell that contains (x0, y0)
             const double hx = 0.5 * dx;
             const double hy = 0.5 * dy;
-            spatial = (sycl::fabs(x - s.x0) <= hx && sycl::fabs(y - s.y0) <= hy) ? 1.0 : 0.0;
+            spatial = (Maths::fabs(x - s.x0) <= hx && Maths::fabs(y - s.y0) <= hy) ? 1.0 : 0.0;
             break;
         }
     }

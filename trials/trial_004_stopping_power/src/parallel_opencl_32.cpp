@@ -505,7 +505,8 @@ auto main(int argc, char** argv) -> int {
             j["method"] = method;
             j["operation"] = "Bethe-Bloch Stopping Power";
             j["comments"] = comments;
-            j["threads"] = 1;
+            j["threads"] = helper::get_num_threads();
+            j["precision"] = "32";
             j["device"] = std::string(device_string);
 
             j["test_time_seconds"] = test_time_seconds;
@@ -518,6 +519,9 @@ auto main(int argc, char** argv) -> int {
 
             j["calculated_value"] = helper::to_string_precise(calculated_value);
             j["values"] = helper::to_string_precise_vector(stopping_power_values_out);
+
+            // Memory
+            j["max_rss_kb"] = helper::max_rss_kb();
 
             std::ofstream out(json_file);
             if (!out) {

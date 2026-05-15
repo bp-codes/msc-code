@@ -173,28 +173,34 @@ static inline double stopping_power(
  *
  * @return Event for the submitted kernel.
  */
-[[nodiscard]]
-static inline sycl::event task(sycl::queue& queue, const std::size_t n,
+static inline void task(sycl::queue& queue, const std::size_t n,
                                const double* const velocity_device,
                                double* const stopping_power_device) {
-    return queue.parallel_for(sycl::range<1>(n), [=](sycl::item<1> item) {
-        static constexpr auto PROJECTILE_ATOMIC_NUMBER{1};
-        static constexpr auto PROJECTILE_ATOMIC_MASS_MEV{938.2720813};
+    queue.submit([&](sycl::handler& h) {
+        h.parallel_for(sycl::range<1>(n), [=](sycl::item<1> item) {
+            static constexpr auto PROJECTILE_ATOMIC_NUMBER{1};
+            static constexpr auto PROJECTILE_ATOMIC_MASS_MEV{938.2720813};
 
-        static constexpr auto TARGET_ATOMIC_NUMBER{26};
-        static constexpr auto TARGET_ATOMIC_MASS_G_MOL{55.845};
-        static constexpr auto TARGET_DENSITY_G_CM3{7.874};
+            static constexpr auto TARGET_ATOMIC_NUMBER{26};
+            static constexpr auto TARGET_ATOMIC_MASS_G_MOL{55.845};
+            static constexpr auto TARGET_DENSITY_G_CM3{7.874};
 
-        static constexpr auto MEAN_EXCITATION_ENERGY_MEV{286.0e-6};
-        static constexpr auto DENSITY_EFFECT_DELTA{0.0};
+            static constexpr auto MEAN_EXCITATION_ENERGY_MEV{286.0e-6};
+            static constexpr auto DENSITY_EFFECT_DELTA{0.0};
 
-        const auto i{item.get_linear_id()};
+            const auto i{item.get_linear_id()};
 
-        stopping_power_device[i] =
-            stopping_power(velocity_device[i], PROJECTILE_ATOMIC_NUMBER, PROJECTILE_ATOMIC_MASS_MEV,
-                           TARGET_ATOMIC_NUMBER, TARGET_ATOMIC_MASS_G_MOL, TARGET_DENSITY_G_CM3,
-                           MEAN_EXCITATION_ENERGY_MEV, DENSITY_EFFECT_DELTA);
-    });
+            stopping_power_device[i] =
+                stopping_power(velocity_device[i],
+                                PROJECTILE_ATOMIC_NUMBER,
+                                PROJECTILE_ATOMIC_MASS_MEV,
+                                TARGET_ATOMIC_NUMBER,
+                                TARGET_ATOMIC_MASS_G_MOL,
+                                TARGET_DENSITY_G_CM3,
+                                MEAN_EXCITATION_ENERGY_MEV,
+                                DENSITY_EFFECT_DELTA);
+        });
+    }).wait();
 }
 
 auto main(int argc, char** argv) -> int {
@@ -214,8 +220,8 @@ auto main(int argc, char** argv) -> int {
     const auto n{static_cast<std::size_t>(n_raw)};
 
     std::string_view device_string = "GPU";
-    if (argc >= 5) {
-        device_string = argv[4];
+    if (argc >= 4) {
+        device_string = argv[3];
 
         if (device_string != "GPU" && device_string != "CPU") {
             THROW_INVALID_ARGUMENT("device must be GPU or CPU");
@@ -267,16 +273,11 @@ auto main(int argc, char** argv) -> int {
     const auto deadline{t1 + std::chrono::duration<double>(test_time_s)};
     auto iters{static_cast<std::uint64_t>(0)};
 
-    sycl::event last_event;
-
     // Run as many iterations as possible
     do {
-        last_event = task(queue, n, velocity_device, stopping_power_device);
+        task(queue, n, velocity_device, stopping_power_device);
         iters++;
     } while (std::chrono::steady_clock::now() < deadline);
-
-    // Ensure last submitted kernel finished before reading result
-    last_event.wait();
 
     // ======= Copy back and clean up after calculation ========
     const auto t2{std::chrono::steady_clock::now()};
@@ -319,8 +320,9 @@ auto main(int argc, char** argv) -> int {
         j["method"] = method;
         j["operation"] = "Bethe-Bloch Stopping Power";
         j["comments"] = comments;
-        j["threads"] = 1;
-        j["device"] = "GPU";
+        j["threads"] = helper::get_num_threads();
+        j["precision"] = "64";
+        j["device"] = std::string(device_string);
 
         // Iteration/timing
         j["test_time_seconds"] = test_time_s;
@@ -336,7 +338,7 @@ auto main(int argc, char** argv) -> int {
         j["values"] = helper::to_string_precise_vector(stopping_power_values);
 
         // Memory
-        // j["max_rss_kb"] = helper::max_rss_kb();
+        j["max_rss_kb"] = helper::max_rss_kb();
 
         std::ofstream out(json_file);
         if (!out) {
