@@ -253,6 +253,7 @@ auto main(int argc, char** argv) -> int {
         j["operation"] = "Bethe-Bloch Stopping Power";
         j["comments"] = comments;
         j["threads"] = 1;
+        j["precision"] = "128";
         j["device"] = "CPU";
 
         // Iteration/timing

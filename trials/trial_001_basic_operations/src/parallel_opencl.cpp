@@ -59,11 +59,9 @@ __kernel void kernel_add(
     const ulong n,
     __global const double* a,
     __global const double* b,
-    __global double* c)
-{
+    __global double* c) {
     const ulong idx = (ulong)get_global_id(0);
-    if (idx < n)
-    {
+    if (idx < n) {
         c[idx] = a[idx] + b[idx];
     }
 }
@@ -72,11 +70,9 @@ __kernel void kernel_multiply(
     const ulong n,
     __global const double* a,
     __global const double* b,
-    __global double* c)
-{
+    __global double* c) {
     const ulong idx = (ulong)get_global_id(0);
-    if (idx < n)
-    {
+    if (idx < n) {
         c[idx] = a[idx] * b[idx];
     }
 }
@@ -85,11 +81,9 @@ __kernel void kernel_divide(
     const ulong n,
     __global const double* a,
     __global const double* b,
-    __global double* c)
-{
+    __global double* c) {
     const ulong idx = (ulong)get_global_id(0);
-    if (idx < n)
-    {
+    if (idx < n) {
         const double denom = b[idx] > 1.0e-9 ? b[idx] : 1.0e-9;
         c[idx] = a[idx] / denom;
     }
@@ -99,11 +93,9 @@ __kernel void kernel_power(
     const ulong n,
     __global const double* a,
     __global const double* b,
-    __global double* c)
-{
+    __global double* c) {
     const ulong idx = (ulong)get_global_id(0);
-    if (idx < n)
-    {
+    if (idx < n) {
         c[idx] = pow(a[idx], b[idx]);
     }
 }
@@ -112,11 +104,9 @@ __kernel void kernel_exp(
     const ulong n,
     __global const double* a,
     __global const double* b,
-    __global double* c)
-{
+    __global double* c) {
     const ulong idx = (ulong)get_global_id(0);
-    if (idx < n)
-    {
+    if (idx < n) {
         c[idx] = exp(a[idx]) + exp(b[idx]);
     }
 }
@@ -125,11 +115,9 @@ __kernel void kernel_log(
     const ulong n,
     __global const double* a,
     __global const double* b,
-    __global double* c)
-{
+    __global double* c) {
     const ulong idx = (ulong)get_global_id(0);
-    if (idx < n)
-    {
+    if (idx < n) {
         c[idx] = log(a[idx]) + log(b[idx]);
     }
 }
@@ -138,11 +126,9 @@ __kernel void kernel_sqrt(
     const ulong n,
     __global const double* a,
     __global const double* b,
-    __global double* c)
-{
+    __global double* c) {
     const ulong idx = (ulong)get_global_id(0);
-    if (idx < n)
-    {
+    if (idx < n) {
         c[idx] = sqrt(a[idx]) + sqrt(b[idx]);
     }
 }
@@ -482,7 +468,7 @@ auto main(int argc, char** argv) -> int {
             j["values"] = helper::to_string_precise_vector(numbers_c);
 
             // Memory
-            // j["max_rss_kb"] = max_rss_kb();
+            j["max_rss_kb"] = helper::max_rss_kb();
 
             std::ofstream out(json_file);
             if (!out) {

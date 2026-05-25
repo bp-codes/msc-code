@@ -118,7 +118,6 @@ double task(const double* d_input, int N) {
         // Use global memory reduction (simple tree)
         int remaining = num_blocks;
         double* d_src = d_block_sums;
-        double* d_dst = d_result;
 
         while (remaining > 1) {
             int blocks = (remaining + block_size - 1) / block_size;
@@ -226,8 +225,6 @@ int main(int argc, char** argv) {
 
     std::string method{"CUDA"};
     std::string device{"gpu"};
-
-    bool passed_check = std::abs(calculated_value - expected_value) < 1.0e-9;
 
     // Output
     {

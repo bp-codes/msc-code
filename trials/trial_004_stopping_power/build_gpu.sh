@@ -9,6 +9,7 @@ export SYCL_DEVICE_FILTER=cuda
 
 acpp -O3 -ffast-math -std=c++23 \
      -v \
+     -fopenmp \
      --acpp-targets=cuda:sm_86 \
      src/parallel_sycl.cpp \
     -Iinclude \
@@ -18,6 +19,7 @@ acpp -O3 -ffast-math -std=c++23 \
 
 acpp -O3 -ffast-math -std=c++23 \
      -v \
+     -fopenmp \
      --acpp-targets=cuda:sm_86 \
      src/parallel_sycl_32.cpp \
     -Iinclude \

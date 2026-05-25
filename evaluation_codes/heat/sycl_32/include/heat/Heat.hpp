@@ -166,7 +166,7 @@ private:
         sources = parse_sources(config_file, model_grid);
 
         const auto alpha_max{*std::max_element(model_grid.alpha.begin(), model_grid.alpha.end())};
-        if (alpha_max <= 0)
+        if (alpha_max <= 0.0f)
             throw std::runtime_error("alpha must be > 0");
 
         const auto dt_max{1.0f / (2.0f * alpha_max * (model_grid.invdx2 + model_grid.invdy2))};

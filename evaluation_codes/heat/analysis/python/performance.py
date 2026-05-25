@@ -154,7 +154,7 @@ def plot_performance(
 
     methods = []
     means = []
-    maxs = []
+    mins = []
 
     for method, metrics in sorted(grouped.items()):
         time_total = metrics.get("time_total")
@@ -164,7 +164,7 @@ def plot_performance(
 
         methods.append(method)
         means.append(statistics.mean(time_total))
-        maxs.append(max(time_total))
+        mins.append(min(time_total))
 
     if not methods:
         print("No iteration data available for performance plot.")
@@ -184,11 +184,11 @@ def plot_performance(
 
     plot_horizontal_bar(
         labels=methods,
-        values=maxs,
+        values=mins,
         xlabel="Run time/s",
         title=f"Heat2D Runtime",
         output_dir="analysis",
-        output_file = f"heat2d_max_performance.png".replace(" ", "_"),
+        output_file = f"heat2d_min_performance.png".replace(" ", "_"),
         width=8,
         height=6,
         use_greyscale=False  # or False

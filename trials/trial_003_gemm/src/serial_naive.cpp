@@ -30,7 +30,7 @@
 #include <nlohmann/json.hpp>
 
 Matrix<double> task(double alpha, const Matrix<double>& A, const Matrix<double>& B, double beta,
-                    const Matrix<double>& C) {
+    const Matrix<double>& C) {
     const std::size_t M = A.rows();
     const std::size_t K = A.cols();
     const std::size_t N = B.cols();

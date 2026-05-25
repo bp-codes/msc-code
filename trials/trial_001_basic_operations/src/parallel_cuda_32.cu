@@ -158,7 +158,7 @@ auto main(int argc, char** argv) -> int {
         }
 
         std::mt19937_64 rng(RNG_SEED);
-        std::uniform_real_distribution<double> dist(0.0, 1.0);
+        std::uniform_real_distribution<double> dist(1.0, 2.0);
 
         auto numbers_a{std::vector<float>{}};
         auto numbers_b{std::vector<float>{}};

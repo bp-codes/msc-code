@@ -18,7 +18,6 @@
 #include <CL/cl.h>
 
 #include <algorithm>
-#include <charconv>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
@@ -482,7 +481,7 @@ auto main(int argc, char** argv) -> int {
             j["values"] = helper::to_string_precise_vector(numbers_c);
 
             // Memory
-            // j["max_rss_kb"] = max_rss_kb();
+            j["max_rss_kb"] = helper::max_rss_kb();
 
             std::ofstream out(json_file);
             if (!out) {

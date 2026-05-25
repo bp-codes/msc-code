@@ -9,6 +9,7 @@
 #include <random>
 #include <ranges>
 #include <string>
+#include <charconv>
 
 #include "Error.hpp"
 

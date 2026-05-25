@@ -205,7 +205,7 @@ __global__ void stopping_power_kernel(const std::size_t n,
 
 static inline void task(const std::size_t n, const double* velocity_device,
                         double* stopping_power_device) {
-    constexpr int block_size = 256;
+    constexpr int block_size = 128;
     int device = 0;
     CUDA_CHECK(cudaGetDevice(&device));
 
@@ -215,7 +215,7 @@ static inline void task(const std::size_t n, const double* velocity_device,
     const int blocks_for_n = static_cast<int>((n + static_cast<std::size_t>(block_size) - 1) /
                                               static_cast<std::size_t>(block_size));
 
-    int blocks = prop.multiProcessorCount * 8;
+    int blocks = prop.multiProcessorCount * 32;
     blocks = std::min(blocks, blocks_for_n);
     blocks = std::max(blocks, 1);
 
@@ -331,7 +331,8 @@ auto main(int argc, char** argv) -> int {
         j["method"] = method;
         j["operation"] = "Bethe-Bloch Stopping Power";
         j["comments"] = comments;
-        j["threads"] = 1;
+        j["threads"] = helper::get_num_threads();
+        j["precision"] = "64";
         j["device"] = "GPU";
 
         // Iteration/timing

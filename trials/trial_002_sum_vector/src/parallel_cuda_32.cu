@@ -118,7 +118,6 @@ float task(const float* d_input, int N) {
         // Use global memory reduction (simple tree)
         int remaining = num_blocks;
         float* d_src = d_block_sums;
-        float* d_dst = d_result;
 
         while (remaining > 1) {
             int blocks = (remaining + block_size - 1) / block_size;

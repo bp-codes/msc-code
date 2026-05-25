@@ -40,11 +40,11 @@
     } while (0)
 
 // RTX3050 100KB per SM, Warp size 32.
-constexpr int TILE = 32;
+constexpr int TILE = 16;
 
-__global__ void gemm_kernel_tiled(const float* __restrict__ A, const float* __restrict__ B,
-                                  const float* __restrict__ C, float* __restrict__ X, float k,
-                                  float l, int M, int N, int K) {
+__global__ void dgemm_kernel_tiled(const float* __restrict__ A, const float* __restrict__ B,
+                                   const float* __restrict__ C, float* __restrict__ X, float k,
+                                   float l, int M, int N, int K) {
     __shared__ float As[TILE][TILE];
     __shared__ float Bs[TILE][TILE];
 
@@ -59,10 +59,10 @@ __global__ void gemm_kernel_tiled(const float* __restrict__ A, const float* __re
         int kB = t * TILE + threadIdx.y;
 
         // Load A tile (row-major)
-        As[threadIdx.y][threadIdx.x] = (row < M && kA < K) ? A[row * K + kA] : 0.0f;
+        As[threadIdx.y][threadIdx.x] = (row < M && kA < K) ? A[row * K + kA] : 0.0;
 
         // Load B tile (row-major)
-        Bs[threadIdx.y][threadIdx.x] = (kB < K && col < N) ? B[kB * N + col] : 0.0f;
+        Bs[threadIdx.y][threadIdx.x] = (kB < K && col < N) ? B[kB * N + col] : 0.0;
 
         __syncthreads();
 
@@ -79,12 +79,13 @@ __global__ void gemm_kernel_tiled(const float* __restrict__ A, const float* __re
     }
 }
 
-inline void task(const float* d_A, const float* d_B, const float* d_C, float* d_X, const float k,
-                 const float l, const int M, const int N, const int K, cudaStream_t stream = 0) {
+inline void task(const float* d_A, const float* d_B, const float* d_C, float* d_X,
+                 const float k, const float l, const int M, const int N, const int K,
+                 cudaStream_t stream = 0) {
     dim3 block(TILE, TILE);
     dim3 grid((N + TILE - 1) / TILE, (M + TILE - 1) / TILE);
 
-    gemm_kernel_tiled<<<grid, block, 0, stream>>>(d_A, d_B, d_C, d_X, k, l, M, N, K);
+    dgemm_kernel_tiled<<<grid, block, 0, stream>>>(d_A, d_B, d_C, d_X, k, l, M, N, K);
 
     CUDA_CHECK(cudaGetLastError());
 }
@@ -157,7 +158,7 @@ int main(int argc, char** argv) {
     const auto deadline = t1 + std::chrono::duration<double>(test_time_seconds);
     std::uint64_t iters = 0;
 
-    Matrix<double> X{M, N};
+    Matrix<float> X{M, N};
 
     // Test starts
     do {
