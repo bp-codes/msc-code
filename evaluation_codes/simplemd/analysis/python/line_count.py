@@ -5,10 +5,38 @@ import matplotlib.pyplot as plt
 import os
 import matplotlib.pyplot as plt
 
-FRAMEWORKS = ["openmp", "openmp_32", "serial", "serial_32", "sycl", "sycl_32"]
+FRAMEWORKS = ["cuda", "cuda_32", "openmp", "openmp_32", "serial", "serial_32", "sycl", "sycl_32"]
 SRC_DIR = "src"
-INCLUDE_DIRS = ["include/Helper", "include/Maths", "include/SimpleMD"]
+INCLUDE_DIR = "include/SimpleMD"
 EXTENSIONS = (".cpp", ".hpp", ".cu", ".c", ".h")
+
+
+def plot_style(string, use_greyscale=False):
+    # --- Colour logic ---
+    if use_greyscale:
+        colour = "0.6"
+    else:
+        if "precise" in string:
+            colour = "#f4a3a3"
+        elif ("cuda" in string or "sycl" in string or "opencl" in string):
+            if "cpu" in string:
+                colour = "#e6f3aa"
+            else:
+                colour = "#a9d6a5"
+        elif ("parallel" in string or "openmp" in string):
+            colour = "#a8c9f0"
+        elif "serial" in string:
+            colour = "#f6c28b"
+        else:
+            colour = "grey"
+
+    # --- Hatch logic ---
+    if "32" in string:
+        hatch = "///"   # 'xx', '...', '\\\\'
+    else:
+        hatch = None
+
+    return colour, hatch
 
 
 def count_file(path):
@@ -69,9 +97,8 @@ def main():
         for ext in EXTENSIONS:
             search_path = os.path.join("../" + framework, os.path.join(SRC_DIR, f"*{ext}"))
             files.extend(glob.glob(search_path))
-            for include_dir in INCLUDE_DIRS:
-                search_path = os.path.join("../" + framework, os.path.join(include_dir, f"*{ext}"))
-                files.extend(glob.glob(search_path))
+            search_path = os.path.join("../" + framework, os.path.join(INCLUDE_DIR, f"*{ext}"))
+            files.extend(glob.glob(search_path))
 
         loc = {"total": 0, "blank": 0, "comment": 0, "code": 0}
         for file in files:
@@ -138,29 +165,8 @@ def plot_horizontal_bar(labels,
     for label in labels_sorted:
         l = label.lower()
 
-        # --- Colour logic ---
-        if use_greyscale:
-            colour = "0.6"
-        else:
-            if ("precise" in l):
-                colour = "#f4a3a3"
-            elif ("cuda" in l or "sycl" in l or "opencl" in l):
-                colour = "#a9d6a5"
-            elif "parallel" in l:
-                colour = "#a8c9f0"
-            elif "serial" in l:
-                colour = "#f6c28b"
-            else:
-                colour = "grey"
-
+        colour, hatch = plot_style(l)
         colours.append(colour)
-
-        # --- Hatch logic ---
-        if "32" in l:
-            hatch = "///"   # 'xx', '...', '\\\\'
-        else:
-            hatch = None
-
         hatches.append(hatch)
 
     # Create figure

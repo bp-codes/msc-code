@@ -1,8 +1,9 @@
 {
     "settings":
     {
-        "threads": 4,
-        "device": "cpu"
+        "threads": 6,
+        "device": "cpu",
+        "output_dir": "output"
     },
     "crystal":
     {

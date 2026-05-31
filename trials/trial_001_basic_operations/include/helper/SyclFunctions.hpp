@@ -116,6 +116,18 @@ template <std::floating_point T>
 #endif
 }
 
+// -----------------------------
+// abs
+// -----------------------------
+template <std::floating_point T>
+[[nodiscard]] inline T abs(T x) {
+#ifdef __SYCL_DEVICE_ONLY__
+    return sycl::abs(x);
+#else
+    return std::abs(x);
+#endif
+}
+
 }  // namespace SyclFunctions
 
 #endif

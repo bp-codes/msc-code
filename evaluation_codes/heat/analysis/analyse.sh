@@ -3,8 +3,20 @@
 source ~/venv.sh
 python3 python/performance.py  --results ../results
 
+python3 python/precision.py --framework serial --csv_dir output --plot_name serial
+python3 python/precision.py --framework serial_32 --csv_dir output --plot_name serial./analyse.sh
 
+python3 python/precision.py --framework openmp --csv_dir output --plot_name openmp
+python3 python/precision.py --framework openmp_32 --csv_dir output --plot_name openmp_32
 
+python3 python/precision.py --framework cuda --csv_dir output --plot_name cuda
+python3 python/precision.py --framework cuda_32 --csv_dir output --plot_name cuda_32
+
+python3 python/precision.py --framework sycl --csv_dir output_cpu --plot_name sycl_cpu
+python3 python/precision.py --framework sycl --csv_dir output_gpu --plot_name sycl_gpu
+
+python3 python/precision.py --framework sycl_32 --csv_dir output_cpu --plot_name sycl_32_cpu
+python3 python/precision.py --framework sycl_32 --csv_dir output_gpu --plot_name sycl_32_gpu
 
 
 

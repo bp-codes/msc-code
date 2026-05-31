@@ -12,3 +12,6 @@ source ~/venv.sh
 
 #python3 python/complexity.py
 python3 python/line_count.py
+python3 python/word_count.py
+python3 python/function_count.py
+python3 python/character_count.py

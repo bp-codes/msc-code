@@ -267,12 +267,13 @@ public:
      */
     static void record_to_xyz(
         const int time_step,
-        const std::filesystem::path& xyz_file,
         const Configuration& configuration)
     {
         const auto& atoms = configuration.get_atoms();
         const float alat = configuration.get_alat();
         const auto& basis = configuration.get_basis();
+
+        const auto xyz_file = configuration.get_output_dir() / "out.xyz";
 
         if (xyz_file.has_parent_path())
         {

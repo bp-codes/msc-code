@@ -15,6 +15,7 @@
 
 #include "heat/Grid.hpp"
 #include "heat/Source.hpp"
+#include "heat/SyclFunctions.hpp"
 
 #include <nlohmann/json.hpp>
 #include <sycl/sycl.hpp>

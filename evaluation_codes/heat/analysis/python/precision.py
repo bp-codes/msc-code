@@ -11,6 +11,37 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, PillowWriter
 
+FRAMEWORKS = ["cuda", "cuda_32", "openmp", "openmp_32", "serial", "serial_32", "sycl", "sycl_32"]
+
+
+def plot_style(string, use_greyscale=False):
+    # --- Colour logic ---
+    if use_greyscale:
+        colour = "0.6"
+    else:
+        if "precise" in string:
+            colour = "#f4a3a3"
+        elif ("cuda" in string or "sycl" in string or "opencl" in string):
+            if "cpu" in string:
+                colour = "#e6f3aa"
+            else:
+                colour = "#a9d6a5"
+        elif ("parallel" in string or "openmp" in string):
+            colour = "#a8c9f0"
+        elif "serial" in string:
+            colour = "#f6c28b"
+        else:
+            colour = "grey"
+
+    # --- Hatch logic ---
+    if "32" in string:
+        hatch = "///"   # 'xx', '...', '\\\\'
+    else:
+        hatch = None
+
+    return colour, hatch
+
+
 def ensure_parent_dir(file_path: str | Path) -> None:
     p = Path(file_path)
     if p.parent and not p.parent.exists():
@@ -56,7 +87,6 @@ def read_snapshot(path: str) -> Tuple[np.ndarray, Optional[float], Optional[Tupl
         arr = arr[None, :]
 
     return arr, t, meta
-
 
 
 def build_histogram_map(differences, bins=50, range=None, density=False):
@@ -109,6 +139,216 @@ def plot_histogram_map(H, edges, times=None):
     plt.show()
 
 
+def plot_difference_histogram(difference, output_dir, output_file, title, plot_normal=True):
+
+    # Flatten to 1D
+    values = difference.ravel()
+
+    # Remove NaN/inf if needed
+    values = values[np.isfinite(values)]
+
+    count = values.size
+
+    if count > 0:
+
+        mean = np.mean(values)
+        std = np.std(values)
+
+        if std <= 0:
+            std = 1e-12
+
+        # Histogram
+        histogram_counts, histogram_bins = np.histogram(
+            values,
+            bins=100
+        )
+
+        # Colours
+        colour, hatch = plot_style(title)
+        line_colour = "black"
+
+        plt.figure(figsize=(10, 6))
+
+        widths = np.diff(histogram_bins)
+
+        density = (
+            histogram_counts
+            / (np.sum(histogram_counts) * widths)
+        )
+
+        bars = plt.bar(
+            histogram_bins[:-1],
+            density,
+            width=widths,
+            align="edge",
+            color=colour,
+            alpha=0.6,
+            edgecolor="black"
+        )
+
+        for bar in bars:
+            bar.set_hatch(hatch)
+
+        if(plot_normal):
+
+            # Normal distribution fit
+            x = np.linspace(
+                histogram_bins[0],
+                histogram_bins[-1],
+                500
+            )
+
+            pdf = (
+                (1 / (std * np.sqrt(2 * np.pi)))
+                * np.exp(-0.5 * ((x - mean) / std) ** 2)
+            )
+
+            plt.plot(
+                x,
+                pdf,
+                color=line_colour,
+                linewidth=2,
+                label="Normal fit"
+            )
+
+            plt.axvline(
+                mean,
+                linestyle="--",
+                linewidth=2,
+                color=line_colour,
+                label=f"Mean = {mean:.4e}"
+            )
+
+            plt.axvline(
+                mean + std,
+                linestyle=":",
+                linewidth=2,
+                color=line_colour,
+                label=f"+1σ = {mean + std:.4e}"
+            )
+
+            plt.axvline(
+                mean - std,
+                linestyle=":",
+                linewidth=2,
+                color=line_colour,
+                label=f"-1σ = {mean - std:.4e}"
+            )
+
+        plt.title(title)
+        plt.xlabel(
+            "Relative percentage difference to reference data"
+        )
+        plt.ylabel("Density")
+        plt.yscale("log")
+        plt.grid(True)
+        if(plot_normal):
+            plt.legend()
+        plt.tight_layout()
+        plt.savefig(os.path.join(output_dir, output_file))
+        plt.close()
+
+
+
+def plot_heatmap(
+    output_dir, 
+    output_file, 
+    temperature,
+    x=None,
+    y=None,
+    title="Temperature",
+    xlabel="x",
+    ylabel="y",
+    label="Temperature",
+    figsize=(8, 6),
+    show=False,
+    vmax=None,
+    vmin=None
+):
+    """
+    Plot a 2D heatmap.
+    Parameters
+    ----------
+    x : 1D array
+        x coordinates
+
+    y : 1D array
+        y coordinates
+
+    temperature : 2D array
+        Temperature values with shape:
+        (len(y), len(x))
+
+    file_name : str | None
+        Save figure if provided
+
+    show : bool
+        Display interactively
+    """
+
+    h, w = temperature.shape
+
+    if x is None:
+        x = np.linspace(
+            -w / 2,
+            w / 2,
+            w
+        )
+
+    if y is None:
+        y = np.linspace(
+            -h / 2,
+            h / 2,
+            h
+        )
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    if(vmax is None):
+        image = ax.imshow(
+            temperature,
+            extent=[
+                np.min(x),
+                np.max(x),
+                np.min(y),
+                np.max(y)
+            ],
+            origin="lower",
+            aspect="auto",
+            cmap="inferno"
+        )
+    else:
+        image = ax.imshow(
+            temperature,
+            extent=[
+                np.min(x),
+                np.max(x),
+                np.min(y),
+                np.max(y)
+            ],
+            origin="lower",
+            aspect="auto",
+            cmap="inferno",
+            vmin=vmin,
+            vmax=vmax
+        )
+
+    cbar = plt.colorbar(image, ax=ax)
+    cbar.set_label(label)
+
+    ax.set_title(title)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    plt.tight_layout()
+
+    file_name = os.path.join(output_dir, output_file)
+    if file_name:
+        plt.savefig(file_name, dpi=300)
+    if show:
+        plt.show()
+    plt.close()
+
+
 
 def load_set(path):
     results = []
@@ -118,22 +358,144 @@ def load_set(path):
         results.append((arr, t, meta))
     return results
 
-def main():
+
+
+def main() -> None:
+
+    parser = argparse.ArgumentParser(
+        description="Analyse benchmark results"
+    )
+
+    parser.add_argument(
+        "--framework",
+        type=Path,
+        default=Path(""),
+        help="Framework"
+    )
+
+    parser.add_argument(
+        "--csv_dir",
+        type=Path,
+        default=Path(""),
+        help="CSV directory in framework directory"
+    )
+
+    parser.add_argument(
+        "--plot_name",
+        type=Path,
+        default=Path(""),
+        help="Plot Name"
+    )
+
+    args = parser.parse_args()
+
+    print(f"Precision for {args.framework}")
+
+    output_dir = "analysis"
+    Path(output_dir).mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
     precise = Path("../serial/output")
     precise_results = load_set(precise)
 
-    openmp_32 = Path("../sycl_32/output")
+    openmp_32 = Path(f"../{args.framework}/{args.csv_dir}")
     openmp_32_results = load_set(openmp_32)
 
+    last_step = min(len(precise_results), len(openmp_32_results)) - 1
+
     differences = [
-        precise_results[i][0] - openmp_32_results[i][0]
-        for i in range(len(precise_results))
+        100 * np.divide(
+            precise_results[i][0]
+            - openmp_32_results[i][0],
+            precise_results[i][0],
+            out=np.zeros_like(precise_results[i][0]),
+            where=precise_results[i][0] != 0
+        )
+        for i in range(last_step)
     ]
+
+    print(differences)
+    
+    vmax_list = [
+        np.maximum(np.max(precise_results[i][0]), np.max(openmp_32_results[i][0]))
+        for i in range(last_step)
+    ]
+    print(vmax_list)
+    vmax = np.max(vmax_list)
+    print(vmax)
+
+    vmax_differences_list = [
+        np.max(differences[i])
+        for i in range(last_step)
+    ]
+    print(vmax_differences_list)
+    vmax_differences = np.max(vmax_differences_list)
+    print(vmax_differences)
+
+    vmin_differences_list = [
+        np.min(differences[i])
+        for i in range(last_step)
+    ]
+    print(vmin_differences_list)
+    vmin_differences = np.min(vmin_differences_list)
+    print(vmin_differences)
 
     times = [precise_results[i][1] for i in range(len(precise_results))]
 
-    H, edges = build_histogram_map(differences, bins=60)
-    plot_histogram_map(H, edges, times)
+    step = 0
+    while(step < last_step):
+        time = times[step]
+        plot_difference_histogram(differences[step], output_dir, f"precision_{args.plot_name}_difference_{step}.png",
+                                  f"{args.plot_name} Relative Difference {args.plot_name} t={time}s", False)
+        
+        plot_heatmap(output_dir=output_dir,
+                    output_file=f"heatmap_{args.plot_name}_difference_{step}.png",
+                    temperature=differences[step],
+                    title=f"Temperature difference {args.plot_name} t={time}s",
+                    label="Percentage")
+        plot_heatmap(output_dir=output_dir,
+                    output_file=f"heatmap_reference_{step}.png",
+                    temperature=precise_results[step][0],
+                    title=f"Temperature reference t={time}s",
+                    label="Temperature", 
+                    vmax=vmax,
+                    vmin=0.0)
+        plot_heatmap(output_dir=output_dir,
+                    output_file=f"heatmap_{args.plot_name}_{step}.png",
+                    temperature=openmp_32_results[step][0],
+                    title=f"Temperature {args.plot_name} t={time}s",
+                    label="Temperature", 
+                    vmax=vmax,
+                    vmin=0.0)
+
+        step = step + 10
+
+    time = times[last_step-1]
+    plot_difference_histogram(differences[last_step-1], output_dir, f"precision_{args.plot_name}_difference_{last_step-1}.png",
+                                f"{args.plot_name} Relative Difference {args.plot_name} t={time}s", False)
+
+    plot_heatmap(output_dir=output_dir,
+                output_file=f"heatmap_{args.plot_name}_difference_{last_step-1}.png",
+                temperature=differences[last_step-1],
+                title=f"Temperature difference {args.plot_name} t={time}s",
+                label="TemperPercentageature", 
+                vmax=vmax_differences)
+    plot_heatmap(output_dir=output_dir,
+                output_file=f"heatmap_reference_{last_step-1}.png",
+                temperature=precise_results[last_step-1][0],
+                title=f"Temperature reference t={time}s",
+                label="Temperature", 
+                vmax=vmax)
+    plot_heatmap(output_dir=output_dir,
+                output_file=f"heatmap_{args.plot_name}_{last_step-1}.png",
+                temperature=openmp_32_results[last_step-1][0],
+                title=f"Temperature {args.plot_name} t={time}s",
+                label="Temperature", 
+                vmax=vmax)
+
+
 
 if __name__ == "__main__":
     main()

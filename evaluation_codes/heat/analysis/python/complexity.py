@@ -7,6 +7,34 @@ import matplotlib.pyplot as plt
 INPUT_DIR = "complexity"
 
 
+def plot_style(string, use_greyscale=False):
+    # --- Colour logic ---
+    if use_greyscale:
+        colour = "0.6"
+    else:
+        if "precise" in string:
+            colour = "#f4a3a3"
+        elif ("cuda" in string or "sycl" in string or "opencl" in string):
+            if "cpu" in string:
+                colour = "#e6f3aa"
+            else:
+                colour = "#a9d6a5"
+        elif ("parallel" in string or "openmp" in string):
+            colour = "#a8c9f0"
+        elif "serial" in string:
+            colour = "#f6c28b"
+        else:
+            colour = "grey"
+
+    # --- Hatch logic ---
+    if "32" in string:
+        hatch = "///"   # 'xx', '...', '\\\\'
+    else:
+        hatch = None
+
+    return colour, hatch
+
+
 def parse_file(xml_path):
     tree = ET.parse(xml_path)
     root = tree.getroot()
@@ -159,30 +187,9 @@ def plot_horizontal_bar(labels,
 
     for label in labels_sorted:
         l = label.lower()
-
-        # --- Colour logic ---
-        if use_greyscale:
-            colour = "0.6"
-        else:
-            if ("precise" in l):
-                colour = "#f4a3a3"
-            elif ("cuda" in l or "sycl" in l or "opencl" in l):
-                colour = "#a9d6a5"
-            elif "parallel" in l:
-                colour = "#a8c9f0"
-            elif "serial" in l:
-                colour = "#f6c28b"
-            else:
-                colour = "grey"
-
+        
+        colour, hatch = plot_style(l)
         colours.append(colour)
-
-        # --- Hatch logic ---
-        if "32" in l:
-            hatch = "///"   # 'xx', '...', '\\\\'
-        else:
-            hatch = None
-
         hatches.append(hatch)
 
     # Create figure

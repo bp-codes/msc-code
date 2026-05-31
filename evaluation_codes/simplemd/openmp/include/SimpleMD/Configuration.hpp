@@ -15,6 +15,7 @@ namespace SimpleMD {
 class Configuration {
 private:
     std::string _device{};
+    std::filesystem::path _output_dir {};
     double _heat{0.0};
     double _alat{1.0};
     std::array<double, 9> _basis = {1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0};
@@ -31,6 +32,7 @@ private:
 
 public:
     STRING_SET_GET(device);
+    CLASS_SET_GET(std::filesystem::path, output_dir);
     DOUBLE_SET_GET(heat);
     SIZE_T_SET_GET(crystal_size);
     DOUBLE_SET_GET(alat);

@@ -12,6 +12,32 @@ import matplotlib.pyplot as plt
 import os
 
 
+def plot_style(string, use_greyscale=False):
+    # --- Colour logic ---
+    if use_greyscale:
+        colour = "0.6"
+    else:
+        if "precise" in string:
+            colour = "#f4a3a3"
+        elif ("cuda" in string or "sycl" in string or "opencl" in string):
+            if "cpu" in string:
+                colour = "#e6f3aa"
+            else:
+                colour = "#a9d6a5"
+        elif ("parallel" in string or "openmp" in string):
+            colour = "#a8c9f0"
+        elif "serial" in string:
+            colour = "#f6c28b"
+        else:
+            colour = "grey"
+
+    # --- Hatch logic ---
+    if "32" in string:
+        hatch = "///"   # 'xx', '...', '\\\\'
+    else:
+        hatch = None
+
+    return colour, hatch
 
 
 def parse_float(value) -> float:
@@ -24,8 +50,6 @@ def parse_float_list(values) -> list[float]:
         raise TypeError("Expected a list of numeric values")
 
     return [parse_float(value) for value in values]
-
-
 
 
 def load_results(
@@ -56,12 +80,16 @@ def load_results(
         if input is None:
             continue
 
-        device = input.get("device")
+        settings = input.get("settings")
+        device = settings.get("device")
         if device is not None:
             run_type = run_type + "_" + device
 
-        for field in ["time_total"]:
+        for field in ["time", "max_rss_kb"]:
             value = data.get(field)
+            if(field == "time"):
+                field = "time_total"
+                value = value.get("total")
 
             if value is None:
                 continue
@@ -146,7 +174,58 @@ def load_results(
 
 
 
-def plot_performance(
+def plot_performance_runtime(
+    grouped: dict[str, dict[str, list[float]]],
+    analysis_dir: Path
+) -> None:
+    import matplotlib.pyplot as plt
+
+    methods = []
+    means = []
+    mins = []
+
+    for method, metrics in sorted(grouped.items()):
+        time_total = metrics.get("time_total")
+
+        if not time_total:
+            continue
+
+        methods.append(method)
+        means.append(statistics.mean(time_total))
+        mins.append(min(time_total))
+
+    if not methods:
+        print("No iteration data available for performance plot.")
+        return
+
+    plot_horizontal_bar(
+        labels=methods,
+        values=means,
+        xlabel="Run time/s",
+        title=f"SimpleMD Runtime",
+        output_dir="analysis",
+        output_file = f"simplemd_mean_runtime.png".replace(" ", "_"),
+        width=8,
+        height=6,
+        use_greyscale=False  # or False
+    )
+
+    plot_horizontal_bar(
+        labels=methods,
+        values=mins,
+        xlabel="Run time/s",
+        title=f"SimpleMD Runtime",
+        output_dir="analysis",
+        output_file = f"simplemd_min_runtime.png".replace(" ", "_"),
+        width=8,
+        height=6,
+        use_greyscale=False  # or False
+    )
+
+
+
+
+def plot_performance_memory(
     grouped: dict[str, dict[str, list[float]]],
     analysis_dir: Path
 ) -> None:
@@ -157,14 +236,14 @@ def plot_performance(
     maxs = []
 
     for method, metrics in sorted(grouped.items()):
-        time_total = metrics.get("time_total")
+        max_rss_kb = metrics.get("max_rss_kb")
 
-        if not time_total:
+        if not max_rss_kb:
             continue
 
         methods.append(method)
-        means.append(statistics.mean(time_total))
-        maxs.append(max(time_total))
+        means.append(statistics.mean(max_rss_kb))
+        maxs.append(min(max_rss_kb))
 
     if not methods:
         print("No iteration data available for performance plot.")
@@ -174,9 +253,9 @@ def plot_performance(
         labels=methods,
         values=means,
         xlabel="Run time/s",
-        title=f"Heat2D Runtime",
+        title=f"SimpleMD Runtime",
         output_dir="analysis",
-        output_file = f"heat2d_mean_performance.png".replace(" ", "_"),
+        output_file = f"simplemd_mean_memory.png".replace(" ", "_"),
         width=8,
         height=6,
         use_greyscale=False  # or False
@@ -186,14 +265,13 @@ def plot_performance(
         labels=methods,
         values=maxs,
         xlabel="Run time/s",
-        title=f"Heat2D Runtime",
+        title=f"SimpleMD Runtime",
         output_dir="analysis",
-        output_file = f"heat2d_max_performance.png".replace(" ", "_"),
+        output_file = f"simplemd_max_memory.png".replace(" ", "_"),
         width=8,
         height=6,
         use_greyscale=False  # or False
     )
-
 
 
 
@@ -222,29 +300,9 @@ def plot_horizontal_bar(labels,
     for label in labels_sorted:
         l = label.lower()
 
-        # --- Colour logic ---
-        if use_greyscale:
-            colour = "0.6"
-        else:
-            if ("precise" in l):
-                colour = "#f4a3a3"
-            elif ("cuda" in l or "sycl" in l or "opencl" in l):
-                colour = "#a9d6a5"
-            elif ("parallel" in l or "openmp" in l):
-                colour = "#a8c9f0"
-            elif "serial" in l:
-                colour = "#f6c28b"
-            else:
-                colour = "grey"
+        colour, hatch = plot_style(l)
 
         colours.append(colour)
-
-        # --- Hatch logic ---
-        if "32" in l:
-            hatch = "///"   # 'xx', '...', '\\\\'
-        else:
-            hatch = None
-
         hatches.append(hatch)
 
     # Create figure
@@ -302,7 +360,8 @@ def main() -> None:
     analysis_dir.mkdir(parents=True, exist_ok=True)
 
     grouped = load_results(results_dir)
-    plot_performance(grouped, analysis_dir)
+    plot_performance_runtime(grouped, analysis_dir)
+    plot_performance_memory(grouped, analysis_dir)
 
     """
     if not grouped:

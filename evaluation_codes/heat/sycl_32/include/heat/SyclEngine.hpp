@@ -57,7 +57,7 @@ inline float source_value_at_device(const Source& s, float t, float x, float y, 
             // Act only on the cell that contains (x0, y0)
             const float hx = 0.5f * dx;
             const float hy = 0.5f * dy;
-            spatial = (Maths::abs(x - s.x0) <= hx && Maths::abs(y - s.y0) <= hy) ? 1.0f : 0.0f;
+            spatial = (Maths::fabs(x - s.x0) <= hx && Maths::fabs(y - s.y0) <= hy) ? 1.0f : 0.0f;
             break;
         }
     }

@@ -197,11 +197,12 @@ public:
         timer.update_updating_neighbour_list(t1 - t0);
     }
 
-    static void record_to_xyz(const int time_step, const std::filesystem::path& xyz_file,
-                              Configuration& configuration) {
+    static void record_to_xyz(const int time_step, Configuration& configuration) {
         const auto& atoms = configuration.get_atoms();
         const float alat = configuration.get_alat();
         const auto& basis = configuration.get_basis();
+
+        const auto xyz_file = configuration.get_output_dir() / "out.xyz";
 
         // Ensure the directory exists
         if (xyz_file.has_parent_path()) {
@@ -468,13 +469,14 @@ public:
         timer.update_updating_neighbour_list(t1 - t0);
     }
 
-    static void record_to_xyz_sycl(const int time_step, const std::filesystem::path& xyz_file,
-                                   Configuration& configuration) {
+    static void record_to_xyz_sycl(const int time_step, Configuration& configuration) {
         download_from_device(configuration);
 
         const auto& atoms = configuration.get_atoms();
         const float alat = configuration.get_alat();
         const auto& basis = configuration.get_basis();
+
+        const auto xyz_file = configuration.get_output_dir() / "out.xyz";
 
         // Ensure the directory exists
         if (xyz_file.has_parent_path()) {
