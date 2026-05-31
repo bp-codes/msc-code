@@ -69,6 +69,7 @@ int main(int argc, char** argv) {
         nlohmann::json output;
         output["type"] = "sycl";
         output["time_total"] = time_total;
+        output["max_rss_kb"] = helper::max_rss_kb();
         output["input"] = input;
         std::ofstream out(json_file);
         if (!out)

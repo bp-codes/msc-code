@@ -65,6 +65,7 @@ int main(int argc, char* argv[])
     output["time"]["making_neighbour_list"] = timer.get_making_neighbour_list_seconds();
     output["time"]["updating_neighbour_list"] = timer.get_updating_neighbour_list_seconds();
     output["time"]["overall_time"] = timer.get_overall_time_seconds();
+    output["max_rss_kb"] = helper::max_rss_kb();
     output["input"] = input;
     std::ofstream out(json_file);
     if (!out) throw std::runtime_error("Failed to open output JSON file.");

@@ -19,6 +19,7 @@ class ConfigurationEngine;
 class Configuration {
 private:
     std::string _device{};
+    std::filesystem::path _output_dir {};
     float _heat{0.0f};
     float _alat{1.0f};
     std::array<float, 9> _basis = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
@@ -47,6 +48,7 @@ public:
 
 public:
     STRING_SET_GET(device);
+    CLASS_SET_GET(std::filesystem::path, output_dir);
     FLOAT_SET_GET(heat);
     FLOAT_SET_GET(alat);
     ARRAY9F_SET_GET(basis);

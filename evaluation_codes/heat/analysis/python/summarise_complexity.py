@@ -8,6 +8,34 @@ import statistics
 from pathlib import Path
 
 
+def plot_style(string, use_greyscale=False):
+    # --- Colour logic ---
+    if use_greyscale:
+        colour = "0.6"
+    else:
+        if "precise" in string:
+            colour = "#f4a3a3"
+        elif ("cuda" in string or "sycl" in string or "opencl" in string):
+            if "cpu" in string:
+                colour = "#e6f3aa"
+            else:
+                colour = "#a9d6a5"
+        elif ("parallel" in string or "openmp" in string):
+            colour = "#a8c9f0"
+        elif "serial" in string:
+            colour = "#f6c28b"
+        else:
+            colour = "grey"
+
+    # --- Hatch logic ---
+    if "32" in string:
+        hatch = "///"   # 'xx', '...', '\\\\'
+    else:
+        hatch = None
+
+    return colour, hatch
+
+
 def load_functions(json_path: Path) -> list[dict[str, object]]:
     with open(json_path, "r", encoding="utf-8") as f:
         data = json.load(f)

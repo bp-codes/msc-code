@@ -3,7 +3,13 @@
 source ~/venv.sh
 python3 python/performance.py  --results ../results
 
-
+python3 python/precision.py ../serial/output/out.xyz ../serial_32/output/out.xyz --outdir=precision/serial_32 --plot_name serial_32
+python3 python/precision.py ../serial/output/out.xyz ../openmp/output/out.xyz --outdir=precision/openmp --plot_name openmp
+python3 python/precision.py ../serial/output/out.xyz ../openmp_32/output/out.xyz --outdir=precision/openmp_32 --plot_name openmp_32
+python3 python/precision.py ../serial/output/out.xyz ../sycl/output_cpu/out.xyz --outdir=precision/sycl --plot_name sycl_cpu
+python3 python/precision.py ../serial/output/out.xyz ../sycl/output_gpu/out.xyz --outdir=precision/sycl --plot_name sycl_gpu
+python3 python/precision.py ../serial/output/out.xyz ../sycl_32/output_cpu/out.xyz --outdir=precision/sycl_32 --plot_name sycl_32_cpu
+python3 python/precision.py ../serial/output/out.xyz ../sycl_32/output_gpu/out.xyz --outdir=precision/sycl_32 --plot_name sycl_32_gpu
 
 
 

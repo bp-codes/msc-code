@@ -63,7 +63,7 @@ public:
 
             if (i % configuration.get_xyz_every() == 0)
             {
-                ConfigurationEngine::record_to_xyz(static_cast<int>(i), std::filesystem::path("results/out.xyz"), configuration);
+                ConfigurationEngine::record_to_xyz(static_cast<int>(i), configuration);
             }
         }
         auto t1 {std::chrono::steady_clock::now()};
@@ -108,6 +108,7 @@ public:
         // changing behavior/assumptions around JSON schema.
         auto threads {Run::load<std::size_t>(config, {"settings", "threads"})};
         auto device {Run::load<std::string>(config, {"settings", "device"})};
+        auto output_dir {Run::load<std::filesystem::path>(config, {"settings", "output_dir"})};
 
         auto heat {Run::load<float>(config, {"crystal", "heat"})};
         auto crystal_structure {Run::load<std::string>(config, {"crystal", "structure"})};
@@ -145,6 +146,8 @@ public:
             THROW_RUNTIME_ERROR("Crystal structure must be bcc or fcc.");
         }
 
+        configuration.set_device(device);
+        configuration.set_output_dir(output_dir);
         configuration.set_crystal_size(n);
         configuration.set_alat(n * alat);
         configuration.set_basis(basis);

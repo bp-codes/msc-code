@@ -26,6 +26,7 @@ namespace SimpleMD {
 class Configuration {
 private:
     std::string _device{};
+    std::filesystem::path _output_dir {};
     double _heat{0.0};
     double _alat{1.0};
 
@@ -46,6 +47,7 @@ private:
 
 public:
     STRING_SET_GET(device);
+    CLASS_SET_GET(std::filesystem::path, output_dir);
     DOUBLE_SET_GET(heat);
     DOUBLE_SET_GET(alat);
     ARRAY9_SET_GET(basis);

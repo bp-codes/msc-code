@@ -688,25 +688,15 @@ def plot_horizontal_bar(
 
             if "precise" in l:
                 colour = "#f4a3a3"
-
-            elif (
-                "cuda" in l
-                or "sycl" in l
-                or "opencl" in l
-            ):
-
+            elif ("cuda" in l or "sycl" in l or "opencl" in l):
                 if "cpu" in l:
                     colour = "#e6f3aa"
-
                 else:
                     colour = "#a9d6a5"
-
-            elif "parallel" in l:
+            elif ("parallel" in l or "openmp" in l):
                 colour = "#a8c9f0"
-
             elif "serial" in l:
                 colour = "#f6c28b"
-
             else:
                 colour = "grey"
 

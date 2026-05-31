@@ -67,58 +67,6 @@ public:
         }
     }
 
-    static void make_neighbour_list(Configuration& configuration) {
-        auto t0 = std::chrono::steady_clock::now();
-
-        const auto& atoms = configuration.get_atoms();
-        const double alat = configuration.get_alat();
-        const auto& basis = configuration.get_basis();
-
-        auto& neighbour_list = configuration.get_neighbour_list();
-        auto& timer = TimerOnce::get();
-
-        std::size_t max_list_size = 1'000'000;
-
-        neighbour_list.clear();
-        neighbour_list.reserve(max_list_size);
-
-        const double r_verlet_cutoff = configuration.get_r_verlet_cutoff();
-        const double r_verlet_cutoff_sq = r_verlet_cutoff * r_verlet_cutoff;
-
-        const std::size_t n_atoms = atoms.size();
-
-#pragma omp parallel
-        {
-            std::size_t max_local_list_size = max_list_size / omp_get_max_threads();
-
-            std::vector<AtomPair> local_neighbour_list;
-            local_neighbour_list.reserve(max_local_list_size);
-
-#pragma omp for schedule(static)
-            for (size_t i = 0; i < atoms.size() - 1; ++i) {
-                const auto& atom_i = atoms[i];
-
-                for (size_t j = i + 1; j < atoms.size(); ++j) {
-                    const auto& atom_j = atoms[j];
-
-                    // If a pair, add to local_neighbour_list
-                    pair_atoms(configuration, r_verlet_cutoff_sq, atom_i, atom_j, i, j,
-                               local_neighbour_list);
-                }
-            }
-
-#pragma omp critical
-            {
-                neighbour_list.insert(neighbour_list.end(), local_neighbour_list.begin(),
-                                      local_neighbour_list.end());
-            }
-        }
-
-        std::cout << neighbour_list.size() << std::endl;
-        auto t1 = std::chrono::steady_clock::now();
-        timer.update_making_neighbour_list(t1 - t0);
-    }
-
     static void pair_atoms(Configuration& configuration, const double r_verlet_cutoff_sq,
                            const Atom& atom_i, const Atom& atom_j, size_t ni, size_t nj,
                            std::vector<AtomPair>& local_neighbour_list) {
@@ -195,11 +143,12 @@ public:
         timer.update_updating_neighbour_list(t1 - t0);
     }
 
-    static void record_to_xyz(const int time_step, const std::filesystem::path& xyz_file,
-                              Configuration& configuration) {
+    static void record_to_xyz(const int time_step, Configuration& configuration) {
         const auto& atoms = configuration.get_atoms();
         const double alat = configuration.get_alat();
         const auto& basis = configuration.get_basis();
+
+        const auto xyz_file = configuration.get_output_dir() / "out.xyz";
 
         // Ensure the directory exists
         if (xyz_file.has_parent_path()) {
@@ -288,7 +237,7 @@ public:
         q.memcpy(atoms.data(), configuration._d_atoms, n * sizeof(Atom)).wait();
     }
 
-    static void make_neighbour_list_sycl(Configuration& configuration) {
+    static void make_neighbour_list(Configuration& configuration) {
         auto t0 = std::chrono::steady_clock::now();
 
         auto& timer = TimerOnce::get();
@@ -466,13 +415,14 @@ public:
         timer.update_updating_neighbour_list(t1 - t0);
     }
 
-    static void record_to_xyz_sycl(const int time_step, const std::filesystem::path& xyz_file,
-                                   Configuration& configuration) {
+    static void record_to_xyz_sycl(const int time_step, Configuration& configuration) {
         download_from_device(configuration);
 
         const auto& atoms = configuration.get_atoms();
         const double alat = configuration.get_alat();
         const auto& basis = configuration.get_basis();
+
+        const auto xyz_file = configuration.get_output_dir() / "out.xyz";
 
         // Ensure the directory exists
         if (xyz_file.has_parent_path()) {

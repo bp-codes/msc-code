@@ -225,11 +225,13 @@ public:
      *
      * @throws std::runtime_error If the file cannot be opened for writing.
      */
-    static void record_to_xyz(const int time_step, const std::filesystem::path& xyz_file,
+    static void record_to_xyz(const int time_step, 
                               const Configuration& configuration) {
         const auto& atoms = configuration.get_atoms();
         const double alat = configuration.get_alat();
         const auto& basis = configuration.get_basis();
+        
+        const auto xyz_file = configuration.get_output_dir() / "out.xyz";
 
         if (xyz_file.has_parent_path()) {
             std::error_code ec;
