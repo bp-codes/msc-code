@@ -1,43 +1,43 @@
 #ifndef HEAT_HPP
 #define HEAT_HPP
 
-#include <iostream>
-#include <fstream>
-#include <vector>
-#include <string>
-#include <cmath>
-#include <iomanip>
-#include <stdexcept>
-#include <filesystem>
-#include <algorithm>
-#include <chrono>
 #include <omp.h>
 
-#include <nlohmann/json.hpp>
+#include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
 #include "heat/Grid.hpp"
 #include "heat/Source.hpp"
+#include "heat/OpenclEngine.hpp"
 #include "heat/Writer.hpp"
-#include "heat/CudaEngine.hpp"
+
+#include <nlohmann/json.hpp>
 
 /**
  * @file Heat.hpp
- * @brief Heat equation solver driver using a CUDA backend.
+ * @brief Heat equation solver driver using a SYCL backend.
  *
  * Reads a JSON configuration, initializes the simulation grid and sources,
- * creates output snapshots, and advances the solution in time using a CUDA engine.
+ * sets up a SYCL engine (device buffers), advances the solution in time,
+ * and writes periodic snapshots.
  *
  * @warning This class performs filesystem I/O and may throw on invalid input.
  */
-class Heat
-{
+class Heat {
 public:
-
     /**
      * @brief Run a heat simulation using the provided input file.
      *
      * Reads the JSON configuration from @p input_file, initializes the model grid,
      * validates stability constraints, creates the output directory, constructs
-     * a CUDA engine (device buffers), runs the solver, and prints execution time.
+     * a SYCL engine for the selected device, runs the solver, and prints execution time.
      *
      * @param input_file Path to the JSON configuration file.
      *
@@ -45,49 +45,47 @@ public:
      * @throws nlohmann::json::exception If required JSON fields are missing or have the wrong type.
      * @throws std::filesystem::filesystem_error If creating the output directory fails.
      */
-    static void run(std::string& input_file)
-    {
-        const auto start {std::chrono::high_resolution_clock::now()};
+    static void run(std::string& input_file) {
+        const auto start{std::chrono::high_resolution_clock::now()};
 
-        auto model_grid {Grid{}};
-        auto sources {std::vector<Source>{}};
-        auto dt {0.0f};
-        auto t_final {0.0f};
-        auto snapshot_every {0};
-        auto outdir {std::filesystem::path{}};
-        auto prefix {std::string{}};
-        auto queue_output {false};
+        auto device{std::string{}};
+        auto model_grid{Grid{}};
+        auto sources{std::vector<Source>{}};
+        auto dt{0.0f};
+        auto t_final{0.0f};
+        auto snapshot_every{0};
+        auto outdir{std::filesystem::path{}};
+        auto prefix{std::filesystem::path{}};
+        auto queue_output{false};
 
         // Read input
-        Heat::read_input(input_file, model_grid, sources, dt, t_final, snapshot_every, outdir, prefix, queue_output);
+        Heat::read_input(input_file, device, model_grid, sources, dt, t_final, snapshot_every,
+                         outdir, prefix, queue_output);
 
         // Make output dir
-        try
-        {
+        try {
             std::filesystem::create_directory(outdir);
-        }
-        catch (const std::filesystem::filesystem_error& e)
-        {
+        } catch (const std::filesystem::filesystem_error& e) {
             std::cerr << "Error: " << e.what() << std::endl;
         }
 
-        // Set up Cuda Engine
-        CudaEngine cuda_engine {model_grid.nx, model_grid.ny, sources.size()};
+        // Set up sycl engine (will store grid and sources on device)
+        OpenCLEngine opencl_engine{device, model_grid.nx, model_grid.ny, sources.size()};
 
         // Heat grid
-        Heat::heat_grid_cuda(cuda_engine, model_grid, sources, dt, t_final, snapshot_every, outdir, prefix, queue_output);
+        Heat::heat_grid(opencl_engine, model_grid, sources, dt, t_final, snapshot_every, outdir,
+                             prefix, queue_output);
 
         // Record end time
-        const auto end {std::chrono::high_resolution_clock::now()};
+        const auto end{std::chrono::high_resolution_clock::now()};
 
         // Compute duration in milliseconds
-        const std::chrono::duration<double, std::milli> duration {end - start};
+        const std::chrono::duration<double, std::milli> duration{end - start};
 
         std::cout << "Execution time: " << duration.count() << " ms\n";
     }
 
 private:
-
     /**
      * @brief Root-mean-square (RMS) magnitude of a vector.
      *
@@ -100,23 +98,23 @@ private:
      *         Callers must ensure @p a is non-empty.
      */
     [[nodiscard]]
-    static float rss(const std::vector<float>& a)
-    {
-        auto sum {0.0f};
-        for (const auto v : a)
-        {
+    static float rss(const std::vector<float>& a) {
+        auto sum{0.0f};
+        for (const auto v : a) {
             sum += (v * v) / a.size();
         }
-        return sqrtf(sum);
+        return std::sqrt(sum);
     }
 
     /**
      * @brief Read and validate the JSON input file and initialize simulation state.
      *
-     * Loads grid settings, alpha regions, time-stepping parameters, and output settings;
-     * enforces Dirichlet boundaries; parses sources; and enforces a stable time step.
+     * Loads the selected device string, grid settings, alpha regions, time-stepping parameters,
+     * and output settings; enforces Dirichlet boundaries; parses sources; and enforces a stable
+     * time step.
      *
      * @param input_file Path to JSON configuration file.
+     * @param device Selected device identifier (output).
      * @param model_grid Grid to initialize.
      * @param sources Vector of parsed sources (may be empty).
      * @param dt Time step (may be overridden for stability).
@@ -129,21 +127,13 @@ private:
      * @throws std::runtime_error If the config file cannot be opened or contains invalid values.
      * @throws nlohmann::json::exception If required JSON fields are missing or have the wrong type.
      */
-    static void read_input(
-        std::string& input_file,
-        Grid& model_grid,
-        std::vector<Source>& sources,
-        float& dt,
-        float& t_final,
-        int& snapshot_every,
-        std::filesystem::path& outdir,
-        std::string& prefix,
-        bool& queue_output)
-    {
+    static void read_input(std::string& input_file, std::string& device, Grid& model_grid,
+                           std::vector<Source>& sources, float& dt, float& t_final,
+                           int& snapshot_every, std::filesystem::path& outdir,
+                           std::filesystem::path& prefix, bool& queue_output) {
         // Try reading config file
         std::ifstream in(input_file);
-        if (!in)
-        {
+        if (!in) {
             throw std::runtime_error(std::string("Cannot open config file: ") + input_file);
         }
 
@@ -151,17 +141,21 @@ private:
         nlohmann::json config_file;
         in >> config_file;
 
+        // Read selected device
+        device = config_file.at("device").get<std::string>();
+
         // Set up the 2D model grid and load alpha/thermal diffusivity regions
         model_grid = Grid::Load_settings(config_file);
         set_alpha_regions(model_grid, config_file.at("alpha"));
 
         dt = config_file.value("dt", 0.0f);
         t_final = config_file.at("t_final").get<float>();
-        if (t_final <= 0.0f) throw std::runtime_error("t_final must be > 0");
+        if (t_final <= 0.0f)
+            throw std::runtime_error("t_final must be > 0");
 
         snapshot_every = std::max(1, config_file.value("snapshot_every", 100));
         outdir = config_file.value("output_dir", std::filesystem::path("out"));
-        prefix = config_file.value("output_prefix", std::string("heat"));
+        prefix = config_file.value("output_prefix", std::filesystem::path("heat"));
         queue_output = config_file.value("queue_output", true);
 
         // Zero out the boundaries of the grid
@@ -170,15 +164,14 @@ private:
         // Parse sources (optional)
         sources = parse_sources(config_file, model_grid);
 
-        const auto alpha_max {*std::max_element(model_grid.alpha.begin(), model_grid.alpha.end())};
-        if (alpha_max <= 0.0f) throw std::runtime_error("alpha must be > 0");
+        const auto alpha_max{*std::max_element(model_grid.alpha.begin(), model_grid.alpha.end())};
+        if (alpha_max <= 0)
+            throw std::runtime_error("alpha must be > 0");
 
-        const auto dt_max {1.0f / (2.0f * alpha_max * (model_grid.invdx2 + model_grid.invdy2))};
-        if (dt <= 0.0f || dt > dt_max)
-        {
-            const auto chosen {0.9f * dt_max};
-            if (dt > 0.0f && dt > dt_max)
-            {
+        const auto dt_max{1.0f / (2.0f * alpha_max * (model_grid.invdx2 + model_grid.invdy2))};
+        if (dt <= 0.0f || dt > dt_max) {
+            const auto chosen{0.9f * dt_max};
+            if (dt > 0.0f && dt > dt_max) {
                 std::cerr << "Warning: provided dt=" << dt
                           << " is unstable; using 0.9*dt_max=" << chosen << "\n";
             }
@@ -187,14 +180,15 @@ private:
     }
 
     /**
-     * @brief Advance the heat equation in time using the CUDA backend and write snapshots.
+     * @brief Advance the heat equation in time using the SYCL backend and write snapshots.
      *
      * Uploads the grid and sources to the device, advances the solution from t=0 to @p t_final
-     * with step size @p dt, applies Dirichlet boundaries on-device, swaps device buffers each step,
-     * and periodically downloads the grid for output.
+     * with step size @p dt, applies Dirichlet boundaries on-device, and periodically downloads
+     * the grid for output.
      *
-     * @param cuda_engine CUDA execution engine holding device buffers.
-     * @param model_grid Grid state (updated in-place; downloaded from device when output is needed).
+     * @param opencl_engine SYCL execution engine holding device buffers and queue.
+     * @param model_grid Grid state (updated in-place; downloaded from device when output is
+     * needed).
      * @param sources Heat sources (may be empty).
      * @param dt Time step size.
      * @param t_final Final simulation time.
@@ -203,89 +197,61 @@ private:
      * @param prefix Output prefix.
      * @param queue_output If true, enqueue output; otherwise write synchronously.
      */
-    static void heat_grid_cuda(
-        CudaEngine cuda_engine,
-        Grid& model_grid,
-        const std::vector<Source>& sources,
-        const float& dt,
-        const float& t_final,
-        const int& snapshot_every,
-        const std::filesystem::path& outdir,
-        const std::filesystem::path& prefix,
-        const bool queue_output)
-    {
+    static void heat_grid(OpenCLEngine& opencl_engine, Grid& model_grid,
+                               const std::vector<Source>& sources, const float& dt,
+                               const float& t_final, const int& snapshot_every,
+                               const std::filesystem::path& outdir,
+                               const std::filesystem::path& prefix, const bool queue_output) {
         // Start a snapshot writer
         Writer writer;
 
         // Meta model_grid for snapshot writer
-        auto meta {model_grid};
+        auto meta{model_grid};
         meta.u.clear();
 
-        auto t {0.0f};
-        auto step {0};
+        auto t{0.0f};
+        auto step{0LL};
 
         // Save grid to file (at t=0)
-        if (queue_output)
-        {
+        if (queue_output) {
             writer.enqueue(prefix, outdir, t, step, model_grid);
-        }
-        else
-        {
+        } else {
             writer.grid_to_csv(prefix, outdir, t, step, model_grid);
         }
 
         // Upload grid + sources (scalars & arrays)
-        cuda_engine.upload_grid(model_grid, sources);
-
-        // Load NX and NY from CUDA engine
-        const auto NX {*cuda_engine.d_nx};
-        const auto NY {*cuda_engine.d_ny};
-        (void)NX;
-        (void)NY;
+        opencl_engine.upload_grid(model_grid, sources);        
 
         // Start looping through time steps
-        //####################################
+        // ####################################
 
-        while (t < t_final - 1e-15f)
-        {
+        while (t < t_final - 1e-15f) {
             // sample sources at midpoint time
-            const auto t_sample {t + 0.5f * dt};
+            const auto t_sample{t + 0.5f * dt};
 
-            // Calculate heat step in CUDA engine
-            cuda_engine.heat_step(dt, t_sample);
+            opencl_engine.heat_step(model_grid, dt, t_sample);
+            opencl_engine.dirichlet_boundaries();
+            opencl_engine.swap_buffers();
 
-            // Enforce dirichlet boundaries
-            cuda_engine.dirichlet_boundaries();
-
-            // Replace u with un before next step
-            cuda_engine.swap_buffers();
-
-            // Increment time and step counter
             t += dt;
             step++;
 
-            // Save grid to file (at time t)
-            if (step % snapshot_every == 0 || t >= t_final - 1e-15f)
-            {
-                // Copy u from device
-                cuda_engine.download_grid(model_grid);
+            if (step % snapshot_every == 0 || t >= t_final - 1e-15f) {
 
-                if (queue_output)
-                {
+                opencl_engine.download_grid(model_grid);
+
+                if (queue_output) {
                     writer.enqueue(prefix, outdir, t, step, model_grid);
-                }
-                else
-                {
+                } else {
                     writer.grid_to_csv(prefix, outdir, t, step, model_grid);
                 }
 
-                // Output message
-                std::cerr << "t=" << t << " (step " << step << ")" << std::endl;
+                std::cerr << "t=" << t
+                        << " (step " << step << ")"
+                        << std::endl;
             }
         }
-
-        writer.stop();
     }
 };
 
-#endif
+#endif  // HEAT_HPP

@@ -149,7 +149,7 @@ struct OpenCLEngine {
                              d_u,
                              CL_TRUE,
                              0,
-                             sizeof(double) * n,
+                             sizeof(float) * n,
                              model_grid.u.data(),
                              0,
                              nullptr,
@@ -159,7 +159,7 @@ struct OpenCLEngine {
                              d_un,
                              CL_TRUE,
                              0,
-                             sizeof(double) * n,
+                             sizeof(float) * n,
                              model_grid.un.data(),
                              0,
                              nullptr,
@@ -169,7 +169,7 @@ struct OpenCLEngine {
                              d_alpha,
                              CL_TRUE,
                              0,
-                             sizeof(double) * n,
+                             sizeof(float) * n,
                              model_grid.alpha.data(),
                              0,
                              nullptr,
@@ -210,7 +210,7 @@ struct OpenCLEngine {
                             d_u,
                             CL_TRUE,
                             0,
-                            sizeof(double) * n,
+                            sizeof(float) * n,
                             model_grid.u.data(),
                             0,
                             nullptr,
@@ -220,7 +220,7 @@ struct OpenCLEngine {
                             d_un,
                             CL_TRUE,
                             0,
-                            sizeof(double) * n,
+                            sizeof(float) * n,
                             model_grid.un.data(),
                             0,
                             nullptr,
@@ -267,24 +267,24 @@ struct OpenCLEngine {
         clFinish(queue);
     }
 
-    void heat_step(const Grid& grid, double dt, double t_sample)
+    void heat_step(const Grid& grid, float dt, float t_sample)
     {
         const cl_ulong NX = nx;
         const cl_ulong NY = ny;
 
-        const double invdx2 = grid.invdx2;
-        const double invdy2 = grid.invdy2;
+        const float invdx2 = grid.invdx2;
+        const float invdy2 = grid.invdy2;
 
         cl_ulong source_count = num_sources;
 
         clSetKernelArg(heat_kernel, 0, sizeof(cl_ulong), &NX);
         clSetKernelArg(heat_kernel, 1, sizeof(cl_ulong), &NY);
-        clSetKernelArg(heat_kernel, 2, sizeof(double), &dt);
-        clSetKernelArg(heat_kernel, 3, sizeof(double), &t_sample);
-        clSetKernelArg(heat_kernel, 4, sizeof(double), &grid.invdx2);
-        clSetKernelArg(heat_kernel, 5, sizeof(double), &grid.invdy2);
-        clSetKernelArg(heat_kernel, 6, sizeof(double), &grid.dx);
-        clSetKernelArg(heat_kernel, 7, sizeof(double), &grid.dy);
+        clSetKernelArg(heat_kernel, 2, sizeof(float), &dt);
+        clSetKernelArg(heat_kernel, 3, sizeof(float), &t_sample);
+        clSetKernelArg(heat_kernel, 4, sizeof(float), &grid.invdx2);
+        clSetKernelArg(heat_kernel, 5, sizeof(float), &grid.invdy2);
+        clSetKernelArg(heat_kernel, 6, sizeof(float), &grid.dx);
+        clSetKernelArg(heat_kernel, 7, sizeof(float), &grid.dy);
         clSetKernelArg(heat_kernel, 8, sizeof(cl_mem), &d_u);
         clSetKernelArg(heat_kernel, 9, sizeof(cl_mem), &d_un);
         clSetKernelArg(heat_kernel,10, sizeof(cl_mem), &d_alpha);
@@ -355,29 +355,29 @@ private:
             int spatial_kind;
             int temporal_kind;
 
-            double t0;
-            double duration;
-            double amplitude;
+            float t0;
+            float duration;
+            float amplitude;
 
-            double x0;
-            double y0;
-            double sigma;
+            float x0;
+            float y0;
+            float sigma;
 
-            double x_min;
-            double x_max;
-            double y_min;
-            double y_max;
+            float x_min;
+            float x_max;
+            float y_min;
+            float y_max;
 
         } Source;
 
-        inline double source_value_at_device(
+        inline float source_value_at_device(
             Source s,
-            double t,
-            double x,
-            double y,
-            double dt,
-            double dx,
-            double dy)
+            float t,
+            float x,
+            float y,
+            float dt,
+            float dx,
+            float dy)
         {
             int active = 0;
 
@@ -398,18 +398,18 @@ private:
             }
 
             if (!active)
-                return 0.0;
+                return 0.0f;
 
-            double spatial = 0.0;
+            float spatial = 0.0f;
 
             /* Gaussian = 1 */
             if (s.spatial_kind == 1)
             {
-                const double dx0 = x - s.x0;
-                const double dy0 = y - s.y0;
+                const float dx0 = x - s.x0;
+                const float dy0 = y - s.y0;
 
-                const double two_sigma2 =
-                    2.0 * s.sigma * s.sigma + 1e-300;
+                const float two_sigma2 =
+                    2.0f * s.sigma * s.sigma + 1.0e-38f;
 
                 spatial =
                     exp(-(dx0 * dx0 + dy0 * dy0) /
@@ -419,14 +419,14 @@ private:
             /* Point = 2 */
             else if (s.spatial_kind == 2)
             {
-                const double hx = 0.5 * dx;
-                const double hy = 0.5 * dy;
+                const float hx = 0.5f * dx;
+                const float hy = 0.5f * dy;
 
                 spatial =
                     (fabs(x - s.x0) <= hx &&
                     fabs(y - s.y0) <= hy)
-                        ? 1.0
-                        : 0.0;
+                        ? 1.0f
+                        : 0.0f;
             }
 
             /* Block = 3 */
@@ -437,8 +437,8 @@ private:
                     x <= s.x_max &&
                     y >= s.y_min &&
                     y <= s.y_max)
-                        ? 1.0
-                        : 0.0;
+                        ? 1.0f
+                        : 0.0f;
             }
 
             return s.amplitude * spatial;
@@ -447,15 +447,15 @@ private:
         __kernel void heat_step(
             const ulong NX,
             const ulong NY,
-            const double dt,
-            const double t_sample,
-            const double invdx2,
-            const double invdy2,
-            const double dx,
-            const double dy,
-            __global const double* u,
-            __global double* un,
-            __global const double* alpha,
+            const float dt,
+            const float t_sample,
+            const float invdx2,
+            const float invdy2,
+            const float dx,
+            const float dy,
+            __global const float* u,
+            __global float* un,
+            __global const float* alpha,
             __global const Source* sources,
             const ulong source_count)
         {
@@ -470,23 +470,23 @@ private:
 
             const size_t idx = j * NX + i;
 
-            const double x = i * dx;
-            const double y = j * dy;
+            const float x = i * dx;
+            const float y = j * dy;
 
-            const double uij = u[idx];
+            const float uij = u[idx];
 
-            const double lap =
-                (u[idx + 1] - 2.0 * uij + u[idx - 1]) * invdx2 +
-                (u[idx + NX] - 2.0 * uij + u[idx - NX]) * invdy2;
+            const float lap =
+                (u[idx + 1] - 2.0f * uij + u[idx - 1]) * invdx2 +
+                (u[idx + NX] - 2.0f * uij + u[idx - NX]) * invdy2;
 
-            double source_acc = 0.0;
-            double constant_source = -1.0;
+            float source_acc = 0.0f;
+            float constant_source = -1.0f;
 
             for (ulong k = 0; k < source_count; ++k)
             {
                 const Source s = sources[k];
 
-                const double val =
+                const float val =
                     source_value_at_device(
                         s,
                         t_sample,
@@ -515,9 +515,9 @@ private:
                 }
             }
 
-            const double aij = alpha[idx];
+            const float aij = alpha[idx];
 
-            if (constant_source > 0.0)
+            if (constant_source > 0.0f)
             {
                 un[idx] = constant_source;
             }
@@ -531,25 +531,25 @@ private:
         }
 
         __kernel void boundary_tb(
-            __global double* un,
+            __global float* un,
             const ulong NX,
             const ulong NY)
         {
             const size_t i = get_global_id(0);
 
-            un[i] = 0.0;
-            un[(NY - 1) * NX + i] = 0.0;
+            un[i] = 0.0f;
+            un[(NY - 1) * NX + i] = 0.0f;
         }
 
         __kernel void boundary_lr(
-            __global double* un,
+            __global float* un,
             const ulong NX,
             const ulong NY)
         {
             const size_t j = get_global_id(0);
 
-            un[j * NX] = 0.0;
-            un[j * NX + (NX - 1)] = 0.0;
+            un[j * NX] = 0.0f;
+            un[j * NX + (NX - 1)] = 0.0f;
         }
 
         )CLC";
@@ -611,19 +611,19 @@ private:
 
         d_u = clCreateBuffer(context,
                              CL_MEM_READ_WRITE,
-                             sizeof(double) * n,
+                             sizeof(float) * n,
                              nullptr,
                              &err);
 
         d_un = clCreateBuffer(context,
                               CL_MEM_READ_WRITE,
-                              sizeof(double) * n,
+                              sizeof(float) * n,
                               nullptr,
                               &err);
 
         d_alpha = clCreateBuffer(context,
                                  CL_MEM_READ_WRITE,
-                                 sizeof(double) * n,
+                                 sizeof(float) * n,
                                  nullptr,
                                  &err);
 
@@ -707,5 +707,7 @@ private:
         }
     }
 };
+
+
 
 #endif
