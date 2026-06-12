@@ -67,133 +67,6 @@ public:
         }
     }
 
-    static void pair_atoms(Configuration& configuration, const double r_verlet_cutoff_sq,
-                           const Atom& atom_i, const Atom& atom_j, size_t ni, size_t nj,
-                           std::vector<AtomPair>& local_neighbour_list) {
-        const double alat = configuration.get_alat();
-        const auto& basis = configuration.get_basis();
-
-        for (int i = -1; i <= 1; i++) {
-            for (int j = -1; j <= 1; j++) {
-                for (int k = -1; k <= 1; k++) {
-                    Maths::Vec3 position_offset = {1.0 * i, 1.0 * j, 1.0 * k};
-
-                    // Get squared separation between the two
-                    const auto r_vec = Maths::Vec3::separation(alat, basis, atom_i.position,
-                                                               atom_j.position + position_offset);
-
-                    auto r_sq = r_vec.length_squared();
-
-                    if (r_sq <= r_verlet_cutoff_sq) {
-                        SimpleMD::AtomPair atom_pair{};
-
-                        atom_pair.atom_i_idx = ni;
-                        atom_pair.atom_j_idx = nj;
-
-                        atom_pair.r = Maths::sqrt(r_sq);
-                        atom_pair.r = Maths::fmax(atom_pair.r, 1.0e-9);
-
-                        auto inv_r = 1.0 / atom_pair.r;
-                        atom_pair.u_vec = inv_r * r_vec;
-                        atom_pair.position_offset = position_offset;
-
-                        local_neighbour_list.emplace_back(atom_pair);
-                    }
-                }
-            }
-        }
-    }
-
-    static void update_neighbour_list(Configuration& configuration) {
-        const auto& atoms = configuration.get_atoms();
-        const double alat = configuration.get_alat();
-        const auto& basis = configuration.get_basis();
-
-        auto& neighbour_list = configuration.get_neighbour_list();
-        auto& timer = TimerOnce::get();
-
-        const std::size_t n_pairs = neighbour_list.size();
-
-        auto t0 = std::chrono::steady_clock::now();
-
-#pragma omp parallel for
-        for (std::size_t idx = 0; idx < n_pairs; ++idx) {
-            auto& atom_pair = neighbour_list[idx];
-
-            // Load atoms and ghost atom
-            const auto& atom_i = atoms[atom_pair.atom_i_idx];
-            const auto& atom_j = atoms[atom_pair.atom_j_idx];
-
-            // Get squared separation between the two
-            const auto r_vec = Maths::Vec3::separation(alat, basis, atom_i.position,
-                                                       atom_j.position + atom_pair.position_offset);
-            auto r_sq = r_vec.length_squared();
-
-            // Update r and u_vec
-            atom_pair.r = Maths::sqrt(r_sq);
-
-            if (atom_pair.r > 0.0) {
-                atom_pair.u_vec = (1.0 / atom_pair.r) * r_vec;
-            } else {
-                atom_pair.u_vec = {};
-            }
-        }
-
-        auto t1 = std::chrono::steady_clock::now();
-        timer.update_updating_neighbour_list(t1 - t0);
-    }
-
-    static void record_to_xyz(const int time_step, Configuration& configuration) {
-        const auto& atoms = configuration.get_atoms();
-        const double alat = configuration.get_alat();
-        const auto& basis = configuration.get_basis();
-
-        const auto xyz_file = configuration.get_output_dir() / "out.xyz";
-
-        // Ensure the directory exists
-        if (xyz_file.has_parent_path()) {
-            std::error_code ec;
-            std::filesystem::create_directories(xyz_file.parent_path(), ec);
-        }
-
-        // Only truncate the first time (or if file doesn't exist)
-        static bool first_call = true;
-        std::ios_base::openmode mode = (first_call || !std::filesystem::exists(xyz_file))
-                                           ? (std::ios::out | std::ios::trunc)
-                                           : (std::ios::out | std::ios::app);
-
-        std::ofstream out(xyz_file, mode);
-        if (!out) {
-            throw std::runtime_error("record_to_xyz: failed to open file: " + xyz_file.string());
-        }
-
-        out << atoms.size() << '\n';
-
-        // Write lattice vectors and metadata in ASE/OVITO-compatible format
-        out << std::fixed << std::setprecision(6);
-        out << "Lattice=\"" << basis[0] * alat << " " << basis[1] * alat << " " << basis[2] * alat
-            << "  " << basis[3] * alat << " " << basis[4] * alat << " " << basis[5] * alat << "  "
-            << basis[6] * alat << " " << basis[7] * alat << " " << basis[8] * alat << "\" "
-            << "Properties=species:S:1:pos:R:3 timestep=" << time_step << " alat=" << alat << '\n';
-
-        // Convert positions from fractional → Cartesian and write atoms
-        out << std::setprecision(10);
-        for (const auto& atom : atoms) {
-            const auto& f = atom.position;  // fractional
-            // Cartesian = alat * (basis * fractional)
-            const Maths::Vec3 cart = alat * (basis * f);
-
-            // Replace "X" with element symbol if available
-            out << "X " << cart.x << ' ' << cart.y << ' ' << cart.z << '\n';
-        }
-
-        out.flush();
-        first_call = false;
-    }
-
-    //     SYCL additions
-    // #############################
-
     static void upload_to_device(Configuration& configuration) {
         std::cout << "Loading to device." << std::endl;
         // Existing SYCL queue owned by the configuration
@@ -342,7 +215,6 @@ public:
 
         // ------------------------------------------------------------------
         // Use the neighbour count on host
-        // (malloc_shared => no memcpy required)
         // ------------------------------------------------------------------
         std::size_t neighbour_count = *configuration._d_neighbour_list_size;
 
@@ -360,7 +232,7 @@ public:
         timer.update_making_neighbour_list(t1 - t0);
     }
 
-    static void update_neighbour_list_sycl(Configuration& configuration) {
+    static void update_neighbour_list(Configuration& configuration) {
         auto t0 = std::chrono::steady_clock::now();
         auto& timer = TimerOnce::get();
 
@@ -415,7 +287,7 @@ public:
         timer.update_updating_neighbour_list(t1 - t0);
     }
 
-    static void record_to_xyz_sycl(const int time_step, Configuration& configuration) {
+    static void record_to_xyz(const int time_step, Configuration& configuration) {
         download_from_device(configuration);
 
         const auto& atoms = configuration.get_atoms();

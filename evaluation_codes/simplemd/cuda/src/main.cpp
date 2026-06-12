@@ -32,7 +32,7 @@ int main(int argc, char* argv[]) {
     if (argc != 2) {
         THROW_RUNTIME_ERROR("must give an input file e.g. ./SimpleMD.x input.json");
     }
-
+    /*
     // Run SimpleMD
     const std::filesystem::path input_file{argv[1]};
     SimpleMD::Run::run(input_file);
@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
     if (!out)
         throw std::runtime_error("Failed to open output JSON file.");
     out << output.dump(4);
-
+    */
     return 0;
 }
 

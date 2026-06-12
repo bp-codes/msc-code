@@ -9,8 +9,6 @@
 #include "SimpleMD/Atom.hpp"
 #include "SimpleMD/Morse.hpp"
 
-#include <sycl/sycl.hpp>
-
 /*********************************************************************************************************************************/
 namespace SimpleMD {
 

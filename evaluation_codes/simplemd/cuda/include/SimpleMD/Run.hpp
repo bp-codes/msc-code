@@ -26,6 +26,7 @@ public:
     static void run(const std::filesystem::path& input_file) {
         std::cout << "Simple MD" << std::endl;
 
+        /*
         // Start config
         Configuration& configuration = SimpleMD::ConfigurationOnce::get();
         auto& timer = TimerOnce::get();
@@ -60,6 +61,7 @@ public:
 
         timer.update_overall_time(t1 - t0);
         timer.print_times();
+        */
     }
 
     void static load_json(const std::filesystem::path& input_file, Configuration& configuration) {
@@ -86,7 +88,7 @@ public:
         auto threads = Run::load<std::size_t>(config, {"settings", "threads"});
         auto device = Run::load<std::string>(config, {"settings", "device"});
         auto output_dir {Run::load<std::filesystem::path>(config, {"settings", "output_dir"})};
-
+        /*
         omp_set_num_threads(threads);
 
         std::string crystal_structure = Run::load<std::string>(config, {"crystal", "structure"});
@@ -128,7 +130,7 @@ public:
         configuration.set_dt(dt);
         configuration.set_time_steps(time_steps);
         configuration.set_rebuild_every(rebuild_every);
-        configuration.set_xyz_every(xyz_every);
+        configuration.set_xyz_every(xyz_every);*/
     }
 
     template <typename T>

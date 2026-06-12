@@ -15,8 +15,6 @@
 #include "SimpleMD/Morse.hpp"
 #include "SimpleMD/Timer.hpp"
 
-#include <sycl/sycl.hpp>
-
 /*********************************************************************************************************************************/
 namespace SimpleMD {
 
@@ -168,7 +166,7 @@ public:
 
         auto t0 = std::chrono::steady_clock::now();
 
-#pragma omp parallel for
+        #pragma omp parallel for
         for (std::size_t idx = 0; idx < n_pairs; ++idx) {
             auto& atom_pair = neighbour_list[idx];
 

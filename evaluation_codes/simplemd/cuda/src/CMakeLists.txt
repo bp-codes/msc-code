@@ -1,6 +1,9 @@
 
 # App binary
-add_executable(SimpleMD.x main.cpp)
+add_executable(SimpleMD.x
+    main.cpp
+    ConfigurationEngine.cu
+)
 
 target_include_directories(SimpleMD.x
     PRIVATE
@@ -9,21 +12,27 @@ target_include_directories(SimpleMD.x
         ${CMAKE_SOURCE_DIR}/external/json     # NLohmann JSON
 )
 
-
-# AdaptiveCpp flags (compile + link)
-set(ACPP_TARGETS "cuda:sm_86" CACHE STRING "AdaptiveCpp targets")
+target_link_libraries(SimpleMD.x
+    PRIVATE
+        CUDA::cudart
+)
 
 target_compile_options(SimpleMD.x PRIVATE
-    -O3
-    -v
-    -ffast-math
-    --acpp-targets=${ACPP_TARGETS}
+
+    $<$<COMPILE_LANGUAGE:CXX>:
+        -O3
+    >
+
+    $<$<COMPILE_LANGUAGE:CUDA>:
+        -O3
+        -Xcompiler=-fno-fast-math
+        -Xcompiler=-fno-unsafe-math-optimizations
+        -Xcompiler=-ffp-contract=off
+    >
 )
 
-target_link_options(SimpleMD.x PRIVATE
-    -O3
-    -v 
-    -ffast-math
-    --acpp-targets=${ACPP_TARGETS}
+set_target_properties(SimpleMD.x PROPERTIES
+    CUDA_ARCHITECTURES 86
 )
+
 

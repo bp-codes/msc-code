@@ -167,7 +167,6 @@ void validate_sizes(const std::vector<T>& numbers_a, const std::vector<T>& numbe
  * @return string.
  */
 template <typename T>
-    requires(std::floating_point<T>)
 [[nodiscard]]
 std::string to_string_precise(const T& value) {
     std::ostringstream oss;
@@ -175,6 +174,7 @@ std::string to_string_precise(const T& value) {
     return oss.str();
 }
 
+/*
 template <typename Range>
     requires std::ranges::input_range<Range> &&
              std::floating_point<std::ranges::range_value_t<Range>>
@@ -188,6 +188,7 @@ nlohmann::json to_string_precise_vector(const Range& values_in) {
 
     return values;
 }
+*/
 
 /**
  * @brief Compute the sum of all elements in a vector (serial).

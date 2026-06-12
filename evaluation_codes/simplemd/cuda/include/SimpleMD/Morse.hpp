@@ -6,8 +6,6 @@
 #include "Maths/_maths.hpp"
 #include "SimpleMD/Atom.hpp"
 
-#include <sycl/sycl.hpp>
-
 /*********************************************************************************************************************************/
 
 namespace SimpleMD {

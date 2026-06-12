@@ -8,8 +8,8 @@ status=0
 {
     # Configure
     cmake -S . -B build \
-        -DCMAKE_TOOLCHAIN_FILE=acpp.toolchain.cmake \
-        -DCMAKE_BUILD_TYPE=Release
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCUDAToolkit_ROOT=/usr/local/cuda
 
     # Build
     cmake --build build -- -j1
