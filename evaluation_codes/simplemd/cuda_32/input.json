@@ -3,7 +3,7 @@
     {
         "threads": 1,
         "device": "gpu",
-        "output_dir": "output_gpu"
+        "output_dir": "output"
     },
     "crystal":
     {

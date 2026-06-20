@@ -26,7 +26,6 @@ public:
     static void run(const std::filesystem::path& input_file) {
         std::cout << "Simple MD" << std::endl;
 
-        /*
         // Start config
         Configuration& configuration = SimpleMD::ConfigurationOnce::get();
         auto& timer = TimerOnce::get();
@@ -34,8 +33,8 @@ public:
         // Load input file
         load_json(input_file, configuration);
 
-        // Set up queue
-        configuration.make_queue(configuration.get_device());
+        // Set up cuda
+        configuration.initialise_cuda();
 
         // Display
         configuration.display();
@@ -44,24 +43,24 @@ public:
 
         // Timed section - time steps in simulation
 
-        // Sycl
+        // CUDA
         ConfigurationEngine::upload_to_device(configuration);
-
+ 
         auto t0 = std::chrono::steady_clock::now();
+        
         for (int i = 0; i < configuration.get_time_steps(); i++) {
             if (i % configuration.get_rebuild_every() == 0)
-                ConfigurationEngine::make_neighbour_list_sycl(configuration);
+                ConfigurationEngine::make_neighbour_list(configuration);
 
-            VerletEngine::vertlet_step_sycl(configuration);
+            VerletEngine::verlet_step(configuration);
 
             if (i % configuration.get_xyz_every() == 0)
-                ConfigurationEngine::record_to_xyz_sycl(static_cast<int>(i), configuration);
+                ConfigurationEngine::record_to_xyz(static_cast<int>(i), configuration);
         }
         auto t1 = std::chrono::steady_clock::now();
 
         timer.update_overall_time(t1 - t0);
         timer.print_times();
-        */
     }
 
     void static load_json(const std::filesystem::path& input_file, Configuration& configuration) {
@@ -88,8 +87,8 @@ public:
         auto threads = Run::load<std::size_t>(config, {"settings", "threads"});
         auto device = Run::load<std::string>(config, {"settings", "device"});
         auto output_dir {Run::load<std::filesystem::path>(config, {"settings", "output_dir"})};
-        /*
-        omp_set_num_threads(threads);
+
+        // omp_set_num_threads(threads);
 
         std::string crystal_structure = Run::load<std::string>(config, {"crystal", "structure"});
         double alat = Run::load<double>(config, {"crystal", "alat"});
@@ -130,7 +129,7 @@ public:
         configuration.set_dt(dt);
         configuration.set_time_steps(time_steps);
         configuration.set_rebuild_every(rebuild_every);
-        configuration.set_xyz_every(xyz_every);*/
+        configuration.set_xyz_every(xyz_every);
     }
 
     template <typename T>

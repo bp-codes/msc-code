@@ -2,8 +2,8 @@
     "settings":
     {
         "threads": 1,
-        "device": "cpu",
-        "output_dir": "output_cpu"
+        "device": "gpu",
+        "output_dir": "output"
     },
     "crystal":
     {
