@@ -1,0 +1,713 @@
+#ifndef OPENCLENGINE_HPP
+#define OPENCLENGINE_HPP
+
+#define CL_TARGET_OPENCL_VERSION 120
+#ifndef CL_PLATFORM_NOT_FOUND_KHR
+#define CL_PLATFORM_NOT_FOUND_KHR -1001
+#endif
+
+#include <CL/cl.h>
+
+#include <algorithm>
+#include <fstream>
+#include <iostream>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+#include "heat/Grid.hpp"
+#include "heat/Source.hpp"
+
+void opencl_check(cl_int status, const char* message) {
+    if (status != CL_SUCCESS) {
+        std::ostringstream oss;
+        oss << message << " (OpenCL error " << status << ")";
+        throw std::runtime_error(oss.str());
+    }
+}
+
+[[nodiscard]]
+cl_device_id pick_device(std::string_view device_string) {
+    cl_uint platform_count{0};
+    const cl_int status = clGetPlatformIDs(0, nullptr, &platform_count);
+
+    if (status == CL_PLATFORM_NOT_FOUND_KHR) {
+        throw std::runtime_error(
+            "No OpenCL platform found. "
+            "Install an OpenCL ICD/runtime such as pocl-opencl-icd, "
+            "or enable vendor OpenCL support inside the container.");
+    }
+
+    opencl_check(status, "clGetPlatformIDs(count) failed.");
+
+    if (platform_count == 0) {
+        throw std::runtime_error("No OpenCL platforms found.");
+    }
+
+    auto platforms = std::vector<cl_platform_id>(platform_count);
+    opencl_check(clGetPlatformIDs(platform_count, platforms.data(), nullptr),
+                 "clGetPlatformIDs(data) failed.");
+
+    const cl_device_type requested_type =
+        (device_string == "cpu" || device_string == "CPU") ? CL_DEVICE_TYPE_CPU : CL_DEVICE_TYPE_GPU;
+
+    for (const auto platform : platforms) {
+        cl_uint device_count{0};
+        const auto device_status =
+            clGetDeviceIDs(platform, requested_type, 0, nullptr, &device_count);
+        if (device_status == CL_SUCCESS && device_count > 0) {
+            auto devices = std::vector<cl_device_id>(device_count);
+            opencl_check(
+                clGetDeviceIDs(platform, requested_type, device_count, devices.data(), nullptr),
+                "clGetDeviceIDs(requested type) failed.");
+            return devices.front();
+        }
+    }
+
+    std::ostringstream oss;
+    oss << "No suitable OpenCL " << device_string << " device found.";
+    throw std::runtime_error(oss.str());
+}
+
+std::string get_platform_string(cl_platform_id platform, cl_platform_info param) {
+    std::size_t size{0};
+    opencl_check(clGetPlatformInfo(platform, param, 0, nullptr, &size),
+                 "clGetPlatformInfo(size) failed.");
+
+    std::string value(size, '\0');
+    opencl_check(clGetPlatformInfo(platform, param, size, value.data(), nullptr),
+                 "clGetPlatformInfo(data) failed.");
+
+    if (!value.empty() && value.back() == '\0') {
+        value.pop_back();
+    }
+    return value;
+}
+
+std::string get_device_string(cl_device_id device, cl_device_info param) {
+    std::size_t size{0};
+    opencl_check(clGetDeviceInfo(device, param, 0, nullptr, &size),
+                 "clGetDeviceInfo(size) failed.");
+
+    std::string value(size, '\0');
+    opencl_check(clGetDeviceInfo(device, param, size, value.data(), nullptr),
+                 "clGetDeviceInfo(data) failed.");
+
+    if (!value.empty() && value.back() == '\0') {
+        value.pop_back();
+    }
+    return value;
+}
+
+struct OpenCLEngine {
+    cl_platform_id platform {};
+    cl_device_id device {};
+    cl_context context {};
+    cl_command_queue queue {};
+
+    cl_program program {};
+    cl_kernel heat_kernel {};
+    cl_kernel boundary_tb_kernel {};
+    cl_kernel boundary_lr_kernel {};
+
+    std::size_t nx {};
+    std::size_t ny {};
+    std::size_t num_sources {};
+
+    cl_mem d_u {};
+    cl_mem d_un {};
+    cl_mem d_alpha {};
+    cl_mem d_sources {};
+    cl_mem d_num_sources {};
+
+    OpenCLEngine(const std::string& device_name,
+                 std::size_t nx_in,
+                 std::size_t ny_in,
+                 std::size_t num_sources_in)
+        : nx(nx_in),
+          ny(ny_in),
+          num_sources(num_sources_in)
+    {
+        _init_opencl(device_name);
+        _build_program();
+        _allocate();
+    }
+
+    ~OpenCLEngine()
+    {
+        _cleanup();
+    }
+
+    void upload_grid(const Grid& model_grid, const std::vector<Source>& sources)
+    {
+        _check_data_dims(model_grid);
+        _check_sources_dims(sources);
+
+        const std::size_t n = nx * ny;
+
+        clEnqueueWriteBuffer(queue,
+                             d_u,
+                             CL_TRUE,
+                             0,
+                             sizeof(float) * n,
+                             model_grid.u.data(),
+                             0,
+                             nullptr,
+                             nullptr);
+
+        clEnqueueWriteBuffer(queue,
+                             d_un,
+                             CL_TRUE,
+                             0,
+                             sizeof(float) * n,
+                             model_grid.un.data(),
+                             0,
+                             nullptr,
+                             nullptr);
+
+        clEnqueueWriteBuffer(queue,
+                             d_alpha,
+                             CL_TRUE,
+                             0,
+                             sizeof(float) * n,
+                             model_grid.alpha.data(),
+                             0,
+                             nullptr,
+                             nullptr);
+
+                             num_sources = sources.size();
+
+        clEnqueueWriteBuffer(queue,
+                            d_num_sources,
+                            CL_TRUE,
+                            0,
+                            sizeof(std::size_t),
+                            &num_sources,
+                            0,
+                            nullptr,
+                            nullptr);
+
+        if (num_sources > 0) {
+            clEnqueueWriteBuffer(queue,
+                                d_sources,
+                                CL_TRUE,
+                                0,
+                                sizeof(Source) * num_sources,
+                                sources.data(),
+                                0,
+                                nullptr,
+                                nullptr);
+        }
+    }
+
+    void download_grid(Grid& model_grid)
+    {
+        _check_data_dims(model_grid);
+
+        const std::size_t n = nx * ny;
+
+        clEnqueueReadBuffer(queue,
+                            d_u,
+                            CL_TRUE,
+                            0,
+                            sizeof(float) * n,
+                            model_grid.u.data(),
+                            0,
+                            nullptr,
+                            nullptr);
+
+        clEnqueueReadBuffer(queue,
+                            d_un,
+                            CL_TRUE,
+                            0,
+                            sizeof(float) * n,
+                            model_grid.un.data(),
+                            0,
+                            nullptr,
+                            nullptr);
+    }
+
+    void dirichlet_boundaries()
+    {
+        const cl_ulong NX = nx;
+        const cl_ulong NY = ny;
+
+        clSetKernelArg(boundary_tb_kernel, 0, sizeof(cl_mem), &d_un);
+        clSetKernelArg(boundary_tb_kernel, 1, sizeof(cl_ulong), &NX);
+        clSetKernelArg(boundary_tb_kernel, 2, sizeof(cl_ulong), &NY);
+
+        size_t global_tb[1] = {NX};
+
+        clEnqueueNDRangeKernel(queue,
+                               boundary_tb_kernel,
+                               1,
+                               nullptr,
+                               global_tb,
+                               nullptr,
+                               0,
+                               nullptr,
+                               nullptr);
+
+        clSetKernelArg(boundary_lr_kernel, 0, sizeof(cl_mem), &d_un);
+        clSetKernelArg(boundary_lr_kernel, 1, sizeof(cl_ulong), &NX);
+        clSetKernelArg(boundary_lr_kernel, 2, sizeof(cl_ulong), &NY);
+
+        size_t global_lr[1] = {NY};
+
+        clEnqueueNDRangeKernel(queue,
+                               boundary_lr_kernel,
+                               1,
+                               nullptr,
+                               global_lr,
+                               nullptr,
+                               0,
+                               nullptr,
+                               nullptr);
+
+        clFinish(queue);
+    }
+
+    void heat_step(const Grid& grid, float dt, float t_sample)
+    {
+        const cl_ulong NX = nx;
+        const cl_ulong NY = ny;
+
+        const float invdx2 = grid.invdx2;
+        const float invdy2 = grid.invdy2;
+
+        cl_ulong source_count = num_sources;
+
+        clSetKernelArg(heat_kernel, 0, sizeof(cl_ulong), &NX);
+        clSetKernelArg(heat_kernel, 1, sizeof(cl_ulong), &NY);
+        clSetKernelArg(heat_kernel, 2, sizeof(float), &dt);
+        clSetKernelArg(heat_kernel, 3, sizeof(float), &t_sample);
+        clSetKernelArg(heat_kernel, 4, sizeof(float), &grid.invdx2);
+        clSetKernelArg(heat_kernel, 5, sizeof(float), &grid.invdy2);
+        clSetKernelArg(heat_kernel, 6, sizeof(float), &grid.dx);
+        clSetKernelArg(heat_kernel, 7, sizeof(float), &grid.dy);
+        clSetKernelArg(heat_kernel, 8, sizeof(cl_mem), &d_u);
+        clSetKernelArg(heat_kernel, 9, sizeof(cl_mem), &d_un);
+        clSetKernelArg(heat_kernel,10, sizeof(cl_mem), &d_alpha);
+        clSetKernelArg(heat_kernel,11, sizeof(cl_mem), &d_sources);
+        clSetKernelArg(heat_kernel,12, sizeof(cl_ulong), &source_count);
+
+        size_t global[2] = {NY - 2, NX - 2};
+
+        clEnqueueNDRangeKernel(queue,
+                               heat_kernel,
+                               2,
+                               nullptr,
+                               global,
+                               nullptr,
+                               0,
+                               nullptr,
+                               nullptr);
+
+        clFinish(queue);
+    }
+
+    void swap_buffers()
+    {
+        std::swap(d_u, d_un);
+    }
+
+private:
+    void _init_opencl(const std::string& device_string)
+    {
+
+        cl_int err {};device = pick_device(device_string);
+
+        const auto device_name =
+        get_device_string(device, CL_DEVICE_NAME);
+        std::cerr << "Using device: " << device_name << "\n";
+
+        context = clCreateContext(nullptr,
+                                  1,
+                                  &device,
+                                  nullptr,
+                                  nullptr,
+                                  &err);
+
+        queue = clCreateCommandQueue(context,
+                                     device,
+                                     0,
+                                     &err);
+
+        char name[256];
+
+        clGetDeviceInfo(device,
+                        CL_DEVICE_NAME,
+                        sizeof(name),
+                        name,
+                        nullptr);
+
+        std::cerr << "Using OpenCL device: " << name << "\n";
+    }
+
+    void _build_program()
+    {
+        const char* source = R"CLC(
+
+        #pragma OPENCL EXTENSION cl_khr_fp64 : enable
+
+        typedef struct
+        {
+            int spatial_kind;
+            int temporal_kind;
+
+            float t0;
+            float duration;
+            float amplitude;
+
+            float x0;
+            float y0;
+            float sigma;
+
+            float x_min;
+            float x_max;
+            float y_min;
+            float y_max;
+
+        } Source;
+
+        inline float source_value_at_device(
+            Source s,
+            float t,
+            float x,
+            float y,
+            float dt,
+            float dx,
+            float dy)
+        {
+            int active = 0;
+
+            /* Constant = 1, Rate = 2, Impulse = 3 */
+
+            if (s.temporal_kind == 1 ||
+                s.temporal_kind == 2)
+            {
+                active =
+                    (t >= s.t0) &&
+                    (t < (s.t0 + s.duration));
+            }
+            else if (s.temporal_kind == 3)
+            {
+                active =
+                    (t >= s.t0) &&
+                    (t < (s.t0 + dt));
+            }
+
+            if (!active)
+                return 0.0f;
+
+            float spatial = 0.0f;
+
+            /* Gaussian = 1 */
+            if (s.spatial_kind == 1)
+            {
+                const float dx0 = x - s.x0;
+                const float dy0 = y - s.y0;
+
+                const float two_sigma2 =
+                    2.0f * s.sigma * s.sigma + 1.0e-38f;
+
+                spatial =
+                    exp(-(dx0 * dx0 + dy0 * dy0) /
+                        two_sigma2);
+            }
+
+            /* Point = 2 */
+            else if (s.spatial_kind == 2)
+            {
+                const float hx = 0.5f * dx;
+                const float hy = 0.5f * dy;
+
+                spatial =
+                    (fabs(x - s.x0) <= hx &&
+                    fabs(y - s.y0) <= hy)
+                        ? 1.0f
+                        : 0.0f;
+            }
+
+            /* Block = 3 */
+            else if (s.spatial_kind == 3)
+            {
+                spatial =
+                    (x >= s.x_min &&
+                    x <= s.x_max &&
+                    y >= s.y_min &&
+                    y <= s.y_max)
+                        ? 1.0f
+                        : 0.0f;
+            }
+
+            return s.amplitude * spatial;
+        }
+
+        __kernel void heat_step(
+            const ulong NX,
+            const ulong NY,
+            const float dt,
+            const float t_sample,
+            const float invdx2,
+            const float invdy2,
+            const float dx,
+            const float dy,
+            __global const float* u,
+            __global float* un,
+            __global const float* alpha,
+            __global const Source* sources,
+            const ulong source_count)
+        {
+            const size_t j = get_global_id(0) + 1;
+            const size_t i = get_global_id(1) + 1;
+
+            if (i >= NX - 1 ||
+                j >= NY - 1)
+            {
+                return;
+            }
+
+            const size_t idx = j * NX + i;
+
+            const float x = i * dx;
+            const float y = j * dy;
+
+            const float uij = u[idx];
+
+            const float lap =
+                (u[idx + 1] - 2.0f * uij + u[idx - 1]) * invdx2 +
+                (u[idx + NX] - 2.0f * uij + u[idx - NX]) * invdy2;
+
+            float source_acc = 0.0f;
+            float constant_source = -1.0f;
+
+            for (ulong k = 0; k < source_count; ++k)
+            {
+                const Source s = sources[k];
+
+                const float val =
+                    source_value_at_device(
+                        s,
+                        t_sample,
+                        x,
+                        y,
+                        dt,
+                        dx,
+                        dy);
+
+                /* constant_source */
+                if (s.temporal_kind == 1)
+                {
+                    constant_source = fmax(constant_source, val);
+                }
+
+                /* Rate */
+                else if (s.temporal_kind == 2)
+                {
+                    source_acc += val;
+                }
+
+                /* Impulse */
+                else if (s.temporal_kind == 3)
+                {
+                    source_acc += val;
+                }
+            }
+
+            const float aij = alpha[idx];
+
+            if (constant_source > 0.0f)
+            {
+                un[idx] = constant_source;
+            }
+            else
+            {
+                un[idx] =
+                    uij +
+                    aij * dt *
+                    (lap + source_acc);
+            }
+        }
+
+        __kernel void boundary_tb(
+            __global float* un,
+            const ulong NX,
+            const ulong NY)
+        {
+            const size_t i = get_global_id(0);
+
+            un[i] = 0.0f;
+            un[(NY - 1) * NX + i] = 0.0f;
+        }
+
+        __kernel void boundary_lr(
+            __global float* un,
+            const ulong NX,
+            const ulong NY)
+        {
+            const size_t j = get_global_id(0);
+
+            un[j * NX] = 0.0f;
+            un[j * NX + (NX - 1)] = 0.0f;
+        }
+
+        )CLC";
+
+        cl_int err {};
+
+        program = clCreateProgramWithSource(context,
+                                            1,
+                                            &source,
+                                            nullptr,
+                                            &err);
+
+        err = clBuildProgram(program,
+                             1,
+                             &device,
+                             "",
+                             nullptr,
+                             nullptr);
+
+        if (err != CL_SUCCESS) {
+
+            size_t log_size {};
+            clGetProgramBuildInfo(program,
+                                  device,
+                                  CL_PROGRAM_BUILD_LOG,
+                                  0,
+                                  nullptr,
+                                  &log_size);
+
+            std::vector<char> log(log_size);
+
+            clGetProgramBuildInfo(program,
+                                  device,
+                                  CL_PROGRAM_BUILD_LOG,
+                                  log_size,
+                                  log.data(),
+                                  nullptr);
+
+            std::cerr << log.data() << "\n";
+
+            throw std::runtime_error("OpenCL build failed");
+        }
+
+        heat_kernel =
+            clCreateKernel(program, "heat_step", &err);
+
+        boundary_tb_kernel =
+            clCreateKernel(program, "boundary_tb", &err);
+
+        boundary_lr_kernel =
+            clCreateKernel(program, "boundary_lr", &err);
+    }
+
+    void _allocate()
+    {
+        cl_int err {};
+
+        const std::size_t n = nx * ny;
+
+        d_u = clCreateBuffer(context,
+                             CL_MEM_READ_WRITE,
+                             sizeof(float) * n,
+                             nullptr,
+                             &err);
+
+        d_un = clCreateBuffer(context,
+                              CL_MEM_READ_WRITE,
+                              sizeof(float) * n,
+                              nullptr,
+                              &err);
+
+        d_alpha = clCreateBuffer(context,
+                                 CL_MEM_READ_WRITE,
+                                 sizeof(float) * n,
+                                 nullptr,
+                                 &err);
+
+        d_num_sources = clCreateBuffer(context,
+                        CL_MEM_READ_ONLY,
+                        sizeof(std::size_t),
+                        nullptr,
+                        &err);
+
+        const std::size_t nsrc_alloc =
+            std::max<std::size_t>(1, num_sources);
+
+        d_sources =
+            clCreateBuffer(context,
+                        CL_MEM_READ_ONLY,
+                        sizeof(Source) * nsrc_alloc,
+                        nullptr,
+                        &err);
+
+        if (!d_u || !d_un || !d_alpha) {
+            throw std::runtime_error("OpenCL allocation failed");
+        }
+    }
+
+    void _cleanup()
+    {
+        if (d_u)
+            clReleaseMemObject(d_u);
+
+        if (d_un)
+            clReleaseMemObject(d_un);
+
+        if (d_alpha)
+            clReleaseMemObject(d_alpha);
+
+        if (d_sources)
+            clReleaseMemObject(d_sources);
+
+        if (d_num_sources)
+            clReleaseMemObject(d_num_sources);
+
+        if (heat_kernel)
+            clReleaseKernel(heat_kernel);
+
+        if (boundary_tb_kernel)
+            clReleaseKernel(boundary_tb_kernel);
+
+        if (boundary_lr_kernel)
+            clReleaseKernel(boundary_lr_kernel);
+
+        if (program)
+            clReleaseProgram(program);
+
+        if (queue)
+            clReleaseCommandQueue(queue);
+
+        if (context)
+            clReleaseContext(context);
+    }
+
+    void _check_data_dims(const Grid& model_grid) const
+    {
+        const auto n = nx * ny;
+
+        if (model_grid.nx != nx ||
+            model_grid.ny != ny) {
+            throw std::runtime_error("Grid dims mismatch");
+        }
+
+        if (model_grid.u.size() != n ||
+            model_grid.un.size() != n ||
+            model_grid.alpha.size() != n) {
+            throw std::runtime_error("Grid vector size mismatch");
+        }
+    }
+
+    void _check_sources_dims(const std::vector<Source>& sources) const
+    {
+        if (sources.size() != num_sources) {
+            throw std::runtime_error("Sources size mismatch");
+        }
+    }
+};
+
+
+
+#endif

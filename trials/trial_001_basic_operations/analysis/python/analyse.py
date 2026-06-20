@@ -199,7 +199,7 @@ def load_results(
             try:
                 calculated = parse_float(calculated_value)
 
-                difference = calculated - precise_value
+                difference = (calculated - precise_value) / precise_value
 
                 abs_difference = abs(difference)
 

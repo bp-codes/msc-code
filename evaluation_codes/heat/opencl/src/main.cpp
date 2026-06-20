@@ -63,12 +63,13 @@ int main(int argc, char** argv) {
             throw std::runtime_error("Failed to open input json");
         in >> input;
 
-        const std::string base_file_name = "../results/sycl_heat";
+        const std::string base_file_name = "../results/opencl_heat";
         const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
         const auto time_total{std::chrono::duration<double>(t1 - t0).count()};
         nlohmann::json output;
-        output["type"] = "sycl";
+        output["type"] = "opencl";
         output["time_total"] = time_total;
+        output["max_rss_kb"] = helper::max_rss_kb();
         output["input"] = input;
         std::ofstream out(json_file);
         if (!out)

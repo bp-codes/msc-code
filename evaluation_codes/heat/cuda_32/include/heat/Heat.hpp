@@ -51,8 +51,8 @@ public:
 
         auto model_grid {Grid{}};
         auto sources {std::vector<Source>{}};
-        auto dt {0.0};
-        auto t_final {0.0};
+        auto dt {0.0f};
+        auto t_final {0.0f};
         auto snapshot_every {0};
         auto outdir {std::filesystem::path{}};
         auto prefix {std::string{}};
@@ -133,8 +133,8 @@ private:
         std::string& input_file,
         Grid& model_grid,
         std::vector<Source>& sources,
-        double& dt,
-        double& t_final,
+        float& dt,
+        float& t_final,
         int& snapshot_every,
         std::filesystem::path& outdir,
         std::string& prefix,
@@ -155,9 +155,9 @@ private:
         model_grid = Grid::Load_settings(config_file);
         set_alpha_regions(model_grid, config_file.at("alpha"));
 
-        dt = config_file.value("dt", 0.0);
-        t_final = config_file.at("t_final").get<double>();
-        if (t_final <= 0.0) throw std::runtime_error("t_final must be > 0");
+        dt = config_file.value("dt", 0.0f);
+        t_final = config_file.at("t_final").get<float>();
+        if (t_final <= 0.0f) throw std::runtime_error("t_final must be > 0");
 
         snapshot_every = std::max(1, config_file.value("snapshot_every", 100));
         outdir = config_file.value("output_dir", std::filesystem::path("out"));
@@ -174,10 +174,10 @@ private:
         if (alpha_max <= 0.0f) throw std::runtime_error("alpha must be > 0");
 
         const auto dt_max {1.0f / (2.0f * alpha_max * (model_grid.invdx2 + model_grid.invdy2))};
-        if (dt <= 0.0 || dt > dt_max)
+        if (dt <= 0.0f || dt > dt_max)
         {
-            const auto chosen {0.9 * dt_max};
-            if (dt > 0.0 && dt > dt_max)
+            const auto chosen {0.9f * dt_max};
+            if (dt > 0.0f && dt > dt_max)
             {
                 std::cerr << "Warning: provided dt=" << dt
                           << " is unstable; using 0.9*dt_max=" << chosen << "\n";
@@ -207,8 +207,8 @@ private:
         CudaEngine cuda_engine,
         Grid& model_grid,
         const std::vector<Source>& sources,
-        const double& dt,
-        const double& t_final,
+        const float& dt,
+        const float& t_final,
         const int& snapshot_every,
         const std::filesystem::path& outdir,
         const std::filesystem::path& prefix,

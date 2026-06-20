@@ -17,7 +17,7 @@ public:
     //     SYCL
     // #############################
 
-    static void calculate_force_sycl(Configuration& configuration) {
+    static void calculate_force(Configuration& configuration) {
         auto t0 = std::chrono::steady_clock::now();
         auto& timer = TimerOnce::get();
         sycl::queue& q = configuration.q;
@@ -45,7 +45,7 @@ public:
         q.submit([&](sycl::handler& h) {
              h.parallel_for(sycl::range<1>(n_atoms), [=](sycl::id<1> idx) {
                  const std::size_t i = idx[0];
-                 d_atoms[i].force = {0.0, 0.0, 0.0};
+                 d_atoms[i].force = {0.0f, 0.0f, 0.0f};
              });
          }).wait();
 
@@ -91,7 +91,7 @@ public:
         timer.update_force_calculations(t1 - t0);
     }
 
-    static void calculate_position_sycl(SimpleMD::Configuration& configuration) {
+    static void calculate_position(SimpleMD::Configuration& configuration) {
         auto& q = configuration.q;
         auto& atoms = configuration.get_atoms();
         const std::size_t n_atoms = atoms.size();
@@ -108,7 +108,7 @@ public:
                  const std::size_t i = idx[0];
                  Atom& atom = d_atoms[i];
 
-                 atom.position += atom.velocity * dt + 0.5 * atom.force * atom.inv_mass * dt * dt;
+                 atom.position += atom.velocity * dt + 0.5f * atom.force * atom.inv_mass * dt * dt;
 
                  // Assuming this is SYCL-device safe
                  atom.position.unit_cell_pbc();
@@ -116,7 +116,7 @@ public:
          }).wait();
     }
 
-    static void calculate_velocity_sycl(SimpleMD::Configuration& configuration) {
+    static void calculate_velocity(SimpleMD::Configuration& configuration) {
         auto& q = configuration.q;
         auto& atoms = configuration.get_atoms();
         const std::size_t n_atoms = atoms.size();
@@ -135,7 +135,7 @@ public:
          }).wait();
 
         // 2. Recompute forces on device
-        calculate_force_sycl(configuration);
+        calculate_force(configuration);
 
         // 3. Update velocities using old (scratch) + new (force)
         q.submit([&](sycl::handler& h) {
@@ -143,16 +143,16 @@ public:
                  const std::size_t i = idx[0];
                  Atom& atom = d_atoms[i];
 
-                 atom.velocity += 0.5 * (atom.force + atom.scratch) * atom.inv_mass * dt;
+                 atom.velocity += 0.5f * (atom.force + atom.scratch) * atom.inv_mass * dt;
              });
          }).wait();
     }
 
-    static void vertlet_step_sycl(Configuration& configuration) {
-        calculate_force_sycl(configuration);
-        calculate_position_sycl(configuration);
-        ConfigurationEngine::update_neighbour_list_sycl(configuration);
-        calculate_velocity_sycl(configuration);
+    static void vertlet_step(Configuration& configuration) {
+        calculate_force(configuration);
+        calculate_position(configuration);
+        ConfigurationEngine::update_neighbour_list(configuration);
+        calculate_velocity(configuration);
     }
 };
 

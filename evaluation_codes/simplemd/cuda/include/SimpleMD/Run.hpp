@@ -33,8 +33,8 @@ public:
         // Load input file
         load_json(input_file, configuration);
 
-        // Set up queue
-        configuration.make_queue(configuration.get_device());
+        // Set up cuda
+        configuration.initialise_cuda();
 
         // Display
         configuration.display();
@@ -43,18 +43,19 @@ public:
 
         // Timed section - time steps in simulation
 
-        // Sycl
+        // CUDA
         ConfigurationEngine::upload_to_device(configuration);
-
+ 
         auto t0 = std::chrono::steady_clock::now();
+        
         for (int i = 0; i < configuration.get_time_steps(); i++) {
             if (i % configuration.get_rebuild_every() == 0)
-                ConfigurationEngine::make_neighbour_list_sycl(configuration);
+                ConfigurationEngine::make_neighbour_list(configuration);
 
-            VerletEngine::vertlet_step_sycl(configuration);
+            VerletEngine::verlet_step(configuration);
 
             if (i % configuration.get_xyz_every() == 0)
-                ConfigurationEngine::record_to_xyz_sycl(static_cast<int>(i), configuration);
+                ConfigurationEngine::record_to_xyz(static_cast<int>(i), configuration);
         }
         auto t1 = std::chrono::steady_clock::now();
 
@@ -87,7 +88,7 @@ public:
         auto device = Run::load<std::string>(config, {"settings", "device"});
         auto output_dir {Run::load<std::filesystem::path>(config, {"settings", "output_dir"})};
 
-        omp_set_num_threads(threads);
+        // omp_set_num_threads(threads);
 
         std::string crystal_structure = Run::load<std::string>(config, {"crystal", "structure"});
         double alat = Run::load<double>(config, {"crystal", "alat"});

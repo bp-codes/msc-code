@@ -10,8 +10,9 @@ from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, PillowWriter
+from matplotlib.colors import TwoSlopeNorm
 
-FRAMEWORKS = ["cuda", "cuda_32", "openmp", "openmp_32", "serial", "serial_32", "sycl", "sycl_32"]
+FRAMEWORKS = ["cuda", "cuda_32", "openmp", "openmp_32", "opencl", "opencl_32", "serial", "serial_32", "sycl", "sycl_32"]
 
 
 def plot_style(string, use_greyscale=False):
@@ -263,7 +264,10 @@ def plot_heatmap(
     figsize=(8, 6),
     show=False,
     vmax=None,
-    vmin=None
+    vmin=None,
+    cmap="inferno",
+    symmetric=None
+
 ):
     """
     Plot a 2D heatmap.
@@ -304,7 +308,11 @@ def plot_heatmap(
 
     fig, ax = plt.subplots(figsize=figsize)
 
-    if(vmax is None):
+    if(symmetric is not None and symmetric == True):
+        v = np.abs(temperature).max()
+        if(v == 0):
+            v = 1.0e-10
+        norm = TwoSlopeNorm(vmin=-v, vcenter=0.0, vmax=v)
         image = ax.imshow(
             temperature,
             extent=[
@@ -315,23 +323,40 @@ def plot_heatmap(
             ],
             origin="lower",
             aspect="auto",
-            cmap="inferno"
+            cmap=cmap,
+            norm=norm
         )
+
     else:
-        image = ax.imshow(
-            temperature,
-            extent=[
-                np.min(x),
-                np.max(x),
-                np.min(y),
-                np.max(y)
-            ],
-            origin="lower",
-            aspect="auto",
-            cmap="inferno",
-            vmin=vmin,
-            vmax=vmax
-        )
+
+        if(vmax is None):
+            image = ax.imshow(
+                temperature,
+                extent=[
+                    np.min(x),
+                    np.max(x),
+                    np.min(y),
+                    np.max(y)
+                ],
+                origin="lower",
+                aspect="auto",
+                cmap=cmap
+            )
+        else:
+            image = ax.imshow(
+                temperature,
+                extent=[
+                    np.min(x),
+                    np.max(x),
+                    np.min(y),
+                    np.max(y)
+                ],
+                origin="lower",
+                aspect="auto",
+                cmap=cmap,
+                vmin=vmin,
+                vmax=vmax
+            )
 
     cbar = plt.colorbar(image, ax=ax)
     cbar.set_label(label)
@@ -450,25 +475,30 @@ def main() -> None:
         plot_difference_histogram(differences[step], output_dir, f"precision_{args.plot_name}_difference_{step}.png",
                                   f"{args.plot_name} Relative Difference {args.plot_name} t={time}s", False)
         
+        # Heatmap for difference
         plot_heatmap(output_dir=output_dir,
                     output_file=f"heatmap_{args.plot_name}_difference_{step}.png",
                     temperature=differences[step],
                     title=f"Temperature difference {args.plot_name} t={time}s",
-                    label="Percentage")
+                    label="Percentage", 
+                    cmap="RdBu_r",
+                    symmetric=True)
+        
+        # Heatmap for reference
         plot_heatmap(output_dir=output_dir,
                     output_file=f"heatmap_reference_{step}.png",
                     temperature=precise_results[step][0],
                     title=f"Temperature reference t={time}s",
                     label="Temperature", 
-                    vmax=vmax,
-                    vmin=0.0)
+                    vmax=vmax)
+        
+        # Heatmap for this
         plot_heatmap(output_dir=output_dir,
-                    output_file=f"heatmap_{args.plot_name}_{step}.png",
+                    output_file=f"heatmap_{args.plot_name}_{last_step-1}.png",
                     temperature=openmp_32_results[step][0],
                     title=f"Temperature {args.plot_name} t={time}s",
                     label="Temperature", 
-                    vmax=vmax,
-                    vmin=0.0)
+                    vmax=vmax)
 
         step = step + 10
 
@@ -476,18 +506,24 @@ def main() -> None:
     plot_difference_histogram(differences[last_step-1], output_dir, f"precision_{args.plot_name}_difference_{last_step-1}.png",
                                 f"{args.plot_name} Relative Difference {args.plot_name} t={time}s", False)
 
+    # Heatmap for difference
     plot_heatmap(output_dir=output_dir,
                 output_file=f"heatmap_{args.plot_name}_difference_{last_step-1}.png",
                 temperature=differences[last_step-1],
                 title=f"Temperature difference {args.plot_name} t={time}s",
-                label="TemperPercentageature", 
-                vmax=vmax_differences)
+                label="Percentage", 
+                cmap="RdBu_r",
+                symmetric=True)
+    
+    # Heatmap for reference
     plot_heatmap(output_dir=output_dir,
                 output_file=f"heatmap_reference_{last_step-1}.png",
                 temperature=precise_results[last_step-1][0],
                 title=f"Temperature reference t={time}s",
                 label="Temperature", 
                 vmax=vmax)
+    
+    # Heatmap for this
     plot_heatmap(output_dir=output_dir,
                 output_file=f"heatmap_{args.plot_name}_{last_step-1}.png",
                 temperature=openmp_32_results[last_step-1][0],

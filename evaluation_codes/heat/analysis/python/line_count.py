@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import os
 import matplotlib.pyplot as plt
 
-FRAMEWORKS = ["cuda", "cuda_32", "openmp", "openmp_32", "serial", "serial_32", "sycl", "sycl_32"]
+FRAMEWORKS = ["cuda", "cuda_32", "opencl", "opencl_32", "openmp", "openmp_32", "serial", "serial_32", "sycl", "sycl_32"]
 SRC_DIR = "src"
 INCLUDE_DIR = "include/heat"
 EXTENSIONS = (".cpp", ".hpp", ".cu", ".c", ".h")

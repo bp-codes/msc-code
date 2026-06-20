@@ -2,6 +2,9 @@
 #define OPENCLENGINE_HPP
 
 #define CL_TARGET_OPENCL_VERSION 120
+#ifndef CL_PLATFORM_NOT_FOUND_KHR
+#define CL_PLATFORM_NOT_FOUND_KHR -1001
+#endif
 
 #include <CL/cl.h>
 
@@ -14,6 +17,87 @@
 
 #include "heat/Grid.hpp"
 #include "heat/Source.hpp"
+
+void opencl_check(cl_int status, const char* message) {
+    if (status != CL_SUCCESS) {
+        std::ostringstream oss;
+        oss << message << " (OpenCL error " << status << ")";
+        throw std::runtime_error(oss.str());
+    }
+}
+
+[[nodiscard]]
+cl_device_id pick_device(std::string_view device_string) {
+    cl_uint platform_count{0};
+    const cl_int status = clGetPlatformIDs(0, nullptr, &platform_count);
+
+    if (status == CL_PLATFORM_NOT_FOUND_KHR) {
+        throw std::runtime_error(
+            "No OpenCL platform found. "
+            "Install an OpenCL ICD/runtime such as pocl-opencl-icd, "
+            "or enable vendor OpenCL support inside the container.");
+    }
+
+    opencl_check(status, "clGetPlatformIDs(count) failed.");
+
+    if (platform_count == 0) {
+        throw std::runtime_error("No OpenCL platforms found.");
+    }
+
+    auto platforms = std::vector<cl_platform_id>(platform_count);
+    opencl_check(clGetPlatformIDs(platform_count, platforms.data(), nullptr),
+                 "clGetPlatformIDs(data) failed.");
+
+    const cl_device_type requested_type =
+        (device_string == "cpu" || device_string == "CPU") ? CL_DEVICE_TYPE_CPU : CL_DEVICE_TYPE_GPU;
+
+    for (const auto platform : platforms) {
+        cl_uint device_count{0};
+        const auto device_status =
+            clGetDeviceIDs(platform, requested_type, 0, nullptr, &device_count);
+        if (device_status == CL_SUCCESS && device_count > 0) {
+            auto devices = std::vector<cl_device_id>(device_count);
+            opencl_check(
+                clGetDeviceIDs(platform, requested_type, device_count, devices.data(), nullptr),
+                "clGetDeviceIDs(requested type) failed.");
+            return devices.front();
+        }
+    }
+
+    std::ostringstream oss;
+    oss << "No suitable OpenCL " << device_string << " device found.";
+    throw std::runtime_error(oss.str());
+}
+
+std::string get_platform_string(cl_platform_id platform, cl_platform_info param) {
+    std::size_t size{0};
+    opencl_check(clGetPlatformInfo(platform, param, 0, nullptr, &size),
+                 "clGetPlatformInfo(size) failed.");
+
+    std::string value(size, '\0');
+    opencl_check(clGetPlatformInfo(platform, param, size, value.data(), nullptr),
+                 "clGetPlatformInfo(data) failed.");
+
+    if (!value.empty() && value.back() == '\0') {
+        value.pop_back();
+    }
+    return value;
+}
+
+std::string get_device_string(cl_device_id device, cl_device_info param) {
+    std::size_t size{0};
+    opencl_check(clGetDeviceInfo(device, param, 0, nullptr, &size),
+                 "clGetDeviceInfo(size) failed.");
+
+    std::string value(size, '\0');
+    opencl_check(clGetDeviceInfo(device, param, size, value.data(), nullptr),
+                 "clGetDeviceInfo(data) failed.");
+
+    if (!value.empty() && value.back() == '\0') {
+        value.pop_back();
+    }
+    return value;
+}
 
 struct OpenCLEngine {
     cl_platform_id platform {};
@@ -228,46 +312,14 @@ struct OpenCLEngine {
     }
 
 private:
-    void _init_opencl(const std::string& device_preference)
+    void _init_opencl(const std::string& device_string)
     {
-        cl_int err {};
 
-        cl_uint num_platforms {};
-        clGetPlatformIDs(0, nullptr, &num_platforms);
+        cl_int err {};device = pick_device(device_string);
 
-        if (num_platforms == 0) {
-            throw std::runtime_error("No OpenCL platforms found");
-        }
-
-        std::vector<cl_platform_id> platforms(num_platforms);
-        clGetPlatformIDs(num_platforms, platforms.data(), nullptr);
-
-        platform = platforms[0];
-
-        cl_device_type dtype = CL_DEVICE_TYPE_DEFAULT;
-
-        if (device_preference == "cpu") {
-            dtype = CL_DEVICE_TYPE_CPU;
-        } else if (device_preference == "gpu") {
-            dtype = CL_DEVICE_TYPE_GPU;
-        }
-
-        cl_uint num_devices {};
-        clGetDeviceIDs(platform, dtype, 0, nullptr, &num_devices);
-
-        if (num_devices == 0) {
-            throw std::runtime_error("No matching OpenCL device");
-        }
-
-        std::vector<cl_device_id> devices(num_devices);
-
-        clGetDeviceIDs(platform,
-                       dtype,
-                       num_devices,
-                       devices.data(),
-                       nullptr);
-
-        device = devices[0];
+        const auto device_name =
+        get_device_string(device, CL_DEVICE_NAME);
+        std::cerr << "Using device: " << device_name << "\n";
 
         context = clCreateContext(nullptr,
                                   1,

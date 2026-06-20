@@ -7,6 +7,7 @@ output/*
 **/output
 **/output_cpu
 **/output_gpu
+**/output_gpu_large
 *.log
 *.exe
 *.out

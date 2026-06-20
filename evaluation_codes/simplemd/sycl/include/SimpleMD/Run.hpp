@@ -51,10 +51,10 @@ public:
             if (i % configuration.get_rebuild_every() == 0)
                 ConfigurationEngine::make_neighbour_list(configuration);
 
-            VerletEngine::vertlet_step_sycl(configuration);
+            VerletEngine::vertlet_step(configuration);
 
             if (i % configuration.get_xyz_every() == 0)
-                ConfigurationEngine::record_to_xyz_sycl(static_cast<int>(i), configuration);
+                ConfigurationEngine::record_to_xyz(static_cast<int>(i), configuration);
         }
         auto t1 = std::chrono::steady_clock::now();
 

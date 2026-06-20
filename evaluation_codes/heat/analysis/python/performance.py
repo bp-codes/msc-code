@@ -248,8 +248,8 @@ def plot_performance_memory(
     plot_horizontal_bar(
         labels=methods,
         values=means,
-        xlabel="Run time/s",
-        title=f"Heat2D Runtime",
+        xlabel="Max Memory (kb)",
+        title=f"Heat2D Max Memory (kb)",
         output_dir="analysis",
         output_file = f"heat2d_mean_memory.png".replace(" ", "_"),
         width=8,
@@ -260,8 +260,8 @@ def plot_performance_memory(
     plot_horizontal_bar(
         labels=methods,
         values=maxs,
-        xlabel="Run time/s",
-        title=f"Heat2D Runtime",
+        xlabel="Max Memory (kb)",
+        title=f"Heat2D Max Memory (kb)",
         output_dir="analysis",
         output_file = f"heat2d_max_memory.png".replace(" ", "_"),
         width=8,
