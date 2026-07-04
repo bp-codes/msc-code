@@ -1,0 +1,43 @@
+
+FROM nvidia/cuda:12.3.2-devel-ubuntu22.04
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget \
+    ca-certificates \
+    gnupg \
+    build-essential \
+    cmake \
+    ninja-build \
+    git \
+    python3 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Add AMD/ROCm package repo helper.
+# This follows AMD HIP docs for the NVIDIA HIP runtime packages.
+RUN wget https://repo.radeon.com/amdgpu-install/6.2.4/ubuntu/jammy/amdgpu-install_6.2.60204-1_all.deb \
+    && apt-get update \
+    && apt-get install -y ./amdgpu-install_6.2.60204-1_all.deb \
+    && rm amdgpu-install_6.2.60204-1_all.deb
+
+# Install HIP CUDA/NVIDIA backend.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    hip-runtime-nvidia \
+    hip-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN update-alternatives --set cuda /usr/local/cuda-12.3 || true \
+    && ln -sfn /usr/local/cuda-12.3 /usr/local/cuda
+
+ENV CUDA_HOME=/usr/local/cuda-12.3
+ENV CUDA_PATH=/usr/local/cuda-12.3
+
+ENV HIP_PLATFORM=nvidia
+ENV HIP_COMPILER=nvcc
+ENV HIP_RUNTIME=cuda
+
+ENV PATH=/usr/local/cuda-12.3/bin:/opt/rocm-6.2.4/bin:/opt/rocm/bin:${PATH}
+ENV LD_LIBRARY_PATH=/usr/local/cuda-12.3/lib64:${LD_LIBRARY_PATH}
+
+WORKDIR /workspace

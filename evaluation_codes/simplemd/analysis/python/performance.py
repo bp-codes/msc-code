@@ -252,7 +252,7 @@ def plot_performance_memory(
     plot_horizontal_bar(
         labels=methods,
         values=means,
-        xlabel="Run time/s",
+        xlabel="Mean memory use (kb)",
         title=f"SimpleMD Runtime",
         output_dir="analysis",
         output_file = f"simplemd_mean_memory.png".replace(" ", "_"),
@@ -264,7 +264,7 @@ def plot_performance_memory(
     plot_horizontal_bar(
         labels=methods,
         values=maxs,
-        xlabel="Run time/s",
+        xlabel="Maximum memory use (kb)",
         title=f"SimpleMD Runtime",
         output_dir="analysis",
         output_file = f"simplemd_max_memory.png".replace(" ", "_"),

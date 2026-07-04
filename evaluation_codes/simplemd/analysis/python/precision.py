@@ -256,7 +256,7 @@ def plot_difference_histogram(difference, xlabel, ylabel, title, output_dir, out
 
         plt.title(title)
         plt.xlabel(
-            "Relative percentage difference to reference data"
+            "calculated difference (Å)"
         )
         plt.ylabel("Density")
         plt.yscale("log")
@@ -353,9 +353,12 @@ def plot_top_atoms_over_time(
 
     for atom_index, series in series_by_atom.items():
         element = elements_by_atom[atom_index]
-        plt.plot(series, label=f"{atom_index}:{element}")
 
-    plt.xlabel("Frame index")
+        # Change if the timestep output changes from 20
+        x = [i * 20 for i in range(len(series))]
+        plt.plot(x, series, label=f"{atom_index}:{element}")
+
+    plt.xlabel("Time step")
     plt.ylabel(ylabel)
     plt.title(title)
     plt.legend(fontsize=8, ncol=2)
@@ -375,9 +378,12 @@ def plot_top_atoms_component_over_time(
 
     for atom_index, series in series_by_atom.items():
         element = elements_by_atom[atom_index]
-        plt.plot(series, label=f"{atom_index}:{element}")
 
-    plt.xlabel("Frame index")
+        # Change if the timestep output changes from 20
+        x = [i * 20 for i in range(len(series))]
+        plt.plot(x, series, label=f"{atom_index}:{element}")
+
+    plt.xlabel("Time step")
     plt.ylabel(ylabel)
     plt.title(title)
     plt.legend(fontsize=8, ncol=2)
@@ -561,7 +567,7 @@ def analyze_trajectory(
         elements_by_atom,
         output_path=top_dr_path,
         ylabel="Displacement magnitude (Å)",
-        title=f"Final-frame top {len(worst_indices)} worst atoms tracked over time",
+        title=f"Final-step top {len(worst_indices)} worst atoms tracked over time",
     )
 
     plot_top_atoms_component_over_time(
@@ -569,7 +575,7 @@ def analyze_trajectory(
         elements_by_atom,
         output_path=top_dx_path,
         ylabel="Signed x error (Å)",
-        title=f"Signed dx over time for final-frame top {len(worst_indices)} worst atoms",
+        title=f"Signed dx over time for final-step top {len(worst_indices)} worst atoms",
     )
 
     plot_top_atoms_component_over_time(
@@ -577,7 +583,7 @@ def analyze_trajectory(
         elements_by_atom,
         output_path=top_dy_path,
         ylabel="Signed y error (Å)",
-        title=f"Signed dy over time for final-frame top {len(worst_indices)} worst atoms",
+        title=f"Signed dy over time for final-step top {len(worst_indices)} worst atoms",
     )
 
     plot_top_atoms_component_over_time(
@@ -585,7 +591,7 @@ def analyze_trajectory(
         elements_by_atom,
         output_path=top_dz_path,
         ylabel="Signed z error (Å)",
-        title=f"Signed dz over time for final-frame top {len(worst_indices)} worst atoms",
+        title=f"Signed dz over time for final-step top {len(worst_indices)} worst atoms",
     )
 
     summary_json_path = outdir / "comparison_summary.json"

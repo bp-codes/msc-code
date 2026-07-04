@@ -1,0 +1,401 @@
+
+/**
+ * @file parallel_hip.cpp
+ * @brief HIP version of the Bethe-Bloch stopping-power benchmark.
+ *
+ * @author Ben Palmer
+ * @date 2026
+ *
+ * @copyright
+ * Copyright (c) 2026 Ben Palmer
+ * SPDX-License-Identifier: MIT
+ */
+
+#include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <cstdint>
+#include <cstdlib>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <limits>
+#include <numeric>
+#include <random>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <vector>
+
+#include "helper/Error.hpp"
+#include "helper/helper.hpp"
+
+#include <hip/hip_runtime.h>
+#include <nlohmann/json.hpp>
+
+/**
+ * @brief Check a HIP runtime call and throw if it failed.
+ *
+ * @param error HIP error code.
+ * @param message Context for the failing operation.
+ */
+static inline void check_hip(const hipError_t error, const char* const message) {
+    if (error != hipSuccess) {
+        throw std::runtime_error(std::string(message) + ": " + hipGetErrorString(error));
+    }
+}
+
+/**
+ * @brief Maximum function usable on host and HIP device.
+ */
+__host__ __device__ static inline double hip_compatible_max(const double a, const double b) {
+    return (a > b) ? a : b;
+}
+
+/**
+ * @brief Clamp function usable on host and HIP device.
+ */
+__host__ __device__ static inline double hip_compatible_clamp(const double x, const double lo,
+                                                             const double hi) {
+    return hip_compatible_max(lo, (x < hi) ? x : hi);
+}
+
+/**
+ * @brief Log function usable on host and HIP device.
+ *
+ * @param x Input value.
+ * @return Natural logarithm of x.
+ */
+__host__ __device__ static inline double hip_compatible_log(const double x) {
+#ifdef __HIP_DEVICE_COMPILE__
+    return ::log(x);
+#else
+    return std::log(x);
+#endif
+}
+
+/**
+ * @brief Square-root function usable on host and HIP device.
+ *
+ * @param x Input value.
+ * @return Square root of x.
+ */
+__host__ __device__ static inline double hip_compatible_sqrt(const double x) {
+#ifdef __HIP_DEVICE_COMPILE__
+    return ::sqrt(x);
+#else
+    return std::sqrt(x);
+#endif
+}
+
+/**
+ * @brief Linear stopping power (dE/dx) for a charged ion in a material using the PDG Bethe
+ * equation.
+ *
+ * Implements the PDG "Bethe equation" for heavy charged particles, including:
+ *  - W_max from PDG Eq. (34.4)
+ *  - stopping-power bracket from PDG Eq. (34.5), including the density-effect term -delta/2
+ *
+ * Returns *linear stopping power* in MeV/cm:
+ *   (dE/dx)_linear = rho * (dE/dx)_mass
+ *
+ * Assumes that input values have already been checked as valid.
+ *
+ * @param projectile_velocity_ms
+ *      Projectile velocity in metres per second.
+ * @param projectile_atomic_number
+ *      Projectile charge number z (number of protons in the ion).
+ * @param projectile_atomic_mass_mev
+ *      Projectile rest mass energy Mc^2 in MeV.
+ * @param target_atomic_number
+ *      Atomic number Z of the target material.
+ * @param target_atomic_mass_g_mol
+ *      Atomic mass A of the target material in g/mol.
+ * @param target_density_g_cm3
+ *      Target density rho in g/cm^3.
+ * @param mean_excitation_energy_mev
+ *      Mean excitation energy I in MeV.
+ * @param density_effect_delta
+ *      Density-effect correction delta(beta*gamma) (dimensionless). Use 0 if not applying.
+ *
+ * @return
+ *      Linear stopping power dE/dx in MeV/cm.
+ *
+ * @warning
+ *      This routine does not validate inputs. In particular, beta must be in (0, 1).
+ *      This implementation clamps beta to avoid divide-by-zero and gamma overflow; that changes
+ * physics.
+ */
+__host__ __device__ static inline double stopping_power(
+    const double projectile_velocity_ms, const int projectile_atomic_number,
+    const double projectile_atomic_mass_mev, const int target_atomic_number,
+    const double target_atomic_mass_g_mol, const double target_density_g_cm3,
+    const double mean_excitation_energy_mev, const double density_effect_delta) {
+    // Fundamental constants (PDG)
+    static constexpr auto SPEED_OF_LIGHT_MS{299792458.0};    ///< [m/s]
+    static constexpr auto ELECTRON_MASS_MEV{0.51099895000};  ///< [MeV]
+    static constexpr auto BETHE_CONSTANT_K{0.307075};        ///< [MeV·cm^2/mol]
+    static constexpr auto SMALL_VALUE{1.0e-9};
+
+    // Relativistic kinematics
+    const auto beta_raw{projectile_velocity_ms / SPEED_OF_LIGHT_MS};
+    const auto beta{hip_compatible_clamp(
+        beta_raw, SMALL_VALUE, 0.99999)};  // Clamped to sensible values to avoid errors
+    const auto beta2{beta * beta};
+
+    const auto inv_one_minus_beta2{1.0 / (1.0 - beta2)};
+    const auto gamma2{hip_compatible_max(0.0, inv_one_minus_beta2)};
+    const auto gamma{hip_compatible_sqrt(gamma2)};
+
+    // Total energy E = gamma * M c^2 [MeV]
+    const auto total_energy_mev{hip_compatible_max(0.0, gamma * projectile_atomic_mass_mev)};
+    static_cast<void>(total_energy_mev);
+
+    // Maximum energy transfer W_max (PDG Eq. 34.4)
+    const auto electron_to_projectile_mass{ELECTRON_MASS_MEV /
+                                           hip_compatible_max(SMALL_VALUE,
+                                                              projectile_atomic_mass_mev)};
+
+    const auto w_max_numerator{2.0 * ELECTRON_MASS_MEV * beta2 * gamma2};
+    const auto w_max_denominator =
+        hip_compatible_max(1.0 + 2.0 * gamma * electron_to_projectile_mass +
+                               (electron_to_projectile_mass * electron_to_projectile_mass),
+                           SMALL_VALUE);
+
+    const auto w_max_mev{w_max_numerator / w_max_denominator};
+
+    // Logarithmic argument (PDG Eq. 34.5)
+    const auto mean_excitation_energy2_mev2{mean_excitation_energy_mev *
+                                            mean_excitation_energy_mev};
+
+    const auto log_argument = hip_compatible_max(
+        (2.0 * ELECTRON_MASS_MEV * beta2 * gamma2 * w_max_mev) /
+            hip_compatible_max(SMALL_VALUE, mean_excitation_energy2_mev2),
+        SMALL_VALUE);
+
+    // Square-bracketed term (PDG Eq. 34.5 + optional corrections)
+    const auto bracket =
+        0.5 * hip_compatible_log(log_argument) - beta2 - 0.5 * density_effect_delta;
+
+    // Mass stopping power [MeV·cm^2/g] and linear stopping power [MeV/cm]
+    const auto projectile_charge{static_cast<double>(projectile_atomic_number)};
+    const auto projectile_charge2{projectile_charge * projectile_charge};
+
+    const auto z_over_a{static_cast<double>(target_atomic_number) /
+                        hip_compatible_max(SMALL_VALUE, target_atomic_mass_g_mol)};
+    const auto prefactor_mass{BETHE_CONSTANT_K * projectile_charge2 * z_over_a / beta2};
+
+    const auto mass_stopping_power_mev_cm2_per_g{prefactor_mass * bracket};
+    const auto linear_stopping_power_mev_per_cm{target_density_g_cm3 *
+                                                mass_stopping_power_mev_cm2_per_g};
+
+    return linear_stopping_power_mev_per_cm;
+}
+
+/**
+ * @brief Fill per-particle stopping power array on the HIP device.
+ *
+ * @param n Number of elements.
+ * @param velocity_device Device pointer to velocities (length n).
+ * @param stopping_power_device Device pointer to outputs (length n).
+ */
+__global__ void stopping_power_kernel(const std::size_t n,
+                                             const double* const velocity_device,
+                                             double* const stopping_power_device) {
+    const auto i{static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x};
+
+    if (i >= n) {
+        return;
+    }
+
+    static constexpr auto PROJECTILE_ATOMIC_NUMBER{1};
+    static constexpr auto PROJECTILE_ATOMIC_MASS_MEV{938.2720813};
+
+    static constexpr auto TARGET_ATOMIC_NUMBER{26};
+    static constexpr auto TARGET_ATOMIC_MASS_G_MOL{55.845};
+    static constexpr auto TARGET_DENSITY_G_CM3{7.874};
+
+    static constexpr auto MEAN_EXCITATION_ENERGY_MEV{286.0e-6};
+    static constexpr auto DENSITY_EFFECT_DELTA{0.0};
+
+    stopping_power_device[i] =
+        stopping_power(velocity_device[i], PROJECTILE_ATOMIC_NUMBER, PROJECTILE_ATOMIC_MASS_MEV,
+                       TARGET_ATOMIC_NUMBER, TARGET_ATOMIC_MASS_G_MOL, TARGET_DENSITY_G_CM3,
+                       MEAN_EXCITATION_ENERGY_MEV, DENSITY_EFFECT_DELTA);
+}
+
+/**
+ * @brief Fill per-particle stopping power array on device.
+ *
+ * @param n Number of elements.
+ * @param velocity_device Device pointer to velocities (length n).
+ * @param stopping_power_device Device pointer to outputs (length n).
+ */
+static inline void task(const std::size_t n, const double* const velocity_device,
+                        double* const stopping_power_device) {
+    static constexpr auto BLOCK_SIZE{256U};
+
+    const auto blocks{static_cast<unsigned int>((n + BLOCK_SIZE - 1U) / BLOCK_SIZE)};
+
+    hipLaunchKernelGGL(stopping_power_kernel, dim3(blocks), dim3(BLOCK_SIZE), 0, 0, n,
+                       velocity_device, stopping_power_device);
+    check_hip(hipGetLastError(), "HIP kernel launch failed");
+    check_hip(hipDeviceSynchronize(), "HIP kernel execution failed");
+}
+
+auto main(int argc, char** argv) -> int {
+    if (argc < 3) {
+        std::cerr << "Usage: " << argv[0] << " time_limit vec_size\n";
+        return 1;
+    }
+
+    const auto test_time_s{std::atof(argv[1])};
+    const auto n_raw{std::atoll(argv[2])};
+
+    if (n_raw <= 0) {
+        std::cerr << "vec_size must be a positive integer\n";
+        return 1;
+    }
+
+    const auto n{static_cast<std::size_t>(n_raw)};
+
+    std::string_view device_string = "GPU";
+    if (argc >= 4) {
+        device_string = argv[3];
+
+        if (device_string != "GPU") {
+            THROW_INVALID_ARGUMENT("HIP version currently supports GPU only");
+        }
+    }
+
+    // ======= Set up before calculation ========
+    const auto t0{std::chrono::steady_clock::now()};
+
+    int device_count{0};
+    check_hip(hipGetDeviceCount(&device_count), "Failed to get HIP device count");
+
+    if (device_count < 1) {
+        throw std::runtime_error("No HIP devices found");
+    }
+
+    int device_id{0};
+    check_hip(hipSetDevice(device_id), "Failed to select HIP device");
+
+    hipDeviceProp_t device_properties{};
+    check_hip(hipGetDeviceProperties(&device_properties, device_id),
+              "Failed to get HIP device properties");
+
+    std::cerr << "Using device: " << device_properties.name << "\n";
+
+    auto velocity_host{std::vector<double>(n)};
+    auto stopping_power_values{std::vector<double>(n)};
+
+    double* velocity_device{nullptr};
+    double* stopping_power_device{nullptr};
+
+    try {
+        check_hip(hipMalloc(reinterpret_cast<void**>(&velocity_device), sizeof(double) * n),
+                  "Failed to allocate velocity_device");
+        check_hip(hipMalloc(reinterpret_cast<void**>(&stopping_power_device), sizeof(double) * n),
+                  "Failed to allocate stopping_power_device");
+    } catch (...) {
+        if (stopping_power_device != nullptr) {
+            static_cast<void>(hipFree(stopping_power_device));
+        }
+        if (velocity_device != nullptr) {
+            static_cast<void>(hipFree(velocity_device));
+        }
+        throw;
+    }
+
+    // Fill input once
+    std::mt19937_64 rng(123456789ULL);
+    std::uniform_real_distribution<double> dist(1.0e7, 1.0e8);
+
+    for (auto i = std::size_t(0); i < n; i++) {
+        velocity_host[i] = dist(rng);
+    }
+
+    check_hip(hipMemcpy(velocity_device, velocity_host.data(), sizeof(double) * n,
+                        hipMemcpyHostToDevice),
+              "Failed to copy velocity_host to velocity_device");
+
+    // ======= Carry out calculation ========
+    const auto t1{std::chrono::steady_clock::now()};
+    const auto deadline{t1 + std::chrono::duration<double>(test_time_s)};
+    auto iters{static_cast<std::uint64_t>(0)};
+
+    // Run as many iterations as possible
+    do {
+        task(n, velocity_device, stopping_power_device);
+        iters++;
+    } while (std::chrono::steady_clock::now() < deadline);
+
+    // ======= Copy back and clean up after calculation ========
+    const auto t2{std::chrono::steady_clock::now()};
+
+    check_hip(hipMemcpy(stopping_power_values.data(), stopping_power_device, sizeof(double) * n,
+                        hipMemcpyDeviceToHost),
+              "Failed to copy stopping_power_device to stopping_power_values");
+
+    // Sum stopping_power on host for comparison
+    const auto calculated_value{helper::check_sum(stopping_power_values)};
+
+    check_hip(hipFree(stopping_power_device), "Failed to free stopping_power_device");
+    check_hip(hipFree(velocity_device), "Failed to free velocity_device");
+
+    // ======= End ========
+    const auto t3{std::chrono::steady_clock::now()};
+
+    const auto time_setup_s{std::chrono::duration<double>(t1 - t0).count()};
+    const auto time_calc_s{std::chrono::duration<double>(t2 - t1).count()};
+    const auto time_cleanup_s{std::chrono::duration<double>(t3 - t2).count()};
+    const auto time_total_s{std::chrono::duration<double>(t3 - t0).count()};
+    const auto time_per_iteration_s{(iters > 0) ? (time_calc_s / static_cast<double>(iters)) : 0.0};
+
+    const auto method{std::string("Parallel HIP")};
+    const auto comments{std::string("stopping_power")};
+
+    // Output
+    {
+        const std::string base_file_name = "results/parallel_hip";
+        const std::string json_file = base_file_name + "_" + helper::random_suffix(12) + ".json";
+
+        nlohmann::json j;
+
+        // Metadata / identity
+        j["file"] = json_file;
+        j["method"] = method;
+        j["operation"] = "Bethe-Bloch Stopping Power";
+        j["comments"] = comments;
+        j["threads"] = helper::get_num_threads();
+        j["precision"] = "64";
+        j["device"] = std::string(device_string);
+
+        // Iteration/timing
+        j["test_time_seconds"] = test_time_s;
+        j["iterations"] = iters;
+        j["time_per_iteration"] = time_per_iteration_s;
+        j["time_setup"] = time_setup_s;
+        j["time_calc"] = time_calc_s;
+        j["time_cleanup"] = time_cleanup_s;
+        j["time_total"] = time_total_s;
+
+        // Values
+        j["calculated_value"] = helper::to_string_precise(calculated_value);
+        j["values"] = helper::to_string_precise_vector(stopping_power_values);
+
+        // Memory
+        j["max_rss_kb"] = helper::max_rss_kb();
+
+        std::ofstream out(json_file);
+        if (!out) {
+            throw std::runtime_error("Failed to open output JSON file.");
+        }
+
+        // Pretty-print. Use `out << j;` if you want compact.
+        out << std::setw(2) << j << '\n';
+    }
+
+    return 0;
+}

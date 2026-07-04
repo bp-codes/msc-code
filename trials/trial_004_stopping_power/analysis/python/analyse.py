@@ -448,7 +448,7 @@ def plot_difference_histograms(
 
             elif any(
                 k in method.lower()
-                for k in ["cuda", "sycl", "opencl"]
+                for k in ["cuda", "sycl", "opencl", "hip"]
             ):
                 colour = "#a9d6a5"
 
@@ -706,6 +706,7 @@ def plot_horizontal_bar(
                 "cuda" in l
                 or "sycl" in l
                 or "opencl" in l
+                or "hip" in l
             ):
 
                 if "cpu" in l:

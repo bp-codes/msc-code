@@ -1,6 +1,6 @@
  {
   "queue_output": true,
-  "threads": 4,
+  "threads": 6,
   "nx": 501,
   "ny": 501,
   "length_x": 1.0,

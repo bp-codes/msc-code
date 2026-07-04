@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import os
 import matplotlib.pyplot as plt
 
-FRAMEWORKS = ["cuda", "cuda_32", "opencl", "opencl_32", "openmp", "openmp_32", "serial", "serial_32", "sycl", "sycl_32"]
+FRAMEWORKS = ["cuda", "cuda_32", "opencl", "opencl_32", "hip", "hip_32", "openmp", "openmp_32", "serial", "serial_32", "sycl", "sycl_32"]
 SRC_DIR = "src"
 INCLUDE_DIR = "include/heat"
 EXTENSIONS = (".cpp", ".hpp", ".cu", ".c", ".h")
@@ -18,7 +18,7 @@ def plot_style(string, use_greyscale=False):
     else:
         if "precise" in string:
             colour = "#f4a3a3"
-        elif ("cuda" in string or "sycl" in string or "opencl" in string):
+        elif ("cuda" in string or "sycl" in string or "opencl" in string or "hip" in string):
             if "cpu" in string:
                 colour = "#e6f3aa"
             else:

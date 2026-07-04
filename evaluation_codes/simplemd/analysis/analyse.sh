@@ -10,6 +10,8 @@ python3 python/precision.py ../serial/output/out.xyz ../sycl/output_cpu/out.xyz 
 python3 python/precision.py ../serial/output/out.xyz ../sycl/output_gpu/out.xyz --outdir=precision/sycl --plot_name sycl_gpu
 python3 python/precision.py ../serial/output/out.xyz ../sycl_32/output_cpu/out.xyz --outdir=precision/sycl_32 --plot_name sycl_32_cpu
 python3 python/precision.py ../serial/output/out.xyz ../sycl_32/output_gpu/out.xyz --outdir=precision/sycl_32 --plot_name sycl_32_gpu
+python3 python/precision.py ../serial/output/out.xyz ../cuda/output/out.xyz --outdir=precision/cuda --plot_name cuda
+python3 python/precision.py ../serial/output/out.xyz ../cuda_32/output/out.xyz --outdir=precision/cuda_32 --plot_name cuda_32
 
 
 

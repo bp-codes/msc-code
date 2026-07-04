@@ -1,0 +1,23 @@
+FROM nvidia/cuda:12.6.3-devel-ubuntu24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    gcc-13 \
+    g++-13 \
+    gcc-13-offload-nvptx \
+    libgomp-plugin-nvptx1 \
+    nvptx-tools \
+    cmake \
+    ninja-build \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV CC=gcc-13
+ENV CXX=g++-13
+
+# Useful: fail instead of silently running on CPU
+ENV OMP_TARGET_OFFLOAD=MANDATORY
+
+WORKDIR /work

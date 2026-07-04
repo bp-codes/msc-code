@@ -130,7 +130,7 @@ def plot_horizontal_bar(labels,
         else:
             if ("precise" in l):
                 colour = "#f4a3a3"
-            elif ("cuda" in l or "sycl" in l or "opencl" in l):
+            elif ("cuda" in l or "sycl" in l or "opencl" in l or "hip" in l):
                 colour = "#a9d6a5"
             elif "parallel" in l:
                 colour = "#a8c9f0"
