@@ -15,7 +15,7 @@ def plot_style(string, use_greyscale=False):
     else:
         if "precise" in string:
             colour = "#f4a3a3"
-        elif ("cuda" in string or "sycl" in string or "opencl" in string):
+        elif ("cuda" in string or "sycl" in string or "opencl" in string or "hip" in string):
             if "cpu" in string:
                 colour = "#e6f3aa"
             else:

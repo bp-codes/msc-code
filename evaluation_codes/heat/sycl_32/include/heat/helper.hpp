@@ -97,24 +97,24 @@ OperationKind parse_operation(std::string_view operation) {
 }
 
 /**
- * @brief Parse a double from argv using std::from_chars.
+ * @brief Parse a float from argv using std::from_chars.
  * @param s Null-terminated string.
- * @return Parsed double.
+ * @return Parsed float.
  * @throws std::invalid_argument on parse failure.
  */
 [[nodiscard]]
-double parse_floating_point(const char* s) {
+float parse_floating_point(const char* s) {
     if (s == nullptr) {
-        THROW_INVALID_ARGUMENT("Null argument encountered while parsing double.");
+        THROW_INVALID_ARGUMENT("Null argument encountered while parsing float.");
     }
 
-    double value{};
+    float value{};
     const auto* first{s};
     const auto* last{s + std::char_traits<char>::length(s)};
 
     const auto result{std::from_chars(first, last, value)};
     if (result.ec != std::errc{} || result.ptr != last) {
-        THROW_INVALID_ARGUMENT("Failed to parse double argument.");
+        THROW_INVALID_ARGUMENT("Failed to parse float argument.");
     }
 
     return value;
@@ -198,7 +198,7 @@ nlohmann::json to_string_precise_vector(const Range& values_in) {
 template <typename T>
 [[nodiscard]]
 T check_sum(const std::vector<T>& numbers) {
-    return std::accumulate(numbers.begin(), numbers.end(), 0.0);
+    return std::accumulate(numbers.begin(), numbers.end(), T{0});
 }
 
 }  // namespace helper

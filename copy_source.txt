@@ -1,0 +1,30 @@
+ 
+rsync -avh \
+  --exclude='results/' \
+  --exclude='build/' \
+  --exclude='output/' \
+  --exclude='output_cpu/' \
+  --exclude='output_gpu/' \
+  --exclude='*.o' \
+  --exclude='*.log' \
+  --exclude='*.csv' \
+  --exclude='*.avi' \
+  --exclude='*.png' \
+  /DATA/disk3/cloud/OU/T802/Method/code/evaluation_codes \
+  /media/ben/Storage/ARCHER2/
+
+   
+rsync -avh \
+  --exclude='results/' \
+  --exclude='build/' \
+  --exclude='output/' \
+  --exclude='output_cpu/' \
+  --exclude='output_gpu/' \
+  --exclude='*.o' \
+  --exclude='*.log' \
+  --exclude='*.csv' \
+  --exclude='*.avi' \
+  --exclude='*.png' \
+  /DATA/disk3/cloud/OU/T802/Method/code/trials \
+  /media/ben/Storage/ARCHER2/
+

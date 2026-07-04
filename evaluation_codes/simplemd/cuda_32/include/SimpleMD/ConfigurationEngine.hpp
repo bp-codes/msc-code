@@ -23,8 +23,8 @@ public:
      * Heat the configuration to a target temperature for testing.
      */
 static inline void heat(Configuration& configuration,
-                            float T_target,
-                            float kB = 8.617333262145e-5f,
+                            double T_target,
+                            double kB = 8.617333262145e-5,
                             std::optional<unsigned> seed = std::nullopt)
     {
         static_cast<void>(T_target);
@@ -38,13 +38,13 @@ static inline void heat(Configuration& configuration,
         }
 
         std::mt19937 rng(seed ? *seed : std::random_device{}());
-        auto normal01 = std::normal_distribution<float>(0.0f, 1.0f);
+        auto normal01 = std::normal_distribution<double>(0.0, 1.0);
 
         for (auto& atom : atoms) {
             Maths::Vec3 d_position = {
-                sigma * normal01(rng),
-                sigma * normal01(rng),
-                sigma * normal01(rng)
+                sigma * static_cast<float>(normal01(rng)),
+                sigma * static_cast<float>(normal01(rng)),
+                sigma * static_cast<float>(normal01(rng))
             };
 
             atom.set_position(atom.position + d_position);
@@ -60,13 +60,14 @@ static inline void heat(Configuration& configuration,
 
         // RNG setup
         std::mt19937 rng(42);
-        auto normal01 = std::normal_distribution<float>(0.0f, 1.0f);
+        auto normal01 = std::normal_distribution<double>(0.0, 1.0);
 
         // 1) Draw Maxwell–Boltzmann velocities: each component has variance kB*T/m
         for (auto& atom : atoms) {
             const float new_sigma = sigma * (1.0f / n);
-            Maths::Vec3 d_position = {new_sigma * normal01(rng), new_sigma * normal01(rng),
-                                      new_sigma * normal01(rng)};
+            Maths::Vec3 d_position = {new_sigma * static_cast<float>(normal01(rng)), 
+                                      new_sigma * static_cast<float>(normal01(rng)),
+                                      new_sigma * static_cast<float>(normal01(rng))};
 
             atom.set_position(atom.position + d_position);
         }

@@ -18,6 +18,9 @@ python3 python/precision.py --framework sycl --csv_dir output_gpu --plot_name sy
 python3 python/precision.py --framework sycl_32 --csv_dir output_cpu --plot_name sycl_32_cpu
 python3 python/precision.py --framework sycl_32 --csv_dir output_gpu --plot_name sycl_32_gpu
 
+python3 python/precision.py --framework hip --csv_dir output --plot_name hip
+python3 python/precision.py --framework hip_32 --csv_dir output --plot_name hip_32
+
 
 
 exit 0

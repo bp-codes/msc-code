@@ -22,7 +22,7 @@ public:
         auto z{0.0f};
 
         auto n = std::size_t(0);
-        auto mass{27.0};
+        auto mass{27.0f};
 
         for (size_t i = 0; i < nx; i++) {
             for (size_t j = 0; j < ny; j++) {

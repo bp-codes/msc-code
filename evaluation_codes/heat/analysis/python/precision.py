@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, PillowWriter
 from matplotlib.colors import TwoSlopeNorm
 
-FRAMEWORKS = ["cuda", "cuda_32", "openmp", "openmp_32", "opencl", "opencl_32", "serial", "serial_32", "sycl", "sycl_32"]
+FRAMEWORKS = ["cuda", "cuda_32", "openmp", "openmp_32", "opencl", "opencl_32", "hip", "hip_32", "serial", "serial_32", "sycl", "sycl_32"]
 
 
 def plot_style(string, use_greyscale=False):
@@ -22,7 +22,7 @@ def plot_style(string, use_greyscale=False):
     else:
         if "precise" in string:
             colour = "#f4a3a3"
-        elif ("cuda" in string or "sycl" in string or "opencl" in string):
+        elif ("cuda" in string or "sycl" in string or "opencl" in string or "hip" in string):
             if "cpu" in string:
                 colour = "#e6f3aa"
             else:
