@@ -13,6 +13,7 @@ output/*
 *.out
 *.x
 *.mp4
+!readme_images/simplemd/simplemd.mp4
 *.png
 *.xyz
 *.zip
