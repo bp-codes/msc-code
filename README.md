@@ -74,6 +74,8 @@ AMD EPYC, 32 core CPU with AMD Instinct MI200 GPU
 
 ## Heat2D
 
+[![Watch Heat2D](readme_images/heat2d/heat.gif)](readme_images/heat2d/heat.mp4)
+
 ![Description](readme_images/heat2d/heatmap__difference_20.png)
 ![Description](readme_images/heat2d/heat2d_min_runtime.png)
 ![Description](readme_images/heat2d/heat2d_max_memory.png)
