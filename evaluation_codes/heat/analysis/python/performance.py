@@ -10,9 +10,14 @@ from collections import defaultdict
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import csv
+from collections.abc import Sequence
+from pathlib import Path
+from typing import Any
 
 
 def plot_style(string, use_greyscale=False):
+    string = string.lower()
     # --- Colour logic ---
     if use_greyscale:
         colour = "0.6"
@@ -205,6 +210,7 @@ def plot_performance_runtime(
         height=6,
         use_greyscale=False  # or False
     )
+    write_columns_to_csv("heat2d_mean_runtime.csv", methods, means, ("Method", "Mean"))
 
     plot_horizontal_bar(
         labels=methods,
@@ -217,6 +223,7 @@ def plot_performance_runtime(
         height=6,
         use_greyscale=False  # or False
     )
+    write_columns_to_csv("heat2d_mean_runtime.csv", methods, mins, ("Method", "Min"))
 
 
 
@@ -257,6 +264,8 @@ def plot_performance_memory(
         use_greyscale=False  # or False
     )
 
+    write_columns_to_csv("heat2d_mean_memory.csv", methods, means, ("Method", "Mean"))
+
     plot_horizontal_bar(
         labels=methods,
         values=maxs,
@@ -269,6 +278,7 @@ def plot_performance_memory(
         use_greyscale=False  # or False
     )
 
+    write_columns_to_csv("heat2d_max_memory.csv", methods, means, ("Method", "Max"))
 
 
 
@@ -325,6 +335,23 @@ def plot_horizontal_bar(labels,
 
     print(f"Saved plot: {plot_path}")
 
+
+def write_columns_to_csv(
+    filename: str | Path,
+    column1: Sequence[Any],
+    column2: Sequence[Any],
+    headers: tuple[str, str] | None = None,
+) -> None:
+    if len(column1) != len(column2):
+        raise ValueError("The two lists must have the same length")
+
+    with open(filename, "w", newline="", encoding="utf-8") as csv_file:
+        writer = csv.writer(csv_file)
+
+        if headers is not None:
+            writer.writerow(headers)
+
+        writer.writerows(zip(column1, column2))
 
 
 def main() -> None:

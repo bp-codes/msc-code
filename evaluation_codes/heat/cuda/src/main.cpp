@@ -64,6 +64,7 @@ int main(int argc, char** argv) {
         output["type"] = "cuda";
         output["time_total"] = time_total;
         output["input"] = input;
+        output["max_rss_kb"] = helper::max_rss_kb();
         std::ofstream out(json_file);
         if (!out)
             throw std::runtime_error("Failed to open output JSON file.");

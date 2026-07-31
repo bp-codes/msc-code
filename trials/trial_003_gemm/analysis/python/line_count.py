@@ -91,7 +91,7 @@ def main():
         labels=files_sorted,
         values=code_counts,
         xlabel="Lines of Code (excluding comments)",
-        title="Lines of Code by File",
+        title="Trial_003: Source Code Line Count",
         output_dir="analysis",
         output_file="complexity_loc_per_file.png",
         width=8,

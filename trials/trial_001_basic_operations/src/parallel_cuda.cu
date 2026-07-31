@@ -37,6 +37,19 @@ namespace {
 inline constexpr double MIN_DENOMINATOR{1.0e-9};
 inline constexpr std::uint64_t RNG_SEED{123456789ULL};
 
+std::uint64_t max_rss_kb() {
+    rusage usage{};
+    getrusage(RUSAGE_SELF, &usage);
+
+#if defined(__APPLE__)
+    // macOS reports bytes
+    return usage.ru_maxrss / 1024;
+#else
+    // Linux reports kilobytes
+    return usage.ru_maxrss;
+#endif
+}
+
 inline void cuda_check(cudaError_t status, const char* message) {
     if (status != cudaSuccess) {
         (void)status;
@@ -279,7 +292,7 @@ auto main(int argc, char** argv) -> int {
             j["values"] = helper::to_string_precise_vector(numbers_c);
 
             // Memory
-            // j["max_rss_kb"] = max_rss_kb();
+            j["max_rss_kb"] = max_rss_kb();
 
             std::ofstream out(json_file);
             if (!out) {

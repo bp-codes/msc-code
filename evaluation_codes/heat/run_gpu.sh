@@ -16,4 +16,12 @@ cd sycl_32
 ./run.sh
 cd ../
 
+cd opencl
+./run.sh
+cd ../
+
+cd opencl_32
+./run.sh
+cd ../
+
 

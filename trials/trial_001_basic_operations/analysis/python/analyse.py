@@ -10,9 +10,53 @@ from collections import defaultdict
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import colorsys
+from matplotlib.colors import to_rgb, to_hex
 
 
 HISTOGRAM_BINS = np.linspace(-1e-3, 1e-3, 201)
+
+def bold_colour(hex_colour, saturation_factor=1.2, brightness_factor=0.2):
+    r, g, b = to_rgb(hex_colour)
+
+    # Convert RGB to hue, saturation, lightness
+    h, l, s = colorsys.rgb_to_hls(r, g, b)
+
+    s = min(1.0, s * saturation_factor)
+    l = max(0.0, min(1.0, l * brightness_factor))
+
+    return to_hex(colorsys.hls_to_rgb(h, l, s))
+
+
+def plot_style(string_in, use_greyscale=False):    
+    # --- Colour logic ---
+    string = string_in.lower()
+    if use_greyscale:
+        colour = "0.6"
+        line_colour = "0.2"
+    else:
+        if "precise" in string:
+            colour = "#f4a3a3"
+        elif ("cuda" in string or "sycl" in string or "opencl" in string or "hip" in string or "gpu" in string):
+            if "cpu" in string:
+                colour = "#e6f3aa"
+            else:
+                colour = "#a9d6a5"
+        elif ("parallel" in string or "openmp" in string):
+            colour = "#a8c9f0"
+        elif "serial" in string:
+            colour = "#f6c28b"
+        else:
+            colour = "grey"
+        line_colour =  bold_colour(colour)
+
+    # --- Hatch logic ---
+    if "32" in string:
+        hatch = "///"   # 'xx', '...', '\\\\'
+    else:
+        hatch = None
+
+    return colour, hatch, line_colour
 
 
 def parse_float(value) -> float:
@@ -415,52 +459,16 @@ def plot_difference_histograms(
             continue
 
         mean = stats["sum"] / count
-
-        variance = (
-            stats["sum_sq"] / count
-            - mean * mean
-        )
-
+        variance = (stats["sum_sq"] / count - mean * mean)
         variance = max(variance, 0.0)
-
         std = np.sqrt(variance)
 
-        if std <= 0:
+        if (std <= 0.0):
             std = 1e-12
 
-        safe_method = (
-            method
-            .replace("/", "_")
-            .replace(" ", "_")
-        )
+        safe_method = (method.replace("/", "_").replace(" ", "_"))
 
-        if use_greyscale:
-            colour = "0.6"
-            line_colour = "0.2"
-
-        else:
-
-            if "precise" in method.lower():
-                colour = "#f4a3a3"
-
-            elif any(
-                k in method.lower()
-                for k in ["cuda", "sycl", "opencl", "hip"]
-            ):
-                colour = "#a9d6a5"
-
-            elif "parallel" in method.lower():
-                colour = "#a8c9f0"
-
-            elif "serial" in method.lower():
-                colour = "#f6c28b"
-
-            else:
-                colour = "grey"
-
-            line_colour = "black"
-
-        hatch = "///" if "32" in method else None
+        colour, hatch, _ = plot_style(method)
 
         plt.figure(figsize=(width, height))
 
@@ -736,12 +744,59 @@ def plot_horizontal_bar(
     )
 
     plt.tight_layout()
-
     plt.savefig(plot_path)
-
     plt.close()
-
     print(f"Saved plot: {plot_path}")
+
+
+
+def save_precision(
+    trial: str,
+    grouped,
+    analysis_dir: Path,
+    selected_operation: str
+) -> None:
+
+    methods = []
+    means = []
+    maxs = []
+    mem_methods = []
+    mem_max = []
+
+    fh = open("output_" + selected_operation + ".csv", "w")
+
+    for method, metrics in sorted(grouped.items()):
+        iterations_per_second = metrics.get("iterations_per_second")
+        if not iterations_per_second:
+            continue
+
+        histogram_counts = metrics.get("histogram_counts")
+        histogram_bins = metrics.get("histogram_bins")
+        stats = metrics.get("difference_stats")
+
+        if histogram_counts is None:
+            continue
+
+        count = stats["count"]
+
+        if count == 0:
+            continue
+
+        mean = stats["sum"] / count
+        variance = (stats["sum_sq"] / count - mean * mean)
+        variance = max(variance, 0.0)
+        std = np.sqrt(variance)
+
+        if (std <= 0.0):
+            std = 1e-12
+
+        safe_method = (method.replace("/", "_").replace(" ", "_"))
+
+        fh.write(selected_operation + "," + safe_method + "," + str(mean) + "," + str(variance) + "\n")
+
+    fh.close()
+
+
 
 
 def main() -> None:
@@ -888,6 +943,13 @@ def main() -> None:
     )
 
     plot_performance(
+        trial,
+        grouped,
+        analysis_dir,
+        selected_operation
+    )
+
+    save_precision(
         trial,
         grouped,
         analysis_dir,

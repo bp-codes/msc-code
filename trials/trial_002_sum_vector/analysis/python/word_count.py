@@ -115,7 +115,7 @@ def word_count():
         labels=files_sorted,
         values=code_counts,
         xlabel="Word Count (excluding comments)",
-        title="Code Word Count by File",
+        title="Trial_002: Source Code Word Count",
         output_dir="analysis",
         output_file="complexity_words_per_file.png",
         width=8,
