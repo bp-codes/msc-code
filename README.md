@@ -81,6 +81,10 @@ AMD EPYC, 32 core CPU with AMD Instinct MI200 GPU
 
 
 
+## SimpleMD
+
+![Demo](readme_images/simplemd/simplemd.gif)
+
 
 
 

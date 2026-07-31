@@ -182,7 +182,7 @@ def main():
         labels=files_sorted,
         values=code_counts,
         xlabel="Functions",
-        title="Functions by File",
+        title="Heat2D: Source Code Function Count",
         output_dir="analysis",
         output_file="complexity_functions_per_file.png",
         width=8,
@@ -217,14 +217,6 @@ def plot_horizontal_bar(labels,
         
         colour, hatch = plot_style(l)
         colours.append(colour)
-        hatches.append(hatch)
-
-        # --- Hatch logic ---
-        if "32" in l:
-            hatch = "///"   # 'xx', '...', '\\\\'
-        else:
-            hatch = None
-
         hatches.append(hatch)
 
     # Create figure

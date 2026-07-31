@@ -119,7 +119,7 @@ def character_count():
         labels=files_sorted,
         values=code_counts,
         xlabel="Character Count (excluding comments)",
-        title="Code Character Count by File",
+        title="Trial_002: Source Code Character Count",
         output_dir="analysis",
         output_file="complexity_characters_per_file.png",
         width=8,

@@ -755,6 +755,55 @@ def plot_horizontal_bar(
     print(f"Saved plot: {plot_path}")
 
 
+
+def save_precision(
+    trial: str,
+    grouped,
+    analysis_dir: Path,
+    selected_operation: str
+) -> None:
+
+    methods = []
+    means = []
+    maxs = []
+    mem_methods = []
+    mem_max = []
+
+    fh = open("output_" + selected_operation + ".csv", "w")
+
+    for method, metrics in sorted(grouped.items()):
+        iterations_per_second = metrics.get("iterations_per_second")
+        if not iterations_per_second:
+            continue
+
+        histogram_counts = metrics.get("histogram_counts")
+        histogram_bins = metrics.get("histogram_bins")
+        stats = metrics.get("difference_stats")
+
+        if histogram_counts is None:
+            continue
+
+        count = stats["count"]
+
+        if count == 0:
+            continue
+
+        mean = stats["sum"] / count
+        variance = (stats["sum_sq"] / count - mean * mean)
+        variance = max(variance, 0.0)
+        std = np.sqrt(variance)
+
+        if (std <= 0.0):
+            std = 1e-12
+
+        safe_method = (method.replace("/", "_").replace(" ", "_"))
+
+        fh.write(selected_operation + "," + safe_method + "," + str(mean) + "," + str(variance) + "\n")
+
+    fh.close()
+
+
+
 def main() -> None:
 
     parser = argparse.ArgumentParser(
@@ -899,6 +948,13 @@ def main() -> None:
     )
 
     plot_performance(
+        trial,
+        grouped,
+        analysis_dir,
+        selected_operation
+    )
+
+    save_precision(
         trial,
         grouped,
         analysis_dir,

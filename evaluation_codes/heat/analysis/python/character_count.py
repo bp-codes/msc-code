@@ -161,7 +161,7 @@ def main():
         labels=files_sorted,
         values=code_counts,
         xlabel="Characters (excluding comments)",
-        title="Characters by File",
+        title="Heat2D: Source Code Character Count",
         output_dir="analysis",
         output_file="complexity_characters_per_file.png",
         width=8,

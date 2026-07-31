@@ -155,7 +155,7 @@ def main():
         labels=files_sorted,
         values=code_counts,
         xlabel="Word Count (excluding comments)",
-        title="Word Count by File",
+        title="SimpleMD: Source Code Word Count",
         output_dir="analysis",
         output_file="complexity_words_per_file.png",
         width=8,

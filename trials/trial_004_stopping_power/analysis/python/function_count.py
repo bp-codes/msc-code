@@ -144,7 +144,7 @@ def function_count():
         labels=files_sorted,
         values=code_counts,
         xlabel="Function Count",
-        title="Code Function Count by File",
+        title="Trial_004: Source Code Function Count",
         output_dir="analysis",
         output_file="complexity_functions_per_file.png",
         width=8,
