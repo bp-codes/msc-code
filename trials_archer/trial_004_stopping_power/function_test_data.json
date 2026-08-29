@@ -1,0 +1,93 @@
+[
+  {
+    "name": "proton_in_iron_beta_0p20",
+    "projectile_velocity_ms": 5.99584916e7,
+    "projectile_atomic_number": 1,
+    "projectile_atomic_mass_mev": 938.2720813,
+    "target_atomic_number": 26,
+    "target_atomic_mass_g_mol": 55.845,
+    "target_density_g_cm3": 7.874,
+    "mean_excitation_energy_mev": 2.86e-4,
+    "density_effect_delta": 0.0,
+    "expected_mass_stopping_power_mev_cm2_g": 17.737353,
+    "expected_linear_stopping_power_mev_cm": 139.663915
+  },
+  {
+    "name": "proton_in_iron_beta_0p40",
+    "projectile_velocity_ms": 1.199169832e8,
+    "projectile_atomic_number": 1,
+    "projectile_atomic_mass_mev": 938.2720813,
+    "target_atomic_number": 26,
+    "target_atomic_mass_g_mol": 55.845,
+    "target_density_g_cm3": 7.874,
+    "mean_excitation_energy_mev": 2.86e-4,
+    "density_effect_delta": 0.0,
+    "expected_mass_stopping_power_mev_cm2_g": 5.685103,
+    "expected_linear_stopping_power_mev_cm": 44.764500
+  },
+  {
+    "name": "proton_in_iron_beta_0p60",
+    "projectile_velocity_ms": 1.798754748e8,
+    "projectile_atomic_number": 1,
+    "projectile_atomic_mass_mev": 938.2720813,
+    "target_atomic_number": 26,
+    "target_atomic_mass_g_mol": 55.845,
+    "target_density_g_cm3": 7.874,
+    "mean_excitation_energy_mev": 2.86e-4,
+    "density_effect_delta": 0.0,
+    "expected_mass_stopping_power_mev_cm2_g": 2.877288,
+    "expected_linear_stopping_power_mev_cm": 22.655769
+  },
+  {
+    "name": "proton_in_iron_beta_0p80",
+    "projectile_velocity_ms": 2.398339664e8,
+    "projectile_atomic_number": 1,
+    "projectile_atomic_mass_mev": 938.2720813,
+    "target_atomic_number": 26,
+    "target_atomic_mass_g_mol": 55.845,
+    "target_density_g_cm3": 7.874,
+    "mean_excitation_energy_mev": 2.86e-4,
+    "density_effect_delta": 0.0,
+    "expected_mass_stopping_power_mev_cm2_g": 1.812932,
+    "expected_linear_stopping_power_mev_cm": 14.275023
+  },
+  {
+    "name": "proton_in_iron_beta_0p90",
+    "projectile_velocity_ms": 2.698132122e8,
+    "projectile_atomic_number": 1,
+    "projectile_atomic_mass_mev": 938.2720813,
+    "target_atomic_number": 26,
+    "target_atomic_mass_g_mol": 55.845,
+    "target_density_g_cm3": 7.874,
+    "mean_excitation_energy_mev": 2.86e-4,
+    "density_effect_delta": 0.0,
+    "expected_mass_stopping_power_mev_cm2_g": 1.556751,
+    "expected_linear_stopping_power_mev_cm": 12.257855
+  },
+  {
+    "name": "proton_in_iron_beta_0p96",
+    "projectile_velocity_ms": 2.878007597e8,
+    "projectile_atomic_number": 1,
+    "projectile_atomic_mass_mev": 938.2720813,
+    "target_atomic_number": 26,
+    "target_atomic_mass_g_mol": 55.845,
+    "target_density_g_cm3": 7.874,
+    "mean_excitation_energy_mev": 2.86e-4,
+    "density_effect_delta": 0.0,
+    "expected_mass_stopping_power_mev_cm2_g": 1.508161,
+    "expected_linear_stopping_power_mev_cm": 11.875261
+  },
+  {
+    "name": "proton_in_iron_beta_0p98",
+    "projectile_velocity_ms": 2.937966088e8,
+    "projectile_atomic_number": 1,
+    "projectile_atomic_mass_mev": 938.2720813,
+    "target_atomic_number": 26,
+    "target_atomic_mass_g_mol": 55.845,
+    "target_density_g_cm3": 7.874,
+    "mean_excitation_energy_mev": 2.86e-4,
+    "density_effect_delta": 0.0,
+    "expected_mass_stopping_power_mev_cm2_g": 1.549149,
+    "expected_linear_stopping_power_mev_cm": 12.197997
+  }
+]

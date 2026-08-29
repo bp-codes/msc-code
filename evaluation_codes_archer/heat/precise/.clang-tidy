@@ -1,0 +1,6 @@
+Checks: >
+  misc-const-correctness,
+  readability-const-return-type,
+  performance-unnecessary-value-param
+
+WarningsAsErrors: ''

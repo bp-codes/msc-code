@@ -10,9 +10,54 @@ from collections import defaultdict
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import colorsys
+from matplotlib.colors import to_rgb, to_hex
 
 
 HISTOGRAM_BINS = np.linspace(-1e-3, 1e-3, 201)
+
+
+def bold_colour(hex_colour, saturation_factor=1.2, brightness_factor=0.2):
+    r, g, b = to_rgb(hex_colour)
+
+    # Convert RGB to hue, saturation, lightness
+    h, l, s = colorsys.rgb_to_hls(r, g, b)
+
+    s = min(1.0, s * saturation_factor)
+    l = max(0.0, min(1.0, l * brightness_factor))
+
+    return to_hex(colorsys.hls_to_rgb(h, l, s))
+
+
+def plot_style(string_in, use_greyscale=False):    
+    # --- Colour logic ---
+    string = string_in.lower()
+    if use_greyscale:
+        colour = "0.6"
+        line_colour = "0.2"
+    else:
+        if "precise" in string:
+            colour = "#f4a3a3"
+        elif ("cuda" in string or "sycl" in string or "opencl" in string or "hip" in string or "gpu" in string):
+            if "cpu" in string:
+                colour = "#e6f3aa"
+            else:
+                colour = "#a9d6a5"
+        elif ("parallel" in string or "openmp" in string):
+            colour = "#a8c9f0"
+        elif "serial" in string:
+            colour = "#f6c28b"
+        else:
+            colour = "grey"
+        line_colour =  bold_colour(colour)
+
+    # --- Hatch logic ---
+    if "32" in string:
+        hatch = "///"   # 'xx', '...', '\\\\'
+    else:
+        hatch = None
+
+    return colour, hatch, line_colour
 
 
 def parse_float(value) -> float:
@@ -435,33 +480,7 @@ def plot_difference_histograms(
             .replace(" ", "_")
         )
 
-        if use_greyscale:
-            colour = "0.6"
-            line_colour = "0.2"
-
-        else:
-
-            if "precise" in method.lower():
-                colour = "#f4a3a3"
-
-            elif any(
-                k in method.lower()
-                for k in ["cuda", "sycl", "opencl"]
-            ):
-                colour = "#a9d6a5"
-
-            elif "parallel" in method.lower():
-                colour = "#a8c9f0"
-
-            elif "serial" in method.lower():
-                colour = "#f6c28b"
-
-            else:
-                colour = "grey"
-
-            line_colour = "black"
-
-        hatch = "///" if "32" in method else None
+        colour, hatch, line_colour = plot_style(method, use_greyscale)
 
         plt.figure(figsize=(width, height))
 
@@ -530,7 +549,7 @@ def plot_difference_histograms(
         )
 
         plt.title(
-            f"{trial} ({selected_operation}): "
+            f"Trial 002 {trial}: "
             f"Values Difference vs Precise ({method})"
         )
 
@@ -566,8 +585,17 @@ def plot_performance(
     methods = []
     means = []
     maxs = []
+    speedup = []
     mem_methods = []
     mem_max = []
+
+    serial_iterations = 1
+    for method, metrics in sorted(grouped.items()):
+        iterations_per_second = metrics.get("iterations_per_second")
+        if not iterations_per_second:
+            continue
+        if ("serial" in method.lower() and "32" not in method.lower()):
+            serial_iterations = max(iterations_per_second)
 
     for method, metrics in sorted(grouped.items()):
         iterations_per_second = metrics.get("iterations_per_second")
@@ -577,6 +605,7 @@ def plot_performance(
         methods.append(method)
         means.append(statistics.mean(iterations_per_second))
         maxs.append(max(iterations_per_second))
+        speedup.append(float(max(iterations_per_second)) / float(serial_iterations))
 
     for method, metrics in sorted(grouped.items()):
         max_rss_kb = metrics.get("max_rss_kb")
@@ -597,8 +626,8 @@ def plot_performance(
         values=means,
         xlabel="Mean Iterations/s",
         title=(
-            f"{trial} ({selected_operation}): "
-            f"Mean Iterations/s by Method"
+            f"Trial 002 {trial}: "
+            f"Mean Iterations/s"
         ),
         output_dir="analysis",
         output_file=(
@@ -616,8 +645,8 @@ def plot_performance(
         values=maxs,
         xlabel="Max Iterations/s",
         title=(
-            f"{trial} ({selected_operation}): "
-            f"Max Iterations/s by Method"
+            f"Trial 002 {trial}: "
+            f"Max Iterations/s"
         ),
         output_dir="analysis",
         output_file=(
@@ -631,11 +660,30 @@ def plot_performance(
     )
 
     plot_horizontal_bar(
+        labels=methods,
+        values=speedup,
+        xlabel="Max Speedup",
+        title=(
+            f"Trial 002 {trial}: "
+            f"Max Speedup"
+        ),
+        output_dir="analysis",
+        output_file=(
+            f"{trial}_{selected_operation}_"
+            f"performance_max_speedup.png"
+            .replace(" ", "_")
+        ),
+        width=8,
+        height=6,
+        use_greyscale=False
+    )
+
+    plot_horizontal_bar(
         labels=mem_methods,
         values=mem_max,
         xlabel="Max Memory (kb)",
         title=(
-            f"{trial} ({selected_operation}): "
+            f"Trial 002 {trial}: "
             f"Max Memory (kb)"
         ),
         output_dir="analysis",
@@ -679,45 +727,10 @@ def plot_horizontal_bar(
     hatches = []
 
     for label in labels_sorted:
-
-        l = label.lower()
-
-        if use_greyscale:
-            colour = "0.6"
-
-        else:
-
-            if "precise" in l:
-                colour = "#f4a3a3"
-
-            elif (
-                "cuda" in l
-                or "sycl" in l
-                or "opencl" in l
-            ):
-
-                if "cpu" in l:
-                    colour = "#e6f3aa"
-
-                else:
-                    colour = "#a9d6a5"
-
-            elif "parallel" in l:
-                colour = "#a8c9f0"
-
-            elif "serial" in l:
-                colour = "#f6c28b"
-
-            else:
-                colour = "grey"
+        
+        colour, hatch, _ = plot_style(label, use_greyscale)
 
         colours.append(colour)
-
-        if "32" in l:
-            hatch = "///"
-        else:
-            hatch = None
-
         hatches.append(hatch)
 
     plt.figure(figsize=(width, height))
@@ -728,6 +741,8 @@ def plot_horizontal_bar(
         color=colours,
         edgecolor="black"
     )
+    plt.bar_label(bars, fmt="%.1f", padding=3)
+    plt.margins(x=0.2) 
 
     for bar, hatch in zip(bars, hatches):
 

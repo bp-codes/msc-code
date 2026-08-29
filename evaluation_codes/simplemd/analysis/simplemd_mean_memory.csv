@@ -1,0 +1,11 @@
+Method,Mean
+cuda_32_gpu,110412.0
+cuda_gpu,115924.0
+openmp_32_cpu,23584.0
+openmp_cpu,33288.0
+serial_32_cpu,9700.0
+serial_cpu,12408.0
+sycl_32_cpu,110172.0
+sycl_32_gpu,193508.0
+sycl_cpu,114224.0
+sycl_gpu,197568.0

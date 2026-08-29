@@ -4,7 +4,7 @@ set -euo pipefail
 export NUM_THREADS=6
 mkdir -p results
 
-RUNS=2
+RUNS=3
 RUN_TIME=1.0
 VECTOR_SIZE=1000000
 

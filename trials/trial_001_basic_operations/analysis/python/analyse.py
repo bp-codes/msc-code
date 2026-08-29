@@ -468,7 +468,7 @@ def plot_difference_histograms(
 
         safe_method = (method.replace("/", "_").replace(" ", "_"))
 
-        colour, hatch, _ = plot_style(method)
+        colour, hatch, line_colour = plot_style(method, use_greyscale)
 
         plt.figure(figsize=(width, height))
 
@@ -573,8 +573,17 @@ def plot_performance(
     methods = []
     means = []
     maxs = []
+    speedup = []
     mem_methods = []
     mem_max = []
+
+    serial_iterations = 1
+    for method, metrics in sorted(grouped.items()):
+        iterations_per_second = metrics.get("iterations_per_second")
+        if not iterations_per_second:
+            continue
+        if ("serial" in method.lower() and "32" not in method.lower()):
+            serial_iterations = max(iterations_per_second)
 
     for method, metrics in sorted(grouped.items()):
         iterations_per_second = metrics.get("iterations_per_second")
@@ -584,6 +593,7 @@ def plot_performance(
         methods.append(method)
         means.append(statistics.mean(iterations_per_second))
         maxs.append(max(iterations_per_second))
+        speedup.append(float(max(iterations_per_second)) / float(serial_iterations))
 
     for method, metrics in sorted(grouped.items()):
         max_rss_kb = metrics.get("max_rss_kb")
@@ -604,8 +614,8 @@ def plot_performance(
         values=means,
         xlabel="Mean Iterations/s",
         title=(
-            f"{trial} ({selected_operation}): "
-            f"Mean Iterations/s by Method"
+            f"Trial 001 {trial} ({selected_operation}): "
+            f"Mean Iterations/s"
         ),
         output_dir="analysis",
         output_file=(
@@ -623,8 +633,8 @@ def plot_performance(
         values=maxs,
         xlabel="Max Iterations/s",
         title=(
-            f"{trial} ({selected_operation}): "
-            f"Max Iterations/s by Method"
+            f"Trial 001 {trial} ({selected_operation}): "
+            f"Max Iterations/s"
         ),
         output_dir="analysis",
         output_file=(
@@ -638,11 +648,30 @@ def plot_performance(
     )
 
     plot_horizontal_bar(
+        labels=methods,
+        values=speedup,
+        xlabel="Max Speedup",
+        title=(
+            f"Trial 001 {trial} ({selected_operation}): "
+            f"Max Speedup"
+        ),
+        output_dir="analysis",
+        output_file=(
+            f"{trial}_{selected_operation}_"
+            f"performance_max_speedup.png"
+            .replace(" ", "_")
+        ),
+        width=8,
+        height=6,
+        use_greyscale=False
+    )
+
+    plot_horizontal_bar(
         labels=mem_methods,
         values=mem_max,
         xlabel="Max Memory (kb)",
         title=(
-            f"{trial} ({selected_operation}): "
+            f"Trial 001 {trial} ({selected_operation}): "
             f"Max Memory (kb)"
         ),
         output_dir="analysis",
@@ -687,34 +716,9 @@ def plot_horizontal_bar(
 
     for label in labels_sorted:
 
-        l = label.lower()
-
-        if use_greyscale:
-            colour = "0.6"
-
-        else:
-
-            if "precise" in l:
-                colour = "#f4a3a3"
-            elif ("cuda" in l or "sycl" in l or "opencl" in l or "hip" in l):
-                if "cpu" in l:
-                    colour = "#e6f3aa"
-                else:
-                    colour = "#a9d6a5"
-            elif ("parallel" in l or "openmp" in l):
-                colour = "#a8c9f0"
-            elif "serial" in l:
-                colour = "#f6c28b"
-            else:
-                colour = "grey"
+        colour, hatch, _ = plot_style(label)
 
         colours.append(colour)
-
-        if "32" in l:
-            hatch = "///"
-        else:
-            hatch = None
-
         hatches.append(hatch)
 
     plt.figure(figsize=(width, height))
@@ -725,6 +729,8 @@ def plot_horizontal_bar(
         color=colours,
         edgecolor="black"
     )
+    plt.bar_label(bars, fmt="%.1f", padding=3)
+    plt.margins(x=0.2) 
 
     for bar, hatch in zip(bars, hatches):
 

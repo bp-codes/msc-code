@@ -10,6 +10,8 @@ from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import colorsys
+from matplotlib.colors import to_rgb, to_hex
 
 
 @dataclass
@@ -26,14 +28,28 @@ class Frame:
     comment: str
 
 
-def plot_style(string, use_greyscale=False):
+def bold_colour(hex_colour, saturation_factor=1.2, brightness_factor=0.2):
+    r, g, b = to_rgb(hex_colour)
+
+    # Convert RGB to hue, saturation, lightness
+    h, l, s = colorsys.rgb_to_hls(r, g, b)
+
+    s = min(1.0, s * saturation_factor)
+    l = max(0.0, min(1.0, l * brightness_factor))
+
+    return to_hex(colorsys.hls_to_rgb(h, l, s))
+
+
+def plot_style(string_in, use_greyscale=False):    
     # --- Colour logic ---
+    string = string_in.lower()
     if use_greyscale:
         colour = "0.6"
+        line_colour = "0.2"
     else:
         if "precise" in string:
             colour = "#f4a3a3"
-        elif ("cuda" in string or "sycl" in string or "opencl" in string):
+        elif ("cuda" in string or "sycl" in string or "opencl" in string or "hip" in string or "gpu" in string):
             if "cpu" in string:
                 colour = "#e6f3aa"
             else:
@@ -44,6 +60,7 @@ def plot_style(string, use_greyscale=False):
             colour = "#f6c28b"
         else:
             colour = "grey"
+        line_colour =  bold_colour(colour)
 
     # --- Hatch logic ---
     if "32" in string:
@@ -51,7 +68,7 @@ def plot_style(string, use_greyscale=False):
     else:
         hatch = None
 
-    return colour, hatch
+    return colour, hatch, line_colour
 
 
 def read_xyz_frames(path: Path) -> list[Frame]:
@@ -183,8 +200,8 @@ def plot_difference_histogram(difference, xlabel, ylabel, title, output_dir, out
         )
 
         # Colours
-        colour, hatch = plot_style(title)
-        line_colour = "black"
+        colour, hatch, line_colour = plot_style(title)
+        #line_colour = "black"
 
         plt.figure(figsize=(10, 6))
 
@@ -356,7 +373,7 @@ def plot_top_atoms_over_time(
 
         # Change if the timestep output changes from 20
         x = [i * 20 for i in range(len(series))]
-        plt.plot(x, series, label=f"{atom_index}:{element}")
+        plt.plot(x, series, label=f"id: {atom_index}")
 
     plt.xlabel("Time step")
     plt.ylabel(ylabel)
@@ -381,7 +398,7 @@ def plot_top_atoms_component_over_time(
 
         # Change if the timestep output changes from 20
         x = [i * 20 for i in range(len(series))]
-        plt.plot(x, series, label=f"{atom_index}:{element}")
+        plt.plot(x, series, label=f"id: {atom_index}")
 
     plt.xlabel("Time step")
     plt.ylabel(ylabel)

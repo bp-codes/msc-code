@@ -1,0 +1,7 @@
+Method,Max
+hip_32_gpu,377404.0
+hip_gpu,391780.0
+openmp,27348.0
+openmp_32,11896.0
+serial,27076.0
+serial_32,12824.0
