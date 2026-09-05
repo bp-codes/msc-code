@@ -1,0 +1,14 @@
+multiply,Parallel_HIP_32_GPU_GPU,6.472850730587787e-11,8.900913514839101e-15
+multiply,Parallel_HIP_GPU_GPU,0.0,0.0
+multiply,Parallel_OpenMP_32_CPU,6.472850730587787e-11,8.900913514839101e-15
+multiply,Parallel_OpenMP_CPU,0.0,0.0
+multiply,Parallel_OpenMP_SIMD_32_CPU,6.472850730587787e-11,8.900913514839101e-15
+multiply,Parallel_OpenMP_SIMD_CPU,0.0,0.0
+multiply,Parallel_Thread_32_CPU,6.472850730587787e-11,8.900913514839101e-15
+multiply,Parallel_Thread_CPU,0.0,0.0
+multiply,Serial_Naive_32_CPU,6.472850730587787e-11,8.900913514839101e-15
+multiply,Serial_Naive_CPU,0.0,0.0
+multiply,Serial_SIMD_32_CPU,6.472850730587787e-11,8.900913514839101e-15
+multiply,Serial_SIMD_CPU,0.0,0.0
+multiply,Serial_STL_32_CPU,6.472850730587787e-11,8.900913514839101e-15
+multiply,Serial_STL_Transform_CPU,0.0,0.0

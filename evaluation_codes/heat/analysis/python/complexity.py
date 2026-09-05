@@ -204,6 +204,8 @@ def plot_horizontal_bar(labels,
         if hatch:
             bar.set_hatch(hatch)
 
+    plt.bar_label(bars, fmt="%.1f", padding=3)
+    plt.margins(x=0.2) 
     plt.xlabel(xlabel)
     plt.title(title)
 

@@ -223,7 +223,69 @@ def plot_performance_runtime(
         height=6,
         use_greyscale=False  # or False
     )
-    write_columns_to_csv("heat2d_mean_runtime.csv", methods, mins, ("Method", "Min"))
+    write_columns_to_csv("heat2d_min_runtime.csv", methods, mins, ("Method", "Min"))
+
+
+
+def plot_performance_speedup(
+    grouped: dict[str, dict[str, list[float]]],
+    analysis_dir: Path
+) -> None:
+    import matplotlib.pyplot as plt
+
+    methods = []
+    means = []
+    mins = []
+
+    for method, metrics in sorted(grouped.items()):
+        time_total = metrics.get("time_total")
+
+        if not time_total:
+            continue
+
+        if ("serial" in method.lower() and "32" not in method):
+            serial_mean = statistics.mean(time_total)
+            serial_max = min(time_total)
+
+    for method, metrics in sorted(grouped.items()):
+        time_total = metrics.get("time_total")
+
+        if not time_total:
+            continue
+
+        methods.append(method)
+        means.append(serial_mean / statistics.mean(time_total))
+        mins.append(serial_max / min(time_total))
+
+    if not methods:
+        print("No iteration data available for performance plot.")
+        return
+
+    plot_horizontal_bar(
+        labels=methods,
+        values=means,
+        xlabel="Speedup",
+        title=f"Heat2D Speedup",
+        output_dir="analysis",
+        output_file = f"heat2d_mean_speedup.png".replace(" ", "_"),
+        width=8,
+        height=6,
+        use_greyscale=False  # or False
+    )
+    write_columns_to_csv("heat2d_mean_speedup.csv", methods, means, ("Method", "Mean"))
+
+    plot_horizontal_bar(
+        labels=methods,
+        values=mins,
+        xlabel="Speedup",
+        title=f"Heat2D Speedup",
+        output_dir="analysis",
+        output_file = f"heat2d_max_speedup.png".replace(" ", "_"),
+        width=8,
+        height=6,
+        use_greyscale=False  # or False
+    )
+    write_columns_to_csv("heat2d_max_speedup.csv", methods, mins, ("Method", "Max"))
 
 
 
@@ -246,7 +308,7 @@ def plot_performance_memory(
 
         methods.append(method)
         means.append(statistics.mean(max_rss_kb))
-        maxs.append(min(max_rss_kb))
+        maxs.append(max(max_rss_kb))
 
     if not methods:
         print("No iteration data available for performance plot.")
@@ -278,7 +340,7 @@ def plot_performance_memory(
         use_greyscale=False  # or False
     )
 
-    write_columns_to_csv("heat2d_max_memory.csv", methods, means, ("Method", "Max"))
+    write_columns_to_csv("heat2d_max_memory.csv", methods, maxs, ("Method", "Max"))
 
 
 
@@ -323,6 +385,8 @@ def plot_horizontal_bar(labels,
         if hatch:
             bar.set_hatch(hatch)
 
+    plt.bar_label(bars, fmt="%.1f", padding=3)   
+    plt.margins(x=0.2) 
     plt.xlabel(xlabel)
     plt.title(title)
 
@@ -384,6 +448,7 @@ def main() -> None:
 
     grouped = load_results(results_dir)
     plot_performance_runtime(grouped, analysis_dir)
+    plot_performance_speedup(grouped, analysis_dir)
     plot_performance_memory(grouped, analysis_dir)
 
     """

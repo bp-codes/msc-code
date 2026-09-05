@@ -204,6 +204,8 @@ def plot_horizontal_bar(labels,
     bars = plt.barh(labels_sorted, values_sorted,
                     color=colours,
                     edgecolor="black")
+    plt.bar_label(bars, fmt="%d", padding=3)
+    plt.margins(x=0.2) 
 
     # Apply hatches individually
     for bar, hatch in zip(bars, hatches):

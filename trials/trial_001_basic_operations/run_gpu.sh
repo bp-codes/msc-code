@@ -8,7 +8,7 @@ RUNS=2
 RUN_TIME=1.0
 VECTOR_SIZE=1000000
 
-# Each entry: "executable arguments"
+# CPU Framework executables
 apps=(
     "./bin/parallel_cuda.x"
     "./bin/parallel_cuda_32.x"

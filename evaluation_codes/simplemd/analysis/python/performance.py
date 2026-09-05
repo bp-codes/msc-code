@@ -10,16 +10,36 @@ from collections import defaultdict
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import csv
+from collections.abc import Sequence
+from pathlib import Path
+from typing import Any
+import colorsys
+from matplotlib.colors import to_rgb, to_hex
 
 
-def plot_style(string, use_greyscale=False):
+def bold_colour(hex_colour, saturation_factor=1.2, brightness_factor=0.2):
+    r, g, b = to_rgb(hex_colour)
+
+    # Convert RGB to hue, saturation, lightness
+    h, l, s = colorsys.rgb_to_hls(r, g, b)
+
+    s = min(1.0, s * saturation_factor)
+    l = max(0.0, min(1.0, l * brightness_factor))
+
+    return to_hex(colorsys.hls_to_rgb(h, l, s))
+
+
+def plot_style(string_in, use_greyscale=False):    
     # --- Colour logic ---
+    string = string_in.lower()
     if use_greyscale:
         colour = "0.6"
+        line_colour = "0.2"
     else:
         if "precise" in string:
             colour = "#f4a3a3"
-        elif ("cuda" in string or "sycl" in string or "opencl" in string):
+        elif ("cuda" in string or "sycl" in string or "opencl" in string or "hip" in string or "gpu" in string):
             if "cpu" in string:
                 colour = "#e6f3aa"
             else:
@@ -30,6 +50,7 @@ def plot_style(string, use_greyscale=False):
             colour = "#f6c28b"
         else:
             colour = "grey"
+        line_colour =  bold_colour(colour)
 
     # --- Hatch logic ---
     if "32" in string:
@@ -37,7 +58,7 @@ def plot_style(string, use_greyscale=False):
     else:
         hatch = None
 
-    return colour, hatch
+    return colour, hatch, line_colour
 
 
 def parse_float(value) -> float:
@@ -209,6 +230,7 @@ def plot_performance_runtime(
         height=6,
         use_greyscale=False  # or False
     )
+    write_columns_to_csv("simplemd_mean_runtime.csv", methods, means, ("Method", "Mean"))
 
     plot_horizontal_bar(
         labels=methods,
@@ -221,6 +243,69 @@ def plot_performance_runtime(
         height=6,
         use_greyscale=False  # or False
     )
+    write_columns_to_csv("simplemd_min_runtime.csv", methods, mins, ("Method", "Min"))
+
+
+
+def plot_performance_speedup(
+    grouped: dict[str, dict[str, list[float]]],
+    analysis_dir: Path
+) -> None:
+    import matplotlib.pyplot as plt
+
+    methods = []
+    means = []
+    mins = []
+
+    for method, metrics in sorted(grouped.items()):
+        time_total = metrics.get("time_total")
+
+        if not time_total:
+            continue
+
+        if ("serial" in method.lower() and "32" not in method):
+            serial_mean = statistics.mean(time_total)
+            serial_max = min(time_total)
+
+    for method, metrics in sorted(grouped.items()):
+        time_total = metrics.get("time_total")
+
+        if not time_total:
+            continue
+
+        methods.append(method)
+        means.append(serial_mean / statistics.mean(time_total))
+        mins.append(serial_max / min(time_total))
+
+    if not methods:
+        print("No iteration data available for performance plot.")
+        return
+
+    plot_horizontal_bar(
+        labels=methods,
+        values=means,
+        xlabel="Speedup",
+        title=f"SimpleMD Speedup",
+        output_dir="analysis",
+        output_file = f"simplemd_mean_speedup.png".replace(" ", "_"),
+        width=8,
+        height=6,
+        use_greyscale=False  # or False
+    )
+    write_columns_to_csv("simplemd_mean_speedup.csv", methods, means, ("Method", "Mean"))
+
+    plot_horizontal_bar(
+        labels=methods,
+        values=mins,
+        xlabel="Speedup",
+        title=f"SimpleMD Speedup",
+        output_dir="analysis",
+        output_file = f"simplemd_max_speedup.png".replace(" ", "_"),
+        width=8,
+        height=6,
+        use_greyscale=False  # or False
+    )
+    write_columns_to_csv("simplemd_max_speedup.csv", methods, mins, ("Method", "Max"))
 
 
 
@@ -243,7 +328,7 @@ def plot_performance_memory(
 
         methods.append(method)
         means.append(statistics.mean(max_rss_kb))
-        maxs.append(min(max_rss_kb))
+        maxs.append(max(max_rss_kb))
 
     if not methods:
         print("No iteration data available for performance plot.")
@@ -253,7 +338,7 @@ def plot_performance_memory(
         labels=methods,
         values=means,
         xlabel="Mean memory use (kb)",
-        title=f"SimpleMD Runtime",
+        title=f"SimpleMD Memory Use",
         output_dir="analysis",
         output_file = f"simplemd_mean_memory.png".replace(" ", "_"),
         width=8,
@@ -261,11 +346,13 @@ def plot_performance_memory(
         use_greyscale=False  # or False
     )
 
+    write_columns_to_csv("simplemd_mean_memory.csv", methods, means, ("Method", "Mean"))
+
     plot_horizontal_bar(
         labels=methods,
         values=maxs,
         xlabel="Maximum memory use (kb)",
-        title=f"SimpleMD Runtime",
+        title=f"SimpleMD Memory Use",
         output_dir="analysis",
         output_file = f"simplemd_max_memory.png".replace(" ", "_"),
         width=8,
@@ -273,6 +360,7 @@ def plot_performance_memory(
         use_greyscale=False  # or False
     )
 
+    write_columns_to_csv("simplemd_max_memory.csv", methods, maxs, ("Method", "Max"))
 
 
 
@@ -300,7 +388,7 @@ def plot_horizontal_bar(labels,
     for label in labels_sorted:
         l = label.lower()
 
-        colour, hatch = plot_style(l)
+        colour, hatch, _ = plot_style(l, use_greyscale)
 
         colours.append(colour)
         hatches.append(hatch)
@@ -311,6 +399,8 @@ def plot_horizontal_bar(labels,
     bars = plt.barh(labels_sorted, values_sorted,
                     color=colours,
                     edgecolor="black")
+    plt.bar_label(bars, fmt="%.1f", padding=3)
+    plt.margins(x=0.2) 
 
     # Apply hatches individually
     for bar, hatch in zip(bars, hatches):
@@ -329,6 +419,23 @@ def plot_horizontal_bar(labels,
 
     print(f"Saved plot: {plot_path}")
 
+
+def write_columns_to_csv(
+    filename: str | Path,
+    column1: Sequence[Any],
+    column2: Sequence[Any],
+    headers: tuple[str, str] | None = None,
+) -> None:
+    if len(column1) != len(column2):
+        raise ValueError("The two lists must have the same length")
+
+    with open(filename, "w", newline="", encoding="utf-8") as csv_file:
+        writer = csv.writer(csv_file)
+
+        if headers is not None:
+            writer.writerow(headers)
+
+        writer.writerows(zip(column1, column2))
 
 
 def main() -> None:
@@ -361,6 +468,7 @@ def main() -> None:
 
     grouped = load_results(results_dir)
     plot_performance_runtime(grouped, analysis_dir)
+    plot_performance_speedup(grouped, analysis_dir)
     plot_performance_memory(grouped, analysis_dir)
 
     """

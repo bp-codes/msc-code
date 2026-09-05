@@ -1,0 +1,252 @@
+/**
+ * @file precise.cpp
+ * @brief
+ *
+ * @author Ben Palmer
+ * @date 2026
+ *
+ * @copyright
+ * Copyright (c) 2026 Ben Palmer
+ * SPDX-License-Identifier: MIT
+ */
+
+#include <quadmath.h>
+#include <sys/resource.h>
+
+#include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <concepts>
+#include <cstdint>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <random>
+#include <string>
+#include <string_view>
+#include <vector>
+
+#include "helper/Error.hpp"
+#include "helper/helper.hpp"
+
+#include <nlohmann/json.hpp>
+
+using OperationKind = helper::OperationKind;
+
+namespace {
+
+inline constexpr __float128 MIN_DENOMINATOR{1.0e-9Q};
+inline constexpr std::uint64_t RNG_SEED{123456789ULL};
+
+/**
+ * @brief Element-wise addition: c[i] = a[i] + b[i]
+ */
+void serial_add(const std::vector<__float128>& numbers_a, const std::vector<__float128>& numbers_b,
+                std::vector<__float128>& numbers_c) {
+    const auto n{std::size_t(numbers_a.size())};
+    for (auto i = std::size_t(0); i < n; i++) {
+        numbers_c[i] = numbers_a[i] + numbers_b[i];
+    }
+}
+
+/**
+ * @brief Element-wise multiplication: c[i] = a[i] * b[i]
+ */
+void serial_multiply(const std::vector<__float128>& numbers_a,
+                     const std::vector<__float128>& numbers_b, std::vector<__float128>& numbers_c) {
+    const auto n{std::size_t(numbers_a.size())};
+    for (auto i = std::size_t(0); i < n; i++) {
+        numbers_c[i] = numbers_a[i] * numbers_b[i];
+    }
+}
+
+/**
+ * @brief Element-wise division: c[i] = a[i] / max(b[i], MIN_DENOMINATOR)
+ */
+void serial_divide(const std::vector<__float128>& numbers_a,
+                   const std::vector<__float128>& numbers_b, std::vector<__float128>& numbers_c) {
+    const auto n{std::size_t(numbers_a.size())};
+    for (auto i = std::size_t(0); i < n; i++) {
+        numbers_c[i] = numbers_a[i] / std::fmax(numbers_b[i], MIN_DENOMINATOR);
+    }
+}
+
+/**
+ * @brief Element-wise power: c[i] = pow(a[i], b[i])
+ */
+void serial_power(const std::vector<__float128>& numbers_a,
+                  const std::vector<__float128>& numbers_b, std::vector<__float128>& numbers_c) {
+    const auto n{std::size_t(numbers_a.size())};
+    for (auto i = std::size_t(0); i < n; i++) {
+        numbers_c[i] = std::pow(numbers_a[i], numbers_b[i]);
+    }
+}
+
+/**
+ * @brief Element-wise exp sum: c[i] = exp(a[i]) + exp(b[i])
+ */
+void serial_exp(const std::vector<__float128>& numbers_a, const std::vector<__float128>& numbers_b,
+                std::vector<__float128>& numbers_c) {
+    const auto n{std::size_t(numbers_a.size())};
+    for (auto i = std::size_t(0); i < n; i++) {
+        numbers_c[i] = std::exp(numbers_a[i]) + std::exp(numbers_b[i]);
+    }
+}
+
+/**
+ * @brief Element-wise log sum: c[i] = log(a[i]) + log(b[i])
+ * @warning Inputs must be > 0. No bounds/validity checking is performed in this hot loop.
+ */
+void serial_log(const std::vector<__float128>& numbers_a, const std::vector<__float128>& numbers_b,
+                std::vector<__float128>& numbers_c) {
+    const auto n{std::size_t(numbers_a.size())};
+    for (auto i = std::size_t(0); i < n; i++) {
+        numbers_c[i] = std::log(numbers_a[i]) + std::log(numbers_b[i]);
+    }
+}
+
+/**
+ * @brief Element-wise sqrt sum: c[i] = sqrt(a[i]) + sqrt(b[i])
+ * @warning Inputs must be >= 0. No bounds/validity checking is performed in this hot loop.
+ */
+void serial_sqrt(const std::vector<__float128>& numbers_a, const std::vector<__float128>& numbers_b,
+                 std::vector<__float128>& numbers_c) {
+    const auto n{std::size_t(numbers_a.size())};
+    for (auto i = std::size_t(0); i < n; i++) {
+        numbers_c[i] = std::sqrt(numbers_a[i]) + std::sqrt(numbers_b[i]);
+    }
+}
+
+/**
+ * @brief Dispatch the selected operation.
+ * @param operation Operation kind.
+ * @param numbers_a First input vector.
+ * @param numbers_b Second input vector.
+ * @param numbers_c Output vector (must be pre-sized).
+ */
+void serial_task(OperationKind operation, const std::vector<__float128>& numbers_a,
+                 const std::vector<__float128>& numbers_b, std::vector<__float128>& numbers_c) {
+    switch (operation) {
+        case OperationKind::Add: {
+            serial_add(numbers_a, numbers_b, numbers_c);
+            return;
+        }
+        case OperationKind::Multiply: {
+            serial_multiply(numbers_a, numbers_b, numbers_c);
+            return;
+        }
+        case OperationKind::Divide: {
+            serial_divide(numbers_a, numbers_b, numbers_c);
+            return;
+        }
+        case OperationKind::Power: {
+            serial_power(numbers_a, numbers_b, numbers_c);
+            return;
+        }
+        case OperationKind::Exp: {
+            serial_exp(numbers_a, numbers_b, numbers_c);
+            return;
+        }
+        case OperationKind::Log: {
+            serial_log(numbers_a, numbers_b, numbers_c);
+            return;
+        }
+        case OperationKind::Sqrt: {
+            serial_sqrt(numbers_a, numbers_b, numbers_c);
+            return;
+        }
+    }
+
+    THROW_RUNTIME_ERROR("Unhandled OperationKind value.");
+}
+
+}  // namespace
+
+/**
+ * @brief Entry point into program.
+ */
+auto main(int argc, char** argv) -> int {
+    try {
+        if (argc < 4) {
+            THROW_INVALID_ARGUMENT("Usage: serial.x time_limit vec_size operation");
+        }
+
+        const auto test_time_seconds{helper::parse_floating_point(argv[1])};
+        const auto n{helper::parse_size(argv[2])};
+        const auto operation_string{std::string_view(argv[3])};
+        const auto operation{helper::parse_operation(operation_string)};
+
+        if (test_time_seconds <= 0.0) {
+            THROW_INVALID_ARGUMENT("time_limit must be > 0.");
+        }
+        if (n == 0) {
+            THROW_INVALID_ARGUMENT("vec_size must be > 0.");
+        }
+
+        std::mt19937_64 rng(RNG_SEED);
+        std::uniform_real_distribution<double> dist(1.0, 2.0);
+
+        auto numbers_a{std::vector<__float128>{}};
+        auto numbers_b{std::vector<__float128>{}};
+        numbers_a.reserve(n);
+        numbers_b.reserve(n);
+
+        for (auto i = std::size_t(0); i < n; i++) {
+            numbers_a.emplace_back(static_cast<__float128>(dist(rng)));
+            numbers_b.emplace_back(static_cast<__float128>(dist(rng)));
+        }
+
+        auto expected_value{0.0};
+
+        auto numbers_c{std::vector<__float128>(n)};
+        helper::validate_sizes(numbers_a, numbers_b, numbers_c);
+
+        serial_task(operation, numbers_a, numbers_b, numbers_c);
+        expected_value = helper::check_sum(numbers_c);
+
+        auto numbers_c_out{std::vector<double>{}};
+        numbers_c_out.reserve(n);
+        for (auto i = std::size_t(0); i < n; i++) {
+            numbers_c_out.emplace_back(static_cast<double>(numbers_c[i]));
+        }
+
+        std::cout << "Precise computed expected value: " << expected_value << "\n";
+
+        const auto method{std::string("Precise")};
+        const auto comments{std::string("operation:") + std::string(operation_string)};
+
+        // Output
+        {
+            const std::string base_file_name =
+                "results/precise_" + std::string(operation_string);
+            const std::string json_file = base_file_name + ".json";
+
+            nlohmann::json j;
+
+            // Metadata / identity
+            j["file"] = json_file;
+            j["method"] = method;
+            j["operation"] = operation_string;
+            j["comments"] = comments;
+            j["threads"] = 1;
+            j["precision"] = "128";
+            j["device"] = "CPU";
+
+            j["expected_value"] = helper::to_string_precise(expected_value);
+            j["values"] = helper::to_string_precise_vector(numbers_c_out);
+
+            std::ofstream out(json_file);
+            if (!out) {
+                throw std::runtime_error("Failed to open output JSON file.");
+            }
+
+            // Save JSON file.
+            out << std::setw(2) << j << '\n';
+        }
+
+        return 0;
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << "\n";
+        return 1;
+    }
+}
